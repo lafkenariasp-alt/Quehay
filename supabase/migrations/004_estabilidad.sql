@@ -219,8 +219,10 @@ create table if not exists public.propuestas_ingredientes (
   creado_en  timestamptz not null default now()
 );
 alter table public.propuestas_ingredientes enable row level security;
+drop policy if exists "proponer" on public.propuestas_ingredientes;
 create policy "proponer" on public.propuestas_ingredientes for insert to authenticated
   with check (auth.uid() = usuario_id and estado = 'pendiente');
+drop policy if exists "ver mis propuestas" on public.propuestas_ingredientes;
 create policy "ver mis propuestas" on public.propuestas_ingredientes for select to authenticated
   using (auth.uid() = usuario_id);
 grant select, insert on public.propuestas_ingredientes to authenticated;
@@ -238,6 +240,7 @@ create table if not exists public.eventos_app (
 create index if not exists eventos_app_nombre_fecha on public.eventos_app (nombre, creado_en);
 alter table public.eventos_app enable row level security;
 -- se puede registrar (con o sin cuenta), pero nadie lee desde la app: solo el panel de administración
+drop policy if exists "registrar evento" on public.eventos_app;
 create policy "registrar evento" on public.eventos_app for insert to anon, authenticated
   with check (usuario_id is null or usuario_id = auth.uid());
 grant insert on public.eventos_app to anon, authenticated;
