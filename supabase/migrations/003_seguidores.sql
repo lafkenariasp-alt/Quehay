@@ -9,7 +9,7 @@ create table if not exists public.seguidores (
   primary key (seguidor_id, seguido_id),
   check (seguidor_id <> seguido_id)
 );
-create index if not exists on public.seguidores (seguido_id);
+create index if not exists seguidores_seguido_idx on public.seguidores (seguido_id);
 
 alter table public.seguidores enable row level security;
 drop policy if exists "lectura publica" on public.seguidores;
