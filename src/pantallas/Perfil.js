@@ -1,23 +1,24 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, Alert } from 'react-native';
+import { View, Text, Alert, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../supabase';
 import { useApp } from '../contexto';
 import { C, RAREZA, xpParaNivel } from '../theme';
-import { Pantalla, Seccion, Boton, Tarjeta, Cargando, s } from '../ui';
+import { Pantalla, Seccion, Boton, Tarjeta, Cargando, Chip, Estrellas, s } from '../ui';
 
 export default function Perfil({ activa }) {
   const { uid, perfil, recargarPerfil, nav } = useApp();
   const [logros, setLogros] = useState([]);
   const [mios, setMios] = useState(new Set());
   const [recetas, setRecetas] = useState([]);
+  const [orden, setOrden] = useState('nuevas'); // nuevas | antiguas | nota
 
   const cargar = useCallback(async () => {
     recargarPerfil();
     const [l, lu, rec] = await Promise.all([
       supabase.from('logros').select('*').eq('clase', 'base'),
       supabase.from('logros_usuario').select('codigo').eq('usuario_id', uid),
-      supabase.from('recetas').select('id, titulo, num_likes, num_cocinadas').eq('autor_id', uid).order('creado_en', { ascending: false }),
+      supabase.from('recetas').select('id, titulo, foto_url, num_likes, num_cocinadas, nota_promedio, num_notas, creado_en').eq('autor_id', uid),
     ]);
     setLogros(l.data || []);
     setMios(new Set((lu.data || []).map((x) => x.codigo)));
@@ -32,8 +33,16 @@ export default function Perfil({ activa }) {
   const sig = xpParaNivel(perfil.nivel + 1);
   const avance = Math.min(1, (perfil.xp - base) / (sig - base));
   const iniciales = perfil.nombre.split(' ').map((p) => p[0]).join('').slice(0, 2).toUpperCase();
-  const orden = ['Común', 'Poco común', 'Raro', 'Épico', 'Legendario'];
-  const ordenados = [...logros].sort((a, b) => (mios.has(b.codigo) - mios.has(a.codigo)) || (orden.indexOf(a.rareza) - orden.indexOf(b.rareza)));
+  const rarezas = ['Común', 'Poco común', 'Raro', 'Épico', 'Legendario'];
+  const ordenados = [...logros].sort((a, b) => (mios.has(b.codigo) - mios.has(a.codigo)) || (rarezas.indexOf(a.rareza) - rarezas.indexOf(b.rareza)));
+  const fecha = (r) => new Date(r.creado_en).getTime();
+  const misRecetas = [...recetas].sort((a, b) => {
+    // si dos recetas tienen la misma fecha, desempata el orden en que se crearon
+    if (orden === 'antiguas') return (fecha(a) - fecha(b)) || (a.id - b.id);
+    if (orden === 'nota') return (Number(b.nota_promedio) - Number(a.nota_promedio)) || (b.num_notas - a.num_notas) || (fecha(b) - fecha(a));
+    return (fecha(b) - fecha(a)) || (b.id - a.id);
+  });
+  const fechaCorta = (iso) => new Date(iso).toLocaleDateString('es-CL', { day: 'numeric', month: 'short', year: 'numeric' });
 
   return (
     <Pantalla>
@@ -96,15 +105,37 @@ export default function Perfil({ activa }) {
         </View>
       </Seccion>
 
-      <Seccion titulo="Mis recetas">
+      <Seccion titulo="Mis recetas" derecha={<Text style={s.sub}>{recetas.length}</Text>}>
         {recetas.length === 0 ? (
           <Boton tipo="secundario" icono="add" titulo="Publica tu primera receta" onPress={() => nav.irA('publicar')} />
-        ) : recetas.map((r) => (
-          <Tarjeta key={r.id} onPress={() => nav.abrir('receta', { id: r.id })}>
-            <Text style={s.etiqueta}>{r.titulo}</Text>
-            <Text style={s.sub}>{r.num_likes} me gusta · {r.num_cocinadas} la cocinaron</Text>
-          </Tarjeta>
-        ))}
+        ) : (
+          <>
+            <View style={s.chips}>
+              <Chip texto="Más nuevas" icono="arrow-down" activo={orden === 'nuevas'} onPress={() => setOrden('nuevas')} />
+              <Chip texto="Más antiguas" icono="arrow-up" activo={orden === 'antiguas'} onPress={() => setOrden('antiguas')} />
+              <Chip texto="Mejor calificadas" icono="star" activo={orden === 'nota'} onPress={() => setOrden('nota')} />
+            </View>
+            {misRecetas.map((r) => (
+              <Tarjeta key={r.id} onPress={() => nav.abrir('receta', { id: r.id })} style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
+                {r.foto_url ? (
+                  <Image source={{ uri: r.foto_url }} style={{ width: 64, height: 64, borderRadius: 12, backgroundColor: C.superficie }} />
+                ) : (
+                  <View style={{ width: 64, height: 64, borderRadius: 12, backgroundColor: C.superficie, alignItems: 'center', justifyContent: 'center' }}>
+                    <Ionicons name="restaurant-outline" size={24} color="#B9A68E" />
+                  </View>
+                )}
+                <View style={{ flex: 1, gap: 3 }}>
+                  <Text style={s.etiqueta}>{r.titulo}</Text>
+                  <View style={s.fila}>
+                    <Estrellas valor={Number(r.nota_promedio)} tam={12} />
+                    <Text style={s.sub}>{r.num_notas ? `${Number(r.nota_promedio).toFixed(1)} (${r.num_notas})` : 'Sin notas'}</Text>
+                  </View>
+                  <Text style={s.sub}>{fechaCorta(r.creado_en)} · {r.num_likes} me gusta · {r.num_cocinadas} la cocinaron</Text>
+                </View>
+              </Tarjeta>
+            ))}
+          </>
+        )}
       </Seccion>
 
       <Boton tipo="neutro" titulo="Cerrar sesión" icono="log-out-outline" onPress={() => Alert.alert('¿Cerrar sesión?', '', [
