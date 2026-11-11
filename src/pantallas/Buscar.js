@@ -1,14 +1,25 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, Switch, Alert } from 'react-native';
 import { supabase } from '../supabase';
 import { useApp } from '../contexto';
 import { C, CATEGORIAS_RECETA } from '../theme';
 import { Pantalla, Encabezado, Seccion, Grilla, Casilla, Chip, Boton, Tarjeta, s } from '../ui';
 import SelectorIngredientes from '../SelectorIngredientes';
+import { guardarIngredientesInvitado, leerIngredientesInvitado } from '../analitica';
 
 export default function Buscar() {
-  const { uid, nav } = useApp();
+  const { uid, invitado, nav, pedirCuenta } = useApp();
   const [elegidos, setElegidos] = useState([]); // [{id, nombre}]
+  const leido = useRef(false);
+
+  // Invitado: recupera lo que eligió en la bienvenida y lo guarda para pasarlo a su nevera al registrarse
+  useEffect(() => {
+    if (!invitado) return;
+    leerIngredientesInvitado().then((l) => { if (l.length) setElegidos(l); leido.current = true; });
+  }, [invitado]);
+  useEffect(() => {
+    if (invitado && leido.current) guardarIngredientesInvitado(elegidos);
+  }, [elegidos, invitado]);
   const [selector, setSelector] = useState(false);
   const [basicos, setBasicos] = useState(true);
   const [maxFaltan, setMaxFaltan] = useState(4);
@@ -16,6 +27,7 @@ export default function Buscar() {
   const [rapida, setRapida] = useState(false);
 
   async function usarNevera() {
+    if (invitado) { pedirCuenta('Guarda tus ingredientes en tu nevera y búscalos con un toque'); return; }
     const { data, error } = await supabase.from('nevera').select('ingrediente_id, ingredientes(nombre)').eq('usuario_id', uid);
     if (error) return Alert.alert('Error', error.message);
     if (!data?.length) return Alert.alert('Tu nevera está vacía', 'Agrega alimentos en la pestaña Nevera.');

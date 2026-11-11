@@ -3,10 +3,13 @@ import { View, Text, Pressable, Keyboard, Platform } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from './src/supabase';
 import { AppCtx } from './src/contexto';
 import { C } from './src/theme';
 import { Cargando } from './src/ui';
+import { registrar, leerIngredientesInvitado, borrarIngredientesInvitado } from './src/analitica';
+import Bienvenida from './src/pantallas/Bienvenida';
 import Acceso from './src/pantallas/Acceso';
 import Nevera from './src/pantallas/Nevera';
 import Buscar from './src/pantallas/Buscar';
@@ -23,15 +26,17 @@ const PESTANAS = [
   { id: 'publicar', nombre: 'Publicar', icono: 'add-circle-outline', comp: Publicar },
   { id: 'perfil', nombre: 'Perfil', icono: 'person-outline', comp: Perfil },
 ];
-const PANTALLAS = { resultados: Resultados, receta: Receta, usuarios: Usuarios, perfilPublico: PerfilPublico };
+const PANTALLAS = { resultados: Resultados, receta: Receta, usuarios: Usuarios, perfilPublico: PerfilPublico, acceso: Acceso };
+const CLAVE_BIENVENIDA = 'bienvenida_v1';
 
 function Contenido() {
   const insets = useSafeAreaInsets();
   const [sesion, setSesion] = useState(undefined);
   const [perfil, setPerfil] = useState(null);
-  const [pestana, setPestana] = useState('nevera');
+  const [bienvenidaVista, setBienvenidaVista] = useState(null); // null = leyendo
+  const [pestana, setPestana] = useState('buscar');
   const [pila, setPila] = useState([]); // pantallas encima de las pestañas
-  const [visitadas, setVisitadas] = useState({ nevera: true }); // pestañas que quedan vivas (no pierden lo escrito)
+  const [visitadas, setVisitadas] = useState({ buscar: true }); // pestañas que quedan vivas (no pierden lo escrito)
   const [teclado, setTeclado] = useState(false);
   const [altoTeclado, setAltoTeclado] = useState(0); // con el teclado abierto escondemos las pestañas
 
@@ -42,8 +47,28 @@ function Contenido() {
   }, []);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => setSesion(data.session));
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, nueva) => setSesion(nueva));
+    AsyncStorage.getItem(CLAVE_BIENVENIDA).then((v) => setBienvenidaVista(!!v)).catch(() => setBienvenidaVista(true));
+    supabase.auth.getSession().then(({ data }) => {
+      setSesion(data.session);
+      if (data.session) { setPestana('nevera'); setVisitadas({ nevera: true }); }
+    });
+    const { data: sub } = supabase.auth.onAuthStateChange(async (evento, nueva) => {
+      setSesion(nueva);
+      if (evento === 'SIGNED_IN' && nueva) {
+        // Lo que eligió como invitado pasa a su nevera
+        const ingredientes = await leerIngredientesInvitado();
+        if (ingredientes.length) {
+          await supabase.from('nevera').upsert(
+            ingredientes.map((i) => ({ usuario_id: nueva.user.id, ingrediente_id: i.id })),
+            { onConflict: 'usuario_id,ingrediente_id', ignoreDuplicates: true },
+          );
+          await borrarIngredientesInvitado();
+        }
+        registrar('sesion_iniciada', { traspaso: ingredientes.length }, nueva.user.id);
+        setPila([]); setPestana('nevera'); setVisitadas({ nevera: true });
+      }
+      if (evento === 'SIGNED_OUT') { setPila([]); setPestana('buscar'); setVisitadas({ buscar: true }); }
+    });
     return () => sub.subscription.unsubscribe();
   }, []);
 
@@ -61,15 +86,28 @@ function Contenido() {
     irA: (id) => { setPila([]); setPestana(id); setVisitadas((v) => ({ ...v, [id]: true })); },
   }), []);
 
-  if (sesion === undefined) return <Cargando />;
+  // Para invitados: abre el registro explicando qué gana con la cuenta
+  const pedirCuenta = useCallback((motivo) => {
+    registrar('pedir_cuenta', { motivo });
+    nav.abrir('acceso', { motivo });
+  }, [nav]);
 
-  const ctx = { sesion, uid: sesion?.user?.id, perfil, recargarPerfil, nav };
+  async function terminarBienvenida(destino) {
+    try { await AsyncStorage.setItem(CLAVE_BIENVENIDA, '1'); } catch (e) { /* sin acción */ }
+    setBienvenidaVista(true);
+    if (destino) nav.abrir(destino.pantalla, destino.params);
+  }
 
-  if (!sesion) {
+  if (sesion === undefined || bienvenidaVista === null) return <Cargando />;
+
+  const uid = sesion?.user?.id || null;
+  const ctx = { sesion, uid, invitado: !uid, perfil, recargarPerfil, nav, pedirCuenta };
+
+  if (!uid && !bienvenidaVista) {
     return (
       <AppCtx.Provider value={ctx}>
-        <View style={{ flex: 1, paddingTop: insets.top, backgroundColor: C.fondo }}>
-          <Acceso />
+        <View style={{ flex: 1, paddingTop: insets.top, paddingBottom: insets.bottom, backgroundColor: C.fondo }}>
+          <Bienvenida onTerminar={terminarBienvenida} />
         </View>
       </AppCtx.Provider>
     );
@@ -87,7 +125,7 @@ function Contenido() {
             const activa = !Encima && p.id === pestana;
             const Comp = p.comp;
             return (
-              <View key={p.id} style={{ flex: 1, display: activa ? 'flex' : 'none' }}>
+              <View key={`${p.id}-${uid || 'invitado'}`} style={{ flex: 1, display: activa ? 'flex' : 'none' }}>
                 <Comp activa={activa} />
               </View>
             );

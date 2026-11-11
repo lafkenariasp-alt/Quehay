@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { supabase } from './supabase';
 import { C, CATEGORIAS_ING } from './theme';
 import { s, Chip } from './ui';
+import { useApp } from './contexto';
 
 // Ventana para agregar ingredientes del catálogo.
 // - Tocar un resultado lo agrega al tiro (y limpia el buscador para el siguiente).
@@ -17,6 +18,7 @@ export default function SelectorIngredientes({ visible, titulo = 'Agregar ingred
   const [aviso, setAviso] = useState('');
   const input = useRef(null);
   const idsYa = new Set(ya.map((i) => i.id));
+  const { uid } = useApp();
   const cerrar = () => { Keyboard.dismiss(); onCerrar(); };
 
   useEffect(() => {
@@ -50,6 +52,14 @@ export default function SelectorIngredientes({ visible, titulo = 'Agregar ingred
     if (partes.length > 1) { partes.pop(); setQ(partes.join(',') + ', '); } else setQ('');
     setAviso(`${ing.nombre} agregado`);
     input.current && input.current.focus();
+  }
+
+  // Ingrediente que no está: se envía para revisión y se agrega al catálogo si se aprueba
+  async function proponer() {
+    const nombre = q.split(',').pop().trim();
+    if (!uid) { setAviso('Crea tu cuenta para proponer ingredientes'); return; }
+    const { error } = await supabase.from('propuestas_ingredientes').insert({ usuario_id: uid, nombre, categoria });
+    setAviso(error ? 'No se pudo enviar la propuesta' : `¡Gracias! Revisaremos "${nombre}" para agregarlo al catálogo`);
   }
 
   // Intro: agrega cada término separado por coma (el primer resultado de cada uno)
@@ -136,9 +146,16 @@ export default function SelectorIngredientes({ visible, titulo = 'Agregar ingred
           keyboardDismissMode="on-drag"
           style={{ flex: 1 }}
           ListEmptyComponent={
-            <Text style={[s.sub, { textAlign: 'center', marginTop: 24 }]}>
-              {q.split(',').pop().trim().length >= 2 ? 'No encontramos ese ingrediente' : 'Escribe o elige una categoría'}
-            </Text>
+            q.split(',').pop().trim().length >= 2 ? (
+              <View style={{ alignItems: 'center', gap: 10, marginTop: 24 }}>
+                <Text style={s.sub}>No encontramos "{q.split(',').pop().trim()}" en el catálogo</Text>
+                <Pressable onPress={proponer} style={{ minHeight: 44, paddingHorizontal: 16, borderRadius: 12, borderWidth: 1, borderColor: C.tomate, justifyContent: 'center' }}>
+                  <Text style={{ fontWeight: '800', color: C.tomate }}>Proponer "{q.split(',').pop().trim()}"</Text>
+                </Pressable>
+              </View>
+            ) : (
+              <Text style={[s.sub, { textAlign: 'center', marginTop: 24 }]}>Escribe o elige una categoría</Text>
+            )
           }
           renderItem={({ item }) => {
             const marcado = idsYa.has(item.id);

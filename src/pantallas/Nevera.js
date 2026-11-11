@@ -4,22 +4,26 @@ import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../supabase';
 import { useApp, diasHasta, textoVence } from '../contexto';
 import { C, CATEGORIAS_ING } from '../theme';
-import { Boton, Casilla, Encabezado, Grilla, Seccion, Vacio, Tarjeta, s } from '../ui';
+import { Boton, Casilla, Encabezado, Grilla, Seccion, Vacio, Tarjeta, ErrorCarga, s } from '../ui';
+import { PideCuenta } from '../mascota';
 import SelectorIngredientes from '../SelectorIngredientes';
 
 export default function Nevera({ activa }) {
-  const { uid, perfil, recargarPerfil, nav } = useApp();
+  const { uid, invitado, perfil, recargarPerfil, nav, pedirCuenta } = useApp();
+  const [error, setError] = useState(false);
   const [items, setItems] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [selector, setSelector] = useState(false);
   const vencimiento = !!perfil?.control_vencimiento;
 
   const cargar = useCallback(async () => {
-    const { data, error } = await supabase
+    if (!uid) return;
+    setError(false);
+    const { data, error: e } = await supabase
       .from('nevera')
       .select('ingrediente_id, vence_el, ingredientes(nombre, categoria)')
       .eq('usuario_id', uid).order('agregado_en');
-    if (error) Alert.alert('Error', error.message);
+    if (e) { setError(true); setCargando(false); return; }
     setItems(data || []);
     setCargando(false);
   }, [uid]);
@@ -64,6 +68,11 @@ export default function Nevera({ activa }) {
   const grupos = CATEGORIAS_ING
     .map((cat) => ({ cat, lista: conDias.filter((i) => i.ingredientes?.categoria === cat) }))
     .filter((g) => g.lista.length);
+
+  if (invitado) {
+    return <PideCuenta titulo="Tu nevera te espera" texto="Guarda lo que tienes en casa, recibe avisos antes de que algo venza y encuentra recetas sin escribir nada." onCrear={() => pedirCuenta('Guarda tus ingredientes y recibe avisos de vencimiento')} />;
+  }
+  if (error) return <ErrorCarga onReintentar={cargar} />;
 
   return (
     <View style={{ flex: 1 }}>

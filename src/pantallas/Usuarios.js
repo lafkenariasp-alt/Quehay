@@ -10,13 +10,14 @@ const CAMPOS = 'id, nombre, usuario, avatar_url, nivel, titulo';
 
 // Buscador de cocineros + lista de a quiénes sigues
 export default function Usuarios() {
-  const { uid, nav } = useApp();
+  const { uid, nav, pedirCuenta } = useApp();
   const [q, setQ] = useState('');
   const [resultados, setResultados] = useState([]);
   const [siguiendo, setSiguiendo] = useState([]); // perfiles que sigo
   const [meSiguen, setMeSiguen] = useState(new Set());
 
   const cargarSeguidos = useCallback(async () => {
+    if (!uid) return;
     const [a, b] = await Promise.all([
       supabase.from('seguidores').select('seguido_id').eq('seguidor_id', uid),
       supabase.from('seguidores').select('seguidor_id').eq('seguido_id', uid),
@@ -34,15 +35,16 @@ export default function Usuarios() {
     let cancelado = false;
     const t = q.trim().replace(/[,()%*]/g, '');
     if (t.length < 2) { setResultados([]); return; }
-    supabase.from('perfiles_publicos').select(CAMPOS)
-      .or(`nombre.ilike.%${t}%,usuario.ilike.%${t}%`).neq('id', uid).limit(25)
-      .then(({ data }) => { if (!cancelado) setResultados(data || []); });
+    let consulta = supabase.from('perfiles_publicos').select(CAMPOS).or(`nombre.ilike.%${t}%,usuario.ilike.%${t}%`).limit(25);
+    if (uid) consulta = consulta.neq('id', uid);
+    consulta.then(({ data }) => { if (!cancelado) setResultados(data || []); });
     return () => { cancelado = true; };
   }, [q, uid]);
 
   const idsSigo = new Set(siguiendo.map((p) => p.id));
 
   async function alternar(p) {
+    if (!uid) { pedirCuenta('Crea tu cuenta para seguir a otros cocineros'); return; }
     const loSigo = idsSigo.has(p.id);
     setSiguiendo((l) => (loSigo ? l.filter((x) => x.id !== p.id) : [...l, p]));
     const { error } = loSigo

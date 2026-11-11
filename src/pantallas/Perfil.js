@@ -6,9 +6,10 @@ import { useApp } from '../contexto';
 import { C, RAREZA, xpParaNivel } from '../theme';
 import { Pantalla, Seccion, Boton, Tarjeta, Cargando, Chip, Estrellas, Avatar, s } from '../ui';
 import { desdeCamara, desdeGaleria, subirFoto } from '../fotos';
+import { Mascota, PideCuenta } from '../mascota';
 
 export default function Perfil({ activa }) {
-  const { uid, perfil, recargarPerfil, nav } = useApp();
+  const { uid, invitado, perfil, recargarPerfil, nav, pedirCuenta } = useApp();
   const [logros, setLogros] = useState([]);
   const [mios, setMios] = useState(new Set());
   const [recetas, setRecetas] = useState([]);
@@ -16,6 +17,7 @@ export default function Perfil({ activa }) {
   const [orden, setOrden] = useState('nuevas'); // nuevas | antiguas | nota
 
   const cargar = useCallback(async () => {
+    if (!uid) return;
     recargarPerfil();
     const cuenta = (col) => supabase.from('seguidores').select('*', { count: 'exact', head: true }).eq(col, uid);
     const [l, lu, rec, c1, c2] = await Promise.all([
@@ -33,6 +35,9 @@ export default function Perfil({ activa }) {
 
   useEffect(() => { if (activa) cargar(); }, [activa, cargar]); // recarga al volver a la pestaña
 
+  if (invitado) {
+    return <PideCuenta titulo="Tu perfil de cocinero" texto="Sube de nivel, desbloquea logros y clases, y muestra tus recetas." onCrear={() => pedirCuenta('Crea tu cuenta y abre tu regalo de bienvenida')} />;
+  }
   if (!perfil) return <Cargando />;
 
   const base = xpParaNivel(perfil.nivel);
@@ -90,9 +95,22 @@ export default function Perfil({ activa }) {
           <View style={{ alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999, backgroundColor: C.doradoTinte }}>
             <Text style={{ fontSize: 13, fontWeight: '800', color: C.ambarOscuro }}>{perfil.titulo}</Text>
           </View>
+          {perfil.fundador ? (
+            <View style={{ alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999, backgroundColor: C.texto }}>
+              <Text style={{ fontSize: 12, fontWeight: '800', color: C.dorado }}>Fundador</Text>
+            </View>
+          ) : null}
           <Text style={s.sub}>{conteo.seguidores} seguidores · {conteo.siguiendo} siguiendo</Text>
         </View>
       </View>
+
+      <Tarjeta style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+        <Mascota tam={64} accesorio={(perfil.accesorios || [])[0]} />
+        <View style={{ flex: 1, gap: 2 }}>
+          <Text style={s.etiqueta}>Tu mascota</Text>
+          <Text style={s.sub}>{(perfil.accesorios || []).includes('delantal_bienvenida') ? 'Lleva su delantal de bienvenida. Gana accesorios nuevos al subir de nivel.' : 'Gana accesorios al subir de nivel.'}</Text>
+        </View>
+      </Tarjeta>
 
       <Boton tipo="secundario" icono="people-outline" titulo="Buscar cocineros y amigos" onPress={() => nav.abrir('usuarios')} />
 

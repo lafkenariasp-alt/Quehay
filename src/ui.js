@@ -99,6 +99,7 @@ export function Casilla({ nombre, estado = 'tengo', detalle, onPress, onLongPres
     falta: { bg: C.ambarTinte, borde: C.ambar, fg: C.ambarOscuro, estilo: 'dashed' },
     vence: { bg: C.ambarTinte, borde: C.ambar, fg: C.ambarOscuro, estilo: 'solid' },
     vacia: { bg: C.blanco, borde: '#CBBBA5', fg: C.suave, estilo: 'dashed' },
+    vacia_nombre: { bg: C.blanco, borde: C.linea, fg: C.texto, estilo: 'solid' }, // opción sin elegir
   }[estado];
   return (
     <Pressable
@@ -156,6 +157,19 @@ export function Vacio({ icono = 'restaurant-outline', texto }) {
     <View style={{ alignItems: 'center', gap: 8, paddingVertical: 32 }}>
       <Ionicons name={icono} size={40} color="#B9A68E" />
       <Text style={[s.sub, { textAlign: 'center' }]}>{texto}</Text>
+    </View>
+  );
+}
+
+// Cuando algo no carga: mensaje claro y botón para reintentar
+export function ErrorCarga({ mensaje, onReintentar, onVolver }) {
+  return (
+    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, padding: 24, backgroundColor: C.fondo }}>
+      <Ionicons name="cloud-offline-outline" size={44} color="#B9A68E" />
+      <Text style={[s.etiqueta, { textAlign: 'center', fontSize: 17 }]}>No pudimos cargar esto</Text>
+      <Text style={[s.sub, { textAlign: 'center' }]}>{mensaje || 'Revisa tu conexión a internet e intenta de nuevo.'}</Text>
+      <Boton titulo="Reintentar" icono="refresh" onPress={onReintentar} style={{ alignSelf: 'stretch' }} />
+      {onVolver ? <Boton tipo="neutro" titulo="Volver" onPress={onVolver} style={{ alignSelf: 'stretch' }} /> : null}
     </View>
   );
 }

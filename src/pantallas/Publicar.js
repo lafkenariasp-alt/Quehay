@@ -6,12 +6,13 @@ import { useApp } from '../contexto';
 import { C, CATEGORIAS_RECETA } from '../theme';
 import { Pantalla, Encabezado, Seccion, Chip, Boton, Tarjeta, s } from '../ui';
 import SelectorIngredientes from '../SelectorIngredientes';
+import { PideCuenta } from '../mascota';
 import { elegirFoto, subirFoto } from '../fotos';
 
 const VACIO = { foto: null, titulo: '', descripcion: '', minutos: '', porciones: '2', dificultad: 'Fácil', categorias: [], ingredientes: [], pasos: [''] };
 
 export default function Publicar() {
-  const { uid, nav, recargarPerfil } = useApp();
+  const { uid, invitado, nav, recargarPerfil, pedirCuenta } = useApp();
   const [f, setF] = useState(VACIO);
   const [selector, setSelector] = useState(false);
   const [guardando, setGuardando] = useState(false);
@@ -61,8 +62,12 @@ export default function Publicar() {
 
     setF(VACIO);
     recargarPerfil();
-    Alert.alert('¡Receta publicada!', 'Ganaste 50 XP.');
+    Alert.alert('¡Receta publicada!', 'Ganas 50 XP por receta (hasta 3 recetas con XP al día).');
     nav.abrir('receta', { id: data.id });
+  }
+
+  if (invitado) {
+    return <PideCuenta titulo="Comparte tus recetas" texto="Publica lo que sabes cocinar, gana XP cada vez que alguien la prepara y sube de nivel." onCrear={() => pedirCuenta('Crea tu cuenta para publicar tus recetas')} />;
   }
 
   return (

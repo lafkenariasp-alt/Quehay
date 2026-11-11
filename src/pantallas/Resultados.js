@@ -1,10 +1,12 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, Alert, Image } from 'react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import { View, Text, Image, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../supabase';
 import { useApp } from '../contexto';
 import { C } from '../theme';
-import { Pantalla, Encabezado, Seccion, Tarjeta, Estrellas, Vacio, Cargando, s } from '../ui';
+import { Pantalla, Encabezado, Seccion, Tarjeta, Estrellas, Vacio, Cargando, ErrorCarga, s } from '../ui';
+import { Mascota } from '../mascota';
+import { registrar } from '../analitica';
 
 const GRUPOS = [
   { titulo: 'Puedes cocinarla ya', color: C.verde, f: (n) => n === 0 },
@@ -14,18 +16,22 @@ const GRUPOS = [
   { titulo: 'Te faltan 5 o más', color: C.ambarTexto, f: (n) => n >= 5 },
 ];
 
-export default function Resultados({ tengo = [], maxFaltan = 4, basicos = true, categoria = null, maxMinutos = null, prioridad = null, titulo }) {
-  const { nav } = useApp();
+export default function Resultados({ tengo = [], maxFaltan = 4, basicos = true, categoria = null, maxMinutos = null, prioridad = null, titulo, primeraVez = false }) {
+  const { nav, uid } = useApp();
   const [recetas, setRecetas] = useState(null);
+  const [error, setError] = useState(null);
+  const [ayuda, setAyuda] = useState(primeraVez); // explicación de colores la primera vez
   const [cercanas, setCercanas] = useState(false); // sin resultados en el límite: mostramos las más cercanas
 
-  useEffect(() => {
-    (async () => {
+  const cargar = useCallback(async () => {
+    setError(null);
+    setRecetas(null);
+    {
       const buscar = (max) => supabase.rpc('buscar_recetas', {
         tengo, max_faltantes: max, incluir_basicos: basicos, categoria, max_minutos: maxMinutos, limite: 60,
       });
       let { data, error } = await buscar(maxFaltan);
-      if (error) { Alert.alert('Error', error.message); setRecetas([]); return; }
+      if (error) { setError(error.message.includes('fetch') ? null : error.message); setRecetas('error'); return; }
       if (!data?.length && !prioridad?.length) {
         const r2 = await buscar(20);
         if (!r2.error && r2.data?.length) { data = r2.data.slice(0, 10); setCercanas(true); }
@@ -38,9 +44,13 @@ export default function Resultados({ tengo = [], maxFaltan = 4, basicos = true, 
         lista = lista.filter((r) => usan.has(r.receta_id));
       }
       setRecetas(lista);
-    })();
+      registrar('busqueda', { ingredientes: tengo.length, resultados: lista.length, cercanas: !data?.length }, uid);
+    }
   }, []);
 
+  useEffect(() => { cargar(); }, [cargar]);
+
+  if (recetas === 'error') return <ErrorCarga mensaje={error} onReintentar={cargar} onVolver={nav.volver} />;
   if (!recetas) return <Cargando />;
 
   return (
@@ -50,6 +60,18 @@ export default function Resultados({ tengo = [], maxFaltan = 4, basicos = true, 
         titulo={titulo || `${recetas.length} ${recetas.length === 1 ? 'receta' : 'recetas'} para ti`}
         sub={`Con ${tengo.length} ingredientes${basicos ? ' + despensa básica' : ''}`}
       />
+      {ayuda ? (
+        <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center', padding: 14, borderRadius: 16, backgroundColor: C.blanco, borderWidth: 1, borderColor: C.linea }}>
+          <Mascota tam={56} />
+          <View style={{ flex: 1, gap: 4 }}>
+            <Text style={s.etiqueta}><Text style={{ color: C.verde }}>Verde</Text> = lo tienes · <Text style={{ color: C.ambarTexto }}>Ámbar</Text> = te falta</Text>
+            <Text style={s.sub}>Toca una receta para ver cómo se hace.</Text>
+          </View>
+          <Pressable onPress={() => setAyuda(false)} hitSlop={10} accessibilityLabel="Cerrar ayuda">
+            <Ionicons name="close" size={20} color={C.suave} />
+          </Pressable>
+        </View>
+      ) : null}
       {cercanas ? (
         <View style={{ padding: 14, borderRadius: 16, backgroundColor: C.ambarTinte, borderWidth: 1, borderColor: '#F3C98B', gap: 4 }}>
           <Text style={{ fontSize: 15, fontWeight: '800', color: C.ambarOscuro }}>

@@ -1,14 +1,16 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, Alert, Image } from 'react-native';
+import { View, Text, Alert, Image, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../supabase';
 import { useApp } from '../contexto';
 import { C } from '../theme';
-import { Pantalla, Encabezado, Seccion, Boton, Tarjeta, Cargando, Avatar, Estrellas, s } from '../ui';
+import { Pantalla, Encabezado, Seccion, Boton, Tarjeta, Cargando, ErrorCarga, Avatar, Estrellas, s } from '../ui';
+import { reportar } from '../reportar';
 
 // Perfil de otro cocinero
 export default function PerfilPublico({ id }) {
-  const { uid, nav } = useApp();
+  const { uid, nav, pedirCuenta } = useApp();
+  const [error, setError] = useState(false);
   const [p, setP] = useState(null);
   const [recetas, setRecetas] = useState([]);
   const [conteo, setConteo] = useState({ seguidores: 0, siguiendo: 0 });
@@ -16,14 +18,16 @@ export default function PerfilPublico({ id }) {
   const [meSigue, setMeSigue] = useState(false);
 
   const cargar = useCallback(async () => {
+    setError(false);
     const cuenta = (col) => supabase.from('seguidores').select('*', { count: 'exact', head: true }).eq(col, id);
     const [per, rec, c1, c2, yo, el] = await Promise.all([
       supabase.from('perfiles_publicos').select('*').eq('id', id).maybeSingle(),
       supabase.from('recetas').select('id, titulo, foto_url, nota_promedio, num_notas, num_likes, num_cocinadas').eq('autor_id', id).order('creado_en', { ascending: false }),
       cuenta('seguido_id'), cuenta('seguidor_id'),
-      supabase.from('seguidores').select('seguido_id').eq('seguidor_id', uid).eq('seguido_id', id).maybeSingle(),
-      supabase.from('seguidores').select('seguido_id').eq('seguidor_id', id).eq('seguido_id', uid).maybeSingle(),
+      uid ? supabase.from('seguidores').select('seguido_id').eq('seguidor_id', uid).eq('seguido_id', id).maybeSingle() : Promise.resolve({ data: null }),
+      uid ? supabase.from('seguidores').select('seguido_id').eq('seguidor_id', id).eq('seguido_id', uid).maybeSingle() : Promise.resolve({ data: null }),
     ]);
+    if (per.error || !per.data) { setError(true); return; }
     setP(per.data);
     setRecetas(rec.data || []);
     setConteo({ seguidores: c1.count || 0, siguiendo: c2.count || 0 });
@@ -33,9 +37,11 @@ export default function PerfilPublico({ id }) {
 
   useEffect(() => { cargar(); }, [cargar]);
 
+  if (error) return <ErrorCarga onReintentar={cargar} onVolver={nav.volver} />;
   if (!p) return <Cargando />;
 
   async function alternar() {
+    if (!uid) { pedirCuenta('Crea tu cuenta para seguir a otros cocineros'); return; }
     const { error } = loSigo
       ? await supabase.from('seguidores').delete().eq('seguidor_id', uid).eq('seguido_id', id)
       : await supabase.from('seguidores').insert({ seguidor_id: uid, seguido_id: id });
@@ -45,7 +51,11 @@ export default function PerfilPublico({ id }) {
 
   return (
     <Pantalla>
-      <Encabezado onVolver={nav.volver} titulo={p.nombre} sub={`@${p.usuario}`} />
+      <Encabezado onVolver={nav.volver} titulo={p.nombre} sub={`@${p.usuario}`} derecha={id !== uid ? (
+        <Pressable onPress={() => reportar({ uid, tipo: 'perfil', objetoId: id, pedirCuenta })} hitSlop={10} accessibilityLabel="Reportar perfil">
+          <Ionicons name="flag-outline" size={22} color={C.suave} />
+        </Pressable>
+      ) : null} />
       <View style={[s.fila, { gap: 16 }]}>
         <Avatar url={p.avatar_url} nombre={p.nombre} tam={84} borde={C.dorado} />
         <View style={{ flex: 1, gap: 4 }}>
