@@ -6,7 +6,7 @@ import { useApp } from '../contexto';
 import { C, RAREZA, xpParaNivel } from '../theme';
 import { Pantalla, Seccion, Boton, Tarjeta, Cargando, s } from '../ui';
 
-export default function Perfil() {
+export default function Perfil({ activa }) {
   const { uid, perfil, recargarPerfil, nav } = useApp();
   const [logros, setLogros] = useState([]);
   const [mios, setMios] = useState(new Set());
@@ -24,7 +24,7 @@ export default function Perfil() {
     setRecetas(rec.data || []);
   }, [uid]);
 
-  useEffect(() => { cargar(); }, [cargar]);
+  useEffect(() => { if (activa) cargar(); }, [activa, cargar]); // recarga al volver a la pestaña
 
   if (!perfil) return <Cargando />;
 

@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, Alert, Pressable } from 'react-native';
+import { View, Text, TextInput, Alert, Pressable, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../supabase';
 import { useApp } from '../contexto';
 import { C, CATEGORIAS_RECETA } from '../theme';
 import { Pantalla, Encabezado, Seccion, Chip, Boton, Tarjeta, s } from '../ui';
 import SelectorIngredientes from '../SelectorIngredientes';
+import { elegirFoto, subirFoto } from '../fotos';
 
-const VACIO = { titulo: '', descripcion: '', minutos: '', porciones: '2', dificultad: 'Fácil', categorias: [], ingredientes: [], pasos: [''] };
+const VACIO = { foto: null, titulo: '', descripcion: '', minutos: '', porciones: '2', dificultad: 'Fácil', categorias: [], ingredientes: [], pasos: [''] };
 
 export default function Publicar() {
   const { uid, nav, recargarPerfil } = useApp();
@@ -33,8 +34,14 @@ export default function Publicar() {
     if (!minutos) return Alert.alert('Falta el tiempo', '¿Cuántos minutos toma?');
 
     setGuardando(true);
+    let foto_url = null;
+    if (f.foto) {
+      try { foto_url = await subirFoto(uid, f.foto, 'receta'); }
+      catch (e) { setGuardando(false); return Alert.alert('No se pudo subir la foto', e.message); }
+    }
     const { data, error } = await supabase.from('recetas').insert({
       autor_id: uid,
+      foto_url,
       titulo: f.titulo.trim(),
       descripcion: f.descripcion.trim() || null,
       minutos,
@@ -62,6 +69,19 @@ export default function Publicar() {
     <View style={{ flex: 1 }}>
       <Pantalla pie={<Boton titulo="Publicar receta" icono="cloud-upload-outline" cargando={guardando} onPress={publicar} />}>
         <Encabezado titulo="Publicar receta" sub="Comparte lo que sabes cocinar · +50 XP" />
+
+        <Pressable onPress={async () => { const foto = await elegirFoto(); if (foto) cambiar('foto', foto); }}
+          style={{ width: '100%', aspectRatio: 4 / 3, borderRadius: 18, borderWidth: 2, borderStyle: f.foto ? 'solid' : 'dashed', borderColor: f.foto ? C.verde : '#CBBBA5', backgroundColor: C.blanco, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' }}>
+          {f.foto ? (
+            <Image source={{ uri: f.foto.uri }} style={{ width: '100%', height: '100%' }} />
+          ) : (
+            <View style={{ alignItems: 'center', gap: 6 }}>
+              <Ionicons name="camera-outline" size={40} color={C.suave} />
+              <Text style={s.etiqueta}>Agrega una foto del plato</Text>
+              <Text style={s.sub}>Las recetas con foto se cocinan mucho más</Text>
+            </View>
+          )}
+        </Pressable>
 
         <View style={{ gap: 8 }}>
           <Text style={s.etiqueta}>Nombre</Text>

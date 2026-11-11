@@ -6,7 +6,21 @@
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "backgroundColor": "#FBF7F0",
-    "ios": { "supportsTablet": true, "bundleIdentifier": "cl.quehay.app" },
-    "android": { "package": "cl.quehay.app" }
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "cl.quehay.app"
+    },
+    "android": {
+      "package": "cl.quehay.app"
+    },
+    "plugins": [
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Qué Hay usa tus fotos para que compartas tus recetas y cómo te quedaron.",
+          "cameraPermission": "Qué Hay usa la cámara para que fotografíes tus platos."
+        }
+      ]
+    ]
   }
 }

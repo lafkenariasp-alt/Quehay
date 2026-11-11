@@ -29,6 +29,7 @@ function Contenido() {
   const [perfil, setPerfil] = useState(null);
   const [pestana, setPestana] = useState('nevera');
   const [pila, setPila] = useState([]); // pantallas encima de las pestañas
+  const [visitadas, setVisitadas] = useState({ nevera: true }); // pestañas que quedan vivas (no pierden lo escrito)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSesion(data.session));
@@ -47,7 +48,7 @@ function Contenido() {
   const nav = useMemo(() => ({
     abrir: (pantalla, params = {}) => setPila((p) => [...p, { pantalla, params, key: Date.now() }]),
     volver: () => setPila((p) => p.slice(0, -1)),
-    irA: (id) => { setPila([]); setPestana(id); },
+    irA: (id) => { setPila([]); setPestana(id); setVisitadas((v) => ({ ...v, [id]: true })); },
   }), []);
 
   if (sesion === undefined) return <Cargando />;
@@ -65,14 +66,23 @@ function Contenido() {
   }
 
   const tope = pila[pila.length - 1];
-  const Pestana = PESTANAS.find((p) => p.id === pestana).comp;
   const Encima = tope ? PANTALLAS[tope.pantalla] : null;
 
   return (
     <AppCtx.Provider value={ctx}>
       <View style={{ flex: 1, paddingTop: insets.top, backgroundColor: C.fondo }}>
         <View style={{ flex: 1 }}>
-          {Encima ? <Encima key={tope.key} {...tope.params} /> : <Pestana />}
+          {PESTANAS.map((p) => {
+            if (!visitadas[p.id]) return null;
+            const activa = !Encima && p.id === pestana;
+            const Comp = p.comp;
+            return (
+              <View key={p.id} style={{ flex: 1, display: activa ? 'flex' : 'none' }}>
+                <Comp activa={activa} />
+              </View>
+            );
+          })}
+          {Encima ? <Encima key={tope.key} {...tope.params} /> : null}
         </View>
         {!Encima ? (
           <View style={{ flexDirection: 'row', borderTopWidth: 1, borderTopColor: C.linea, backgroundColor: C.fondo, paddingBottom: Math.max(insets.bottom, 10), paddingTop: 6 }}>

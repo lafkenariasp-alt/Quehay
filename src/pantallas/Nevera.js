@@ -7,7 +7,7 @@ import { C, CATEGORIAS_ING } from '../theme';
 import { Boton, Casilla, Encabezado, Grilla, Seccion, Vacio, Tarjeta, s } from '../ui';
 import SelectorIngredientes from '../SelectorIngredientes';
 
-export default function Nevera() {
+export default function Nevera({ activa }) {
   const { uid, perfil, recargarPerfil, nav } = useApp();
   const [items, setItems] = useState([]);
   const [cargando, setCargando] = useState(true);
@@ -24,7 +24,7 @@ export default function Nevera() {
     setCargando(false);
   }, [uid]);
 
-  useEffect(() => { cargar(); }, [cargar]);
+  useEffect(() => { if (activa) cargar(); }, [activa, cargar]); // recarga al volver a la pestaña
 
   async function agregar(lista) {
     setSelector(false);
