@@ -254,7 +254,7 @@ function VentanaCocine({ visible, receta, usados, onCerrar, onListo }) {
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onCerrar}>
-      <ScrollView style={{ flex: 1, backgroundColor: C.fondo }} contentContainerStyle={{ padding: 20, gap: 18 }} keyboardShouldPersistTaps="handled">
+      <ScrollView style={{ flex: 1, backgroundColor: C.fondo }} contentContainerStyle={{ padding: 20, gap: 18 }} keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive" automaticallyAdjustKeyboardInsets>
         <View style={s.filaEntre}>
           <Text style={s.seccion}>¿Cómo te quedó?</Text>
           <Pressable onPress={onCerrar} hitSlop={10} accessibilityLabel="Cerrar">

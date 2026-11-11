@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { View, Text, Pressable } from 'react-native';
+import { View, Text, Pressable, Keyboard, Platform } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -30,6 +30,13 @@ function Contenido() {
   const [pestana, setPestana] = useState('nevera');
   const [pila, setPila] = useState([]); // pantallas encima de las pestañas
   const [visitadas, setVisitadas] = useState({ nevera: true }); // pestañas que quedan vivas (no pierden lo escrito)
+  const [teclado, setTeclado] = useState(false); // con el teclado abierto escondemos las pestañas
+
+  useEffect(() => {
+    const mostrar = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow', () => setTeclado(true));
+    const ocultar = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide', () => setTeclado(false));
+    return () => { mostrar.remove(); ocultar.remove(); };
+  }, []);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSesion(data.session));
@@ -84,7 +91,7 @@ function Contenido() {
           })}
           {Encima ? <Encima key={tope.key} {...tope.params} /> : null}
         </View>
-        {!Encima ? (
+        {!Encima && !teclado ? (
           <View style={{ flexDirection: 'row', borderTopWidth: 1, borderTopColor: C.linea, backgroundColor: C.fondo, paddingBottom: Math.max(insets.bottom, 10), paddingTop: 6 }}>
             {PESTANAS.map((p) => {
               const activa = p.id === pestana;

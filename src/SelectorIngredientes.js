@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Modal, View, Text, TextInput, Pressable, FlatList, ScrollView } from 'react-native';
+import { Modal, View, Text, TextInput, Pressable, FlatList, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from './supabase';
 import { C, CATEGORIAS_ING } from './theme';
@@ -72,7 +72,7 @@ export default function SelectorIngredientes({ visible, titulo = 'Agregar ingred
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onCerrar}>
-      <View style={{ flex: 1, backgroundColor: C.fondo, padding: 20, gap: 12 }}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1, backgroundColor: C.fondo, padding: 20, gap: 12 }}>
         <View style={s.filaEntre}>
           <Text style={s.seccion}>{titulo}</Text>
           <Pressable onPress={onCerrar} hitSlop={10} accessibilityLabel="Cerrar">
@@ -130,6 +130,7 @@ export default function SelectorIngredientes({ visible, titulo = 'Agregar ingred
           data={resultados}
           keyExtractor={(i) => String(i.id)}
           keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
           style={{ flex: 1 }}
           ListEmptyComponent={
             <Text style={[s.sub, { textAlign: 'center', marginTop: 24 }]}>
@@ -151,7 +152,7 @@ export default function SelectorIngredientes({ visible, titulo = 'Agregar ingred
         />
 
         <Boton titulo={ya.length ? `Listo (${ya.length})` : 'Listo'} icono="checkmark" onPress={onCerrar} />
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

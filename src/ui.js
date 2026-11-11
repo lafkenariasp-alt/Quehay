@@ -7,7 +7,12 @@ export function Pantalla({ children, scroll = true, pie = null }) {
   return (
     <View style={{ flex: 1, backgroundColor: C.fondo }}>
       {scroll ? (
-        <ScrollView contentContainerStyle={s.contenido} keyboardShouldPersistTaps="handled">
+        <ScrollView
+          contentContainerStyle={s.contenido}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="interactive"
+          automaticallyAdjustKeyboardInsets // iPhone: desplaza para que el teclado no tape el campo que escribes
+        >
           {children}
         </ScrollView>
       ) : (

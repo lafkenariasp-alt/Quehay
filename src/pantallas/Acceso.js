@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, TextInput, Alert } from 'react-native';
 import { supabase } from '../supabase';
 import { C } from '../theme';
 import { Pantalla, Boton, s } from '../ui';
@@ -41,8 +41,7 @@ export default function Acceso() {
   }
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <Pantalla>
+    <Pantalla>
         <View style={{ gap: 6, marginTop: 40 }}>
           <Text style={{ fontSize: 40, fontWeight: '800', color: C.tomate }}>Qué Hay</Text>
           <Text style={{ fontSize: 18, fontWeight: '600', color: C.texto }}>
@@ -79,8 +78,7 @@ export default function Acceso() {
             onPress={() => setModo(modo === 'registro' ? 'entrar' : 'registro')}
           />
         </View>
-      </Pantalla>
-    </KeyboardAvoidingView>
+    </Pantalla>
   );
 }
 

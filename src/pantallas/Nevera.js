@@ -69,6 +69,8 @@ export default function Nevera({ activa }) {
     <View style={{ flex: 1 }}>
       <ScrollView
         contentContainerStyle={s.contenido}
+        keyboardDismissMode="interactive"
+        automaticallyAdjustKeyboardInsets
         refreshControl={<RefreshControl refreshing={false} onRefresh={cargar} tintColor={C.tomate} />}
       >
         <Encabezado
