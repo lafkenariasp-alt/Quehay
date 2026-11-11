@@ -30,3 +30,23 @@ App de recetas: cocina con lo que tienes en la nevera, comparte recetas y sube d
 - **XP:** publicar receta 50 · recibir "así me quedó" 30 · subir "así me quedó" 20 · recibir 5 estrellas 10 · responder como creador 10 · recibir like 2 (tope 200/día) · dar like 1 (tope 20/día).
 - **Niveles:** para llegar al nivel N se necesitan 25 × N × (N − 1) XP. Títulos: Pinche de cocina (1), Chefcito (5), Cocinero de barrio (10), Chef de partida (20), Sous chef (35), Chef ejecutivo (50), Chef Michelin (75).
 - **Seguridad:** todos leen; cada uno escribe solo lo suyo. Nadie puede editarse el XP a mano, y solo el creador responde los "así me quedó".
+
+## App (`App.js` y `src/`)
+
+| Pantalla | Qué hace |
+| --- | --- |
+| Acceso | Crear cuenta y entrar con correo y contraseña |
+| Nevera | Inventario por categoría, agregar desde el catálogo, control de vencimiento opcional, recetas para aprovechar lo que vence |
+| Buscar | Elegir ingredientes (o usar toda la nevera), despensa básica, máximo de faltantes, filtros |
+| Resultados | Recetas agrupadas: puedes cocinarla ya · falta 1 · faltan 2 · 3 o 4 |
+| Receta | Casillas verdes (tienes) y ámbar (falta), pasos, me gusta, nota con estrellas, "Lo cociné" descuenta de la nevera |
+| Publicar | Formulario de receta con ingredientes del catálogo (+50 XP) |
+| Perfil | Nivel, título, barra de XP, logros por rareza y mis recetas |
+
+### Probar en el iPhone (sin computador)
+
+1. Instala **Expo Go** en el iPhone e inicia sesión con tu cuenta de Expo.
+2. En el iPad abre **snack.expo.dev** → menú → **Import git repository** → pega `https://github.com/lafkenariasp-alt/quehay`.
+3. Escanea el código QR con la cámara del iPhone: se abre en Expo Go.
+
+Pendiente para la próxima versión: subir fotos (recetas y "así me quedó"), comentarios, feed, rankings, texto libre con IA.

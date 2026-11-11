@@ -1,0 +1,12 @@
+{
+  "expo": {
+    "name": "Qué Hay",
+    "slug": "quehay",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "backgroundColor": "#FBF7F0",
+    "ios": { "supportsTablet": true, "bundleIdentifier": "cl.quehay.app" },
+    "android": { "package": "cl.quehay.app" }
+  }
+}
