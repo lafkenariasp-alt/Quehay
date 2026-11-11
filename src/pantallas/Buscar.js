@@ -83,8 +83,9 @@ export default function Buscar() {
       <SelectorIngredientes
         visible={selector}
         titulo="¿Qué tienes?"
-        ya={elegidos.map((e) => e.id)}
-        onListo={(lista) => { setSelector(false); setElegidos((l) => [...l, ...lista.map((i) => ({ id: i.id, nombre: i.nombre }))]); }}
+        ya={elegidos}
+        onAgregar={(i) => setElegidos((l) => (l.some((e) => e.id === i.id) ? l : [...l, { id: i.id, nombre: i.nombre }]))}
+        onQuitar={(i) => quitar(i.id)}
         onCerrar={() => setSelector(false)}
       />
     </View>

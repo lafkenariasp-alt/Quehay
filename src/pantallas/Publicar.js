@@ -149,8 +149,9 @@ export default function Publicar() {
       <SelectorIngredientes
         visible={selector}
         titulo="Ingredientes de la receta"
-        ya={f.ingredientes.map((i) => i.id)}
-        onListo={(lista) => { setSelector(false); cambiar('ingredientes', [...f.ingredientes, ...lista.map((i) => ({ id: i.id, nombre: i.nombre, cantidad: '', opcional: false }))]); }}
+        ya={f.ingredientes}
+        onAgregar={(i) => setF((x) => (x.ingredientes.some((e) => e.id === i.id) ? x : { ...x, ingredientes: [...x.ingredientes, { id: i.id, nombre: i.nombre, cantidad: '', opcional: false }] }))}
+        onQuitar={(i) => setF((x) => ({ ...x, ingredientes: x.ingredientes.filter((e) => e.id !== i.id) }))}
         onCerrar={() => setSelector(false)}
       />
     </View>

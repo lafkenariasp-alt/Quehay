@@ -26,12 +26,19 @@ export default function Nevera({ activa }) {
 
   useEffect(() => { if (activa) cargar(); }, [activa, cargar]); // recarga al volver a la pestaña
 
-  async function agregar(lista) {
-    setSelector(false);
-    const filas = lista.map((i) => ({ usuario_id: uid, ingrediente_id: i.id }));
-    const { error } = await supabase.from('nevera').upsert(filas, { onConflict: 'usuario_id,ingrediente_id', ignoreDuplicates: true });
-    if (error) Alert.alert('Error', error.message);
-    cargar();
+  // Se agrega al tiro al tocarlo en el selector (se muestra antes de que responda el servidor)
+  async function agregar(ing) {
+    setItems((l) => [...l, { ingrediente_id: ing.id, vence_el: null, ingredientes: { nombre: ing.nombre, categoria: ing.categoria } }]);
+    const { error } = await supabase.from('nevera').upsert(
+      { usuario_id: uid, ingrediente_id: ing.id },
+      { onConflict: 'usuario_id,ingrediente_id', ignoreDuplicates: true },
+    );
+    if (error) { Alert.alert('Error', error.message); cargar(); }
+  }
+
+  async function quitarRapido(ing) {
+    setItems((l) => l.filter((i) => i.ingrediente_id !== ing.id));
+    await supabase.from('nevera').delete().eq('usuario_id', uid).eq('ingrediente_id', ing.id);
   }
 
   function quitar(item) {
@@ -138,9 +145,10 @@ export default function Nevera({ activa }) {
       <SelectorIngredientes
         visible={selector}
         titulo="Agregar a mi nevera"
-        ya={items.map((i) => i.ingrediente_id)}
-        onListo={agregar}
-        onCerrar={() => setSelector(false)}
+        ya={items.map((i) => ({ id: i.ingrediente_id, nombre: i.ingredientes.nombre }))}
+        onAgregar={agregar}
+        onQuitar={quitarRapido}
+        onCerrar={() => { setSelector(false); cargar(); }}
       />
     </View>
   );
