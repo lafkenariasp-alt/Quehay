@@ -46,10 +46,10 @@ export default function Buscar() {
 
         <Seccion titulo="Tengo" derecha={<Text style={s.sub}>{elegidos.length} ingredientes</Text>}>
           <Grilla>
-            {elegidos.map((e) => (
+            <Casilla estado="vacia" onPress={() => setSelector(true)} />
+            {[...elegidos].reverse().map((e) => (
               <Casilla key={e.id} nombre={e.nombre} estado="tengo" detalle="toca para quitar" onPress={() => quitar(e.id)} />
             ))}
-            <Casilla estado="vacia" onPress={() => setSelector(true)} />
           </Grilla>
           <Boton tipo="neutro" icono="file-tray-stacked-outline" titulo="Usar todo lo de mi nevera" onPress={usarNevera} />
         </Seccion>

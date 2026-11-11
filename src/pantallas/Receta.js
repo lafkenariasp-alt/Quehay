@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../supabase';
 import { useApp, tieneIngrediente } from '../contexto';
 import { C } from '../theme';
-import { Pantalla, Encabezado, Seccion, Grilla, Casilla, Boton, Estrellas, Tarjeta, Cargando, s } from '../ui';
+import { Pantalla, Encabezado, Seccion, Grilla, Casilla, Boton, Estrellas, Tarjeta, Cargando, Avatar, s } from '../ui';
 import { elegirFoto, subirFoto } from '../fotos';
 
 export default function Receta({ id, tengo = null, basicos = true }) {
@@ -22,7 +22,7 @@ export default function Receta({ id, tengo = null, basicos = true }) {
   const cargar = useCallback(async () => {
     const [rec, nev, nota, like, asi] = await Promise.all([
       supabase.from('recetas')
-        .select('*, perfiles!recetas_autor_id_fkey(nombre, xp), receta_ingredientes(cantidad, opcional, ingrediente_id, ingredientes(id, nombre, padre_id, es_basico))')
+        .select('*, perfiles!recetas_autor_id_fkey(nombre, xp, avatar_url), receta_ingredientes(cantidad, opcional, ingrediente_id, ingredientes(id, nombre, padre_id, es_basico))')
         .eq('id', id).single(),
       supabase.from('nevera').select('ingrediente_id').eq('usuario_id', uid),
       supabase.from('notas').select('estrellas').eq('usuario_id', uid).eq('receta_id', id).maybeSingle(),
@@ -114,14 +114,14 @@ export default function Receta({ id, tengo = null, basicos = true }) {
           <Text style={s.sub}>{r.num_likes} me gusta</Text>
         </View>
 
-        <Tarjeta style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: C.superficie, borderWidth: 0 }}>
-          <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: C.tomate, alignItems: 'center', justifyContent: 'center' }}>
-            <Text style={{ color: C.blanco, fontWeight: '800' }}>{(r.perfiles?.nombre || '?').slice(0, 2).toUpperCase()}</Text>
-          </View>
+        <Tarjeta onPress={esMia ? undefined : () => nav.abrir('perfilPublico', { id: r.autor_id })}
+          style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: C.superficie, borderWidth: 0 }}>
+          <Avatar url={r.perfiles?.avatar_url} nombre={r.perfiles?.nombre} tam={40} />
           <View style={{ flex: 1 }}>
             <Text style={s.etiqueta}>{r.perfiles?.nombre}</Text>
-            <Text style={[s.sub, { color: C.ambarTexto }]}>{esMia ? 'Tu receta' : 'Creador'}</Text>
+            <Text style={[s.sub, { color: C.ambarTexto }]}>{esMia ? 'Tu receta' : 'Creador · ver perfil'}</Text>
           </View>
+          {esMia ? null : <Ionicons name="chevron-forward" size={20} color={C.suave} />}
         </Tarjeta>
 
         {r.descripcion ? <Text style={{ fontSize: 15, color: C.texto, lineHeight: 21 }}>{r.descripcion}</Text> : null}

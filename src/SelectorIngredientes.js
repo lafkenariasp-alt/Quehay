@@ -1,9 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Modal, View, Text, TextInput, Pressable, FlatList, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
+import { Modal, View, Text, TextInput, Pressable, FlatList, ScrollView, KeyboardAvoidingView, Platform, Keyboard } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from './supabase';
 import { C, CATEGORIAS_ING } from './theme';
-import { s, Chip, Boton } from './ui';
+import { s, Chip } from './ui';
 
 // Ventana para agregar ingredientes del catálogo.
 // - Tocar un resultado lo agrega al tiro (y limpia el buscador para el siguiente).
@@ -17,6 +17,7 @@ export default function SelectorIngredientes({ visible, titulo = 'Agregar ingred
   const [aviso, setAviso] = useState('');
   const input = useRef(null);
   const idsYa = new Set(ya.map((i) => i.id));
+  const cerrar = () => { Keyboard.dismiss(); onCerrar(); };
 
   useEffect(() => {
     if (!visible) { setQ(''); setCategoria(null); setResultados([]); setAviso(''); }
@@ -54,7 +55,7 @@ export default function SelectorIngredientes({ visible, titulo = 'Agregar ingred
   // Intro: agrega cada término separado por coma (el primer resultado de cada uno)
   async function agregarVarios() {
     const terminos = q.split(',').map((t) => t.trim()).filter((t) => t.length >= 2);
-    if (!terminos.length) return;
+    if (!terminos.length) { cerrar(); return; } // Intro con el campo vacío = terminé
     const agregados = [];
     const noEncontrados = [];
     for (const t of terminos) {
@@ -71,12 +72,14 @@ export default function SelectorIngredientes({ visible, titulo = 'Agregar ingred
   }
 
   return (
-    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onCerrar}>
+    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={cerrar}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1, backgroundColor: C.fondo, padding: 20, gap: 12 }}>
         <View style={s.filaEntre}>
           <Text style={s.seccion}>{titulo}</Text>
-          <Pressable onPress={onCerrar} hitSlop={10} accessibilityLabel="Cerrar">
-            <Ionicons name="close" size={26} color={C.texto} />
+          <Pressable onPress={cerrar} hitSlop={10}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: 40, paddingHorizontal: 16, borderRadius: 999, backgroundColor: C.tomate }}>
+            <Ionicons name="checkmark" size={18} color={C.blanco} />
+            <Text style={{ color: C.blanco, fontWeight: '800', fontSize: 15 }}>Listo{ya.length ? ` (${ya.length})` : ''}</Text>
           </Pressable>
         </View>
 
@@ -84,7 +87,7 @@ export default function SelectorIngredientes({ visible, titulo = 'Agregar ingred
           <View style={{ gap: 6 }}>
             <Text style={s.sub}>{ya.length} agregados · toca uno para quitarlo</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
-              {ya.map((i) => (
+              {[...ya].reverse().map((i) => (
                 <Pressable key={i.id} onPress={() => onQuitar && onQuitar(i)}
                   style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 12, minHeight: 36, borderRadius: 999, backgroundColor: C.verdeTinte, borderWidth: 1, borderColor: C.verde }}>
                   <Text style={{ fontSize: 13, fontWeight: '800', color: C.verdeOscuro }}>{i.nombre}</Text>
@@ -117,7 +120,7 @@ export default function SelectorIngredientes({ visible, titulo = 'Agregar ingred
           ) : null}
         </View>
         <Text style={[s.sub, aviso ? { color: C.verde } : null]}>
-          {aviso || 'Toca un resultado para agregarlo, o escribe varios separados por coma y presiona Intro.'}
+          {aviso || 'Toca para agregar, o escribe varios con coma y presiona Intro. Intro con el campo vacío cierra.'}
         </Text>
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }} style={{ flexGrow: 0 }}>
@@ -151,7 +154,6 @@ export default function SelectorIngredientes({ visible, titulo = 'Agregar ingred
           }}
         />
 
-        <Boton titulo={ya.length ? `Listo (${ya.length})` : 'Listo'} icono="checkmark" onPress={onCerrar} />
       </KeyboardAvoidingView>
     </Modal>
   );

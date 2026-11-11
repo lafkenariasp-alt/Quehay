@@ -14,6 +14,8 @@ import Resultados from './src/pantallas/Resultados';
 import Receta from './src/pantallas/Receta';
 import Publicar from './src/pantallas/Publicar';
 import Perfil from './src/pantallas/Perfil';
+import Usuarios from './src/pantallas/Usuarios';
+import PerfilPublico from './src/pantallas/PerfilPublico';
 
 const PESTANAS = [
   { id: 'nevera', nombre: 'Nevera', icono: 'file-tray-stacked-outline', comp: Nevera },
@@ -21,7 +23,7 @@ const PESTANAS = [
   { id: 'publicar', nombre: 'Publicar', icono: 'add-circle-outline', comp: Publicar },
   { id: 'perfil', nombre: 'Perfil', icono: 'person-outline', comp: Perfil },
 ];
-const PANTALLAS = { resultados: Resultados, receta: Receta };
+const PANTALLAS = { resultados: Resultados, receta: Receta, usuarios: Usuarios, perfilPublico: PerfilPublico };
 
 function Contenido() {
   const insets = useSafeAreaInsets();
@@ -30,10 +32,11 @@ function Contenido() {
   const [pestana, setPestana] = useState('nevera');
   const [pila, setPila] = useState([]); // pantallas encima de las pestañas
   const [visitadas, setVisitadas] = useState({ nevera: true }); // pestañas que quedan vivas (no pierden lo escrito)
-  const [teclado, setTeclado] = useState(false); // con el teclado abierto escondemos las pestañas
+  const [teclado, setTeclado] = useState(false);
+  const [altoTeclado, setAltoTeclado] = useState(0); // con el teclado abierto escondemos las pestañas
 
   useEffect(() => {
-    const mostrar = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow', () => setTeclado(true));
+    const mostrar = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow', (e) => { setTeclado(true); setAltoTeclado(e.endCoordinates?.height || 0); });
     const ocultar = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide', () => setTeclado(false));
     return () => { mostrar.remove(); ocultar.remove(); };
   }, []);
@@ -91,6 +94,13 @@ function Contenido() {
           })}
           {Encima ? <Encima key={tope.key} {...tope.params} /> : null}
         </View>
+        {teclado ? (
+          <Pressable onPress={() => Keyboard.dismiss()} accessibilityLabel="Cerrar teclado"
+            style={{ position: 'absolute', right: 12, bottom: (Platform.OS === 'ios' ? altoTeclado : 0) + 8, flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: 40, paddingHorizontal: 14, borderRadius: 999, backgroundColor: C.texto }}>
+            <Ionicons name="chevron-down" size={18} color={C.blanco} />
+            <Text style={{ color: C.blanco, fontWeight: '800', fontSize: 13 }}>Cerrar teclado</Text>
+          </Pressable>
+        ) : null}
         {!Encima && !teclado ? (
           <View style={{ flexDirection: 'row', borderTopWidth: 1, borderTopColor: C.linea, backgroundColor: C.fondo, paddingBottom: Math.max(insets.bottom, 10), paddingTop: 6 }}>
             {PESTANAS.map((p) => {

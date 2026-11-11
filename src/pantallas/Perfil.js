@@ -1,28 +1,34 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, Alert, Image } from 'react-native';
+import { View, Text, Alert, Image, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../supabase';
 import { useApp } from '../contexto';
 import { C, RAREZA, xpParaNivel } from '../theme';
-import { Pantalla, Seccion, Boton, Tarjeta, Cargando, Chip, Estrellas, s } from '../ui';
+import { Pantalla, Seccion, Boton, Tarjeta, Cargando, Chip, Estrellas, Avatar, s } from '../ui';
+import { desdeCamara, desdeGaleria, subirFoto } from '../fotos';
 
 export default function Perfil({ activa }) {
   const { uid, perfil, recargarPerfil, nav } = useApp();
   const [logros, setLogros] = useState([]);
   const [mios, setMios] = useState(new Set());
   const [recetas, setRecetas] = useState([]);
+  const [conteo, setConteo] = useState({ seguidores: 0, siguiendo: 0 });
   const [orden, setOrden] = useState('nuevas'); // nuevas | antiguas | nota
 
   const cargar = useCallback(async () => {
     recargarPerfil();
-    const [l, lu, rec] = await Promise.all([
+    const cuenta = (col) => supabase.from('seguidores').select('*', { count: 'exact', head: true }).eq(col, uid);
+    const [l, lu, rec, c1, c2] = await Promise.all([
+      
       supabase.from('logros').select('*').eq('clase', 'base'),
       supabase.from('logros_usuario').select('codigo').eq('usuario_id', uid),
       supabase.from('recetas').select('id, titulo, foto_url, num_likes, num_cocinadas, nota_promedio, num_notas, creado_en').eq('autor_id', uid),
+      cuenta('seguido_id'), cuenta('seguidor_id'),
     ]);
     setLogros(l.data || []);
     setMios(new Set((lu.data || []).map((x) => x.codigo)));
     setRecetas(rec.data || []);
+    setConteo({ seguidores: c1.count || 0, siguiendo: c2.count || 0 });
   }, [uid]);
 
   useEffect(() => { if (activa) cargar(); }, [activa, cargar]); // recarga al volver a la pestaña
@@ -32,7 +38,30 @@ export default function Perfil({ activa }) {
   const base = xpParaNivel(perfil.nivel);
   const sig = xpParaNivel(perfil.nivel + 1);
   const avance = Math.min(1, (perfil.xp - base) / (sig - base));
-  const iniciales = perfil.nombre.split(' ').map((p) => p[0]).join('').slice(0, 2).toUpperCase();
+
+  function cambiarFoto() {
+    const guardar = async (foto) => {
+      if (!foto) return;
+      try {
+        const url = await subirFoto(uid, foto, 'avatar');
+        const { error } = await supabase.from('perfiles').update({ avatar_url: url }).eq('id', uid);
+        if (error) throw error;
+        recargarPerfil();
+      } catch (e) { Alert.alert('No se pudo cambiar la foto', e.message); }
+    };
+    const opciones = [
+      { text: 'Tomar foto', onPress: () => desdeCamara(true).then(guardar) },
+      { text: 'Elegir de la galería', onPress: () => desdeGaleria(true).then(guardar) },
+    ];
+    if (perfil.avatar_url) {
+      opciones.push({ text: 'Eliminar foto', style: 'destructive', onPress: async () => {
+        const { error } = await supabase.from('perfiles').update({ avatar_url: null }).eq('id', uid);
+        if (error) Alert.alert('Error', error.message); else recargarPerfil();
+      } });
+    }
+    opciones.push({ text: 'Cancelar', style: 'cancel' });
+    Alert.alert('Foto de perfil', perfil.avatar_url ? 'Cámbiala o elimínala' : 'Agrega tu foto', opciones);
+  }
   const rarezas = ['Común', 'Poco común', 'Raro', 'Épico', 'Legendario'];
   const ordenados = [...logros].sort((a, b) => (mios.has(b.codigo) - mios.has(a.codigo)) || (rarezas.indexOf(a.rareza) - rarezas.indexOf(b.rareza)));
   const fecha = (r) => new Date(r.creado_en).getTime();
@@ -47,21 +76,25 @@ export default function Perfil({ activa }) {
   return (
     <Pantalla>
       <View style={[s.fila, { gap: 16 }]}>
-        <View>
-          <View style={{ width: 84, height: 84, borderRadius: 42, borderWidth: 3, borderColor: C.dorado, backgroundColor: C.superficie, alignItems: 'center', justifyContent: 'center' }}>
-            <Text style={{ fontSize: 28, fontWeight: '800', color: C.tomateOscuro }}>{iniciales}</Text>
+        <Pressable onPress={cambiarFoto} accessibilityLabel="Cambiar foto de perfil">
+          <Avatar url={perfil.avatar_url} nombre={perfil.nombre} tam={84} borde={C.dorado} />
+          <View style={{ position: 'absolute', left: -4, bottom: -4, width: 30, height: 30, borderRadius: 15, backgroundColor: C.tomate, borderWidth: 3, borderColor: C.fondo, alignItems: 'center', justifyContent: 'center' }}>
+            <Ionicons name="camera" size={14} color={C.blanco} />
           </View>
           <View style={{ position: 'absolute', right: -4, bottom: -4, minWidth: 32, height: 32, borderRadius: 10, backgroundColor: C.dorado, borderWidth: 3, borderColor: C.fondo, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 }}>
             <Text style={{ fontWeight: '800', color: C.texto }}>{perfil.nivel}</Text>
           </View>
-        </View>
+        </Pressable>
         <View style={{ flex: 1, gap: 4 }}>
           <Text style={s.titulo}>{perfil.nombre}</Text>
           <View style={{ alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999, backgroundColor: C.doradoTinte }}>
             <Text style={{ fontSize: 13, fontWeight: '800', color: C.ambarOscuro }}>{perfil.titulo}</Text>
           </View>
+          <Text style={s.sub}>{conteo.seguidores} seguidores · {conteo.siguiendo} siguiendo</Text>
         </View>
       </View>
+
+      <Boton tipo="secundario" icono="people-outline" titulo="Buscar cocineros y amigos" onPress={() => nav.abrir('usuarios')} />
 
       <Tarjeta>
         <View style={s.filaEntre}>

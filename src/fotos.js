@@ -3,25 +3,25 @@ import * as ImagePicker from 'expo-image-picker';
 import { decode } from 'base64-arraybuffer';
 import { supabase } from './supabase';
 
-const OPCIONES = { mediaTypes: ['images'], allowsEditing: true, aspect: [4, 3], quality: 0.6, base64: true };
+const opciones = (cuadrada) => ({ mediaTypes: ['images'], allowsEditing: true, aspect: cuadrada ? [1, 1] : [4, 3], quality: 0.6, base64: true });
 
-async function desdeCamara() {
+export async function desdeCamara(cuadrada = false) {
   const permiso = await ImagePicker.requestCameraPermissionsAsync();
   if (!permiso.granted) {
     Alert.alert('Sin permiso', 'Activa el acceso a la cámara en Ajustes para tomar la foto.');
     return null;
   }
-  const r = await ImagePicker.launchCameraAsync(OPCIONES);
+  const r = await ImagePicker.launchCameraAsync(opciones(cuadrada));
   return r.canceled ? null : r.assets[0];
 }
 
-async function desdeGaleria() {
+export async function desdeGaleria(cuadrada = false) {
   const permiso = await ImagePicker.requestMediaLibraryPermissionsAsync();
   if (!permiso.granted) {
     Alert.alert('Sin permiso', 'Activa el acceso a tus fotos en Ajustes para elegir una.');
     return null;
   }
-  const r = await ImagePicker.launchImageLibraryAsync(OPCIONES);
+  const r = await ImagePicker.launchImageLibraryAsync(opciones(cuadrada));
   return r.canceled ? null : r.assets[0];
 }
 

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, Pressable, ActivityIndicator, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, Pressable, ActivityIndicator, StyleSheet, ScrollView, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { C } from './theme';
 
@@ -135,6 +135,18 @@ export function Estrellas({ valor = 0, tam = 14, onCambiar }) {
           <Ionicons name={n <= Math.round(valor) ? 'star' : 'star-outline'} size={tam} color={C.dorado} />
         </Pressable>
       ))}
+    </View>
+  );
+}
+
+export function Avatar({ url, nombre = '?', tam = 44, borde = C.linea }) {
+  const iniciales = nombre.split(' ').map((p) => p[0]).join('').slice(0, 2).toUpperCase();
+  const base = { width: tam, height: tam, borderRadius: tam / 2, borderWidth: tam > 60 ? 3 : 1, borderColor: borde, backgroundColor: C.superficie };
+  return url ? (
+    <Image source={{ uri: url }} style={base} />
+  ) : (
+    <View style={[base, { alignItems: 'center', justifyContent: 'center' }]}>
+      <Text style={{ fontSize: tam * 0.34, fontWeight: '800', color: C.tomateOscuro }}>{iniciales}</Text>
     </View>
   );
 }

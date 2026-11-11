@@ -18,7 +18,7 @@ export default function Nevera({ activa }) {
     const { data, error } = await supabase
       .from('nevera')
       .select('ingrediente_id, vence_el, ingredientes(nombre, categoria)')
-      .eq('usuario_id', uid);
+      .eq('usuario_id', uid).order('agregado_en');
     if (error) Alert.alert('Error', error.message);
     setItems(data || []);
     setCargando(false);
