@@ -182,14 +182,27 @@ drop trigger if exists nevera_actividad on public.nevera;
 create trigger nevera_actividad after insert on public.nevera
   for each row execute function public.tg_nevera_actividad();
 
+-- ---------- Nick disponible (se consulta antes de crear la cuenta, también sin sesión) ----------
+create or replace function public.usuario_disponible(p_usuario text) returns boolean
+language sql stable security definer set search_path = public as $$
+  select lower(p_usuario) ~ '^[a-z0-9_.]{3,24}$'
+     and not exists (select 1 from perfiles where usuario = lower(p_usuario));
+$$;
+grant execute on function public.usuario_disponible(text) to anon, authenticated;
+
 -- ---------- Paquete de bienvenida al registrarse ----------
 create or replace function public.tg_nuevo_usuario() returns trigger
 language plpgsql security definer set search_path = public as $$
+declare
+  nick text := lower(trim(coalesce(new.raw_user_meta_data->>'usuario', '')));
 begin
+  if nick !~ '^[a-z0-9_.]{3,24}$' or exists (select 1 from perfiles where usuario = nick) then
+    nick := 'cocinero_' || substr(replace(new.id::text, '-', ''), 1, 8);
+  end if;
   insert into perfiles (id, usuario, nombre, accesorios, fundador)
   values (new.id,
-          'cocinero_' || substr(replace(new.id::text, '-', ''), 1, 8),
-          coalesce(nullif(trim(new.raw_user_meta_data->>'nombre'), ''), 'Cocinero'),
+          nick,
+          coalesce(nullif(trim(new.raw_user_meta_data->>'nombre'), ''), nick),
           '{delantal_bienvenida}',
           (select count(*) from perfiles) < 1000); -- los primeros 1.000 son fundadores
   perform dar_xp(new.id, 'bienvenida', 30, null);

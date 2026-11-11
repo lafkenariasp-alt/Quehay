@@ -18,6 +18,7 @@
     "expo-image-manipulator": "*",
     "expo-image-picker": "*",
     "expo-keep-awake": "*",
+    "expo-secure-store": "*",
     "expo-status-bar": "*",
     "react": "*",
     "react-native": "*",
