@@ -479,3 +479,25 @@ create policy "editar o responder" on public.asi_me_quedo for update using (
 create or replace view public.perfiles_publicos with (security_invoker = on) as
   select p.*, public.nivel_de(p.xp) as nivel, public.titulo_de(public.nivel_de(p.xp)) as titulo
   from public.perfiles p;
+
+-- =====================================================================
+-- PERMISOS EXPLÍCITOS para la API (el proyecto se crea con
+-- "Automatically expose new tables" desactivado)
+-- =====================================================================
+grant usage on schema public to anon, authenticated;
+grant select on all tables in schema public to anon, authenticated;
+grant insert, update, delete on
+  public.perfiles, public.recetas, public.receta_ingredientes, public.nevera,
+  public.notas, public.likes, public.guardadas, public.comentarios,
+  public.asi_me_quedo, public.reportes
+  to authenticated;
+grant usage on all sequences in schema public to authenticated;
+grant execute on function
+  public.buscar_recetas(int[], int, boolean, text, int, int),
+  public.buscar_ingrediente(text),
+  public.por_vencer(int),
+  public.nivel_de(int),
+  public.titulo_de(int)
+  to anon, authenticated;
+-- Funciones internas de XP: nadie las llama directo desde la app
+revoke execute on function public.dar_xp(uuid, text, int, text, int), public.otorgar_logro(uuid, text) from public, anon, authenticated;
