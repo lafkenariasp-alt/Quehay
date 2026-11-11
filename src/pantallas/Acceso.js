@@ -77,8 +77,11 @@ export default function Acceso({ motivo }) {
           <TextInput style={s.input} placeholder="Tu nombre" placeholderTextColor={C.suave} value={nombre} onChangeText={setNombre} />
         ) : null}
         <TextInput style={s.input} placeholder="Correo" placeholderTextColor={C.suave} autoCapitalize="none"
-          keyboardType="email-address" autoComplete="email" value={correo} onChangeText={setCorreo} />
-        <TextInput style={s.input} placeholder="Contraseña (mínimo 6)" placeholderTextColor={C.suave} secureTextEntry value={clave} onChangeText={setClave} />
+          keyboardType="email-address" autoComplete="email" textContentType="username" autoCorrect={false} value={correo} onChangeText={setCorreo} />
+        <TextInput style={s.input} placeholder="Contraseña (mínimo 6)" placeholderTextColor={C.suave} secureTextEntry
+          textContentType={modo === 'registro' ? 'newPassword' : 'password'}
+          autoComplete={modo === 'registro' ? 'new-password' : 'current-password'}
+          passwordRules="minlength: 6;" value={clave} onChangeText={setClave} />
         <Boton titulo={modo === 'registro' ? 'Crear cuenta y abrir regalo' : 'Entrar'} icono={modo === 'registro' ? 'gift-outline' : 'log-in-outline'} onPress={enviar} cargando={cargando} />
         {modo === 'entrar' ? (
           <Pressable onPress={recuperar} style={{ minHeight: 44, alignItems: 'center', justifyContent: 'center' }}>
