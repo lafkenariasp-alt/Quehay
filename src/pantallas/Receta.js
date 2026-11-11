@@ -18,7 +18,7 @@ export default function Receta({ id, tengo = null, basicos = true }) {
   const cargar = useCallback(async () => {
     const [rec, nev, nota, like, asi] = await Promise.all([
       supabase.from('recetas')
-        .select('*, perfiles(nombre, xp), receta_ingredientes(cantidad, opcional, ingrediente_id, ingredientes(id, nombre, padre_id, es_basico))')
+        .select('*, perfiles!recetas_autor_id_fkey(nombre, xp), receta_ingredientes(cantidad, opcional, ingrediente_id, ingredientes(id, nombre, padre_id, es_basico))')
         .eq('id', id).single(),
       supabase.from('nevera').select('ingrediente_id').eq('usuario_id', uid),
       supabase.from('notas').select('estrellas').eq('usuario_id', uid).eq('receta_id', id).maybeSingle(),
