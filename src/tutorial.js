@@ -15,28 +15,44 @@ import { GUION, LINEA_REGALO, CAPITULOS } from './guion';
 import { registrar } from './analitica';
 import { efecto } from './sonido';
 
-// ---------- Estado del tutorial (guardado en el teléfono) ----------
-const CLAVE = 'tutorial_v2';
+// ---------- Estado del tutorial (guardado en el teléfono, uno por cuenta) ----------
+export const CLAVE_TUTORIAL_INVITADO = 'tutorial_v2';
+export const claveTutorial = (uid) => (uid ? `tutorial_v2_${uid}` : CLAVE_TUTORIAL_INVITADO);
 const INICIAL = { iniciado: false, linea: 0, cuenta: 0, completado: false, saltado: false, regaloPendiente: false, ofrecido: false };
 
-export function useTutorialEstado() {
+// heredar: ref que indica si una cuenta sin tutorial propio toma el que hizo como invitado
+// (solo la primera cuenta creada en el teléfono, para no regalarle el avance a otra persona)
+export function useTutorialEstado(uid = null, heredar = null) {
+  const clave = claveTutorial(uid);
   const [estado, setEstado] = useState(null);
+  const [cargada, setCargada] = useState(null); // clave a la que pertenece "estado"
+  const claveRef = useRef(clave);
+  const cargadaRef = useRef(null);
 
   useEffect(() => {
-    AsyncStorage.getItem(CLAVE).then((v) => {
+    claveRef.current = clave;
+    let vivo = true;
+    (async () => {
+      let v = await AsyncStorage.getItem(clave);
+      if (!v && uid && heredar?.current) {
+        const inv = await AsyncStorage.getItem(CLAVE_TUTORIAL_INVITADO);
+        if (inv && JSON.parse(inv).iniciado) { v = inv; await AsyncStorage.setItem(clave, inv); }
+      }
       let e = v ? { ...INICIAL, ...JSON.parse(v) } : INICIAL;
       // Si la app se cerró a mitad de la historia, la pausamos y Chefpu ofrecerá retomarla
       if (e.iniciado && !e.saltado && e.linea < GUION.length) {
         e = e.completado ? { ...e, linea: GUION.length, regaloPendiente: false } : { ...e, saltado: true, ofrecido: false };
       }
-      setEstado(e);
-    }).catch(() => setEstado(INICIAL));
-  }, []);
+      return e;
+    })().catch(() => INICIAL).then((e) => { if (vivo) { cargadaRef.current = clave; setEstado(e); setCargada(clave); } });
+    return () => { vivo = false; };
+  }, [clave]);
 
   const cambiar = useCallback((fn) => {
     setEstado((e) => {
+      if (cargadaRef.current !== claveRef.current) return e; // aún leyendo el de otra cuenta
       const n = fn(e || INICIAL);
-      if (n !== e) AsyncStorage.setItem(CLAVE, JSON.stringify(n)).catch(() => {});
+      if (n !== e) AsyncStorage.setItem(claveRef.current, JSON.stringify(n)).catch(() => {});
       return n;
     });
   }, []);
@@ -73,9 +89,10 @@ export function useTutorialEstado() {
     return cuenta >= (esp.veces || 1) ? avanzarDe(e) : { ...e, cuenta };
   }), [cambiar]);
 
-  const activo = !!estado && estado.iniciado && !estado.saltado && estado.linea < GUION.length;
+  const listo = cargada === clave;
+  const activo = listo && !!estado && estado.iniciado && !estado.saltado && estado.linea < GUION.length;
   return {
-    estado, activo, linea: activo ? GUION[estado.linea] : null, indice: estado?.linea ?? 0,
+    estado: listo ? estado : null, listo, activo, linea: activo ? GUION[estado.linea] : null, indice: estado?.linea ?? 0,
     iniciar, reiniciar, avanzar, saltar, evento, marcarOfrecido,
   };
 }

@@ -39,6 +39,9 @@ function TutorialRepetido() {
 }
 const PANTALLAS = { amigos: Usuarios, tutorial: TutorialRepetido, resultados: Resultados, receta: Receta, usuarios: Usuarios, perfilPublico: PerfilPublico, acceso: Acceso };
 const CLAVE_BIENVENIDA = 'bienvenida_v1';
+const CLAVE_TUVO_CUENTA = 'tuvo_cuenta_v1'; // en este teléfono ya se entró con una cuenta
+const MINUTOS_CUENTA_NUEVA = 15;
+const esCuentaNueva = (user) => !!user?.created_at && Date.now() - Date.parse(user.created_at) < MINUTOS_CUENTA_NUEVA * 60000;
 
 // Navegación nativa de iOS: transición de empuje y volver deslizando desde el borde izquierdo
 const Pila = createNativeStackNavigator();
@@ -105,8 +108,12 @@ function Contenido() {
   const [sesion, setSesion] = useState(undefined);
   const [perfil, setPerfil] = useState(null);
   const [bienvenidaVista, setBienvenidaVista] = useState(null); // null = leyendo
+  const [tuvoCuenta, setTuvoCuenta] = useState(null); // null = leyendo
   const [pestana, setPestana] = useState('buscar');
-  const tutorial = useTutorialEstado();
+  const heredarTutorial = useRef(false);
+  const cuentaNueva = useRef(null); // uid de la cuenta recién creada: su tutorial parte solo
+  const yaCargo = useRef(false);
+  const tutorial = useTutorialEstado(sesion?.user?.id || null, heredarTutorial);
   const pendiente = useRef(null); // pantalla a abrir apenas la navegación esté lista
   const [visitadas, setVisitadas] = useState({ buscar: true }); // pestañas que quedan vivas (no pierden lo escrito)
   const [teclado, setTeclado] = useState(false);
@@ -134,11 +141,22 @@ function Contenido() {
 
   useEffect(() => {
     AsyncStorage.getItem(CLAVE_BIENVENIDA).then((v) => setBienvenidaVista(!!v)).catch(() => setBienvenidaVista(true));
-    supabase.auth.getSession().then(({ data }) => {
-      setSesion(data.session);
-      if (data.session) { setPestana('nevera'); setVisitadas({ nevera: true }); }
+    const marcarCuenta = () => { setTuvoCuenta(true); AsyncStorage.setItem(CLAVE_TUVO_CUENTA, '1').catch(() => {}); };
+    Promise.all([
+      AsyncStorage.getItem(CLAVE_TUVO_CUENTA).catch(() => null),
+      supabase.auth.getSession(),
+    ]).then(([tuvo, { data }]) => {
+      setTuvoCuenta(!!tuvo || !!data.session);
+      if (data.session) { heredarTutorial.current = true; marcarCuenta(); setSesion(data.session); setPestana('nevera'); setVisitadas({ nevera: true }); } else setSesion(null);
     });
     const { data: sub } = supabase.auth.onAuthStateChange(async (evento, nueva) => {
+      if (evento === 'SIGNED_IN' && nueva) {
+        // La primera cuenta del teléfono se queda con el tutorial que hizo como invitado
+        const tuvo = await AsyncStorage.getItem(CLAVE_TUVO_CUENTA).catch(() => null);
+        heredarTutorial.current = !tuvo;
+        if (esCuentaNueva(nueva.user)) cuentaNueva.current = nueva.user.id;
+        marcarCuenta();
+      }
       setSesion(nueva);
       if (evento === 'SIGNED_IN' && nueva) {
         // Lo que eligió como invitado pasa a su nevera
@@ -189,12 +207,21 @@ function Contenido() {
 
   const uidActual = sesion?.user?.id || null;
 
+  // Cuenta recién creada: el tutorial de Chefpu parte solo (si no lo trae de invitado)
+  useEffect(() => {
+    if (!uidActual || cuentaNueva.current !== uidActual || !tutorial.estado) return undefined;
+    cuentaNueva.current = null;
+    if (tutorial.estado.iniciado) return undefined;
+    const t = setTimeout(() => { tutorial.reiniciar(); nav.abrir('tutorial'); }, 600);
+    return () => clearTimeout(t);
+  }, [uidActual, tutorial.estado]);
+
   // Chefpu ofrece el tutorial a quien no lo ha visto (usuarios que ya tenían la app)
   const enApp = sesion !== undefined && bienvenidaVista !== null && !!tutorial.estado && (uidActual || bienvenidaVista);
   useEffect(() => {
     if (!enApp || tutorial.activo) return undefined;
     const e = tutorial.estado;
-    if (e.ofrecido || (e.iniciado && !e.saltado)) return undefined;
+    if (e.ofrecido || (e.iniciado && !e.saltado) || cuentaNueva.current === uidActual) return undefined;
     const t = setTimeout(() => {
       tutorial.marcarOfrecido();
       voz.decir('oferta', e.saltado ? '¿Seguimos con el tutorial? Te muestro todo en 2 minutos.' : '¿Te muestro cómo funciona Qué Hay? Son 2 minutos.', 'feliz', {
@@ -258,12 +285,25 @@ function Contenido() {
     return () => clearTimeout(t);
   }, [enApp, uidActual, tutorial.activo]);
 
-  if (sesion === undefined || bienvenidaVista === null || !tutorial.estado) return <Cargando />;
+  // Solo la primera carga muestra "cargando"; al cambiar de cuenta la app no se desmonta
+  if (sesion === undefined || bienvenidaVista === null || tuvoCuenta === null || (!tutorial.estado && !yaCargo.current)) return <Cargando />;
+  yaCargo.current = true;
 
   const uid = uidActual;
   const chefpu = { decir: voz.decir };
   const ctx = { sesion, uid, invitado: !uid, perfil, recargarPerfil, nav, pedirCuenta, tutorial, chefpu };
   const verFlotante = !teclado && (!tutorial.activo || (tutorial.linea?.cap === 5 && !tutorial.linea?.capa));
+
+  // Quien ya tuvo cuenta en este teléfono y cerró sesión vuelve a "Entrar", no al modo invitado
+  if (!uid && tuvoCuenta) {
+    return (
+      <AppCtx.Provider value={ctx}>
+        <View style={{ flex: 1, paddingTop: insets.top, backgroundColor: C.fondo }}>
+          <Acceso puerta />
+        </View>
+      </AppCtx.Provider>
+    );
+  }
 
   if (!uid && !bienvenidaVista) {
     return (

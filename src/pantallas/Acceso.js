@@ -33,7 +33,8 @@ async function guardarRecordado(datos) {
 
 // Crear cuenta o entrar. Se abre cuando un invitado intenta algo que requiere cuenta.
 // motivo: lo que intentaba hacer ("Tu plato y tus 20 XP están listos: guárdalos")
-export default function Acceso({ motivo }) {
+// puerta: pantalla de entrada tras cerrar sesión (sin volver ni modo invitado)
+export default function Acceso({ motivo, puerta = false }) {
   const { nav } = useApp();
   const [modo, setModo] = useState(motivo ? 'registro' : 'entrar'); // entrar | registro
   const [nick, setNick] = useState('');
@@ -102,7 +103,7 @@ export default function Acceso({ motivo }) {
 
   return (
     <Pantalla>
-      <Encabezado onVolver={nav.volver} titulo={modo === 'registro' ? 'Crea tu cuenta' : 'Entrar'} />
+      <Encabezado onVolver={puerta ? undefined : nav.volver} titulo={modo === 'registro' ? 'Crea tu cuenta' : 'Entrar'} />
 
       {modo === 'registro' ? (
         <>
@@ -146,9 +147,11 @@ export default function Acceso({ motivo }) {
         ) : null}
         <Boton tipo="neutro" titulo={modo === 'registro' ? 'Ya tengo cuenta' : 'Crear una cuenta nueva'}
           onPress={() => setModo(modo === 'registro' ? 'entrar' : 'registro')} />
-        <Pressable onPress={nav.volver} accessibilityRole="button" style={{ minHeight: 44, alignItems: 'center', justifyContent: 'center' }}>
-          <Text style={{ fontSize: 14, fontWeight: '700', color: C.suave }}>Ahora no, sigo mirando recetas</Text>
-        </Pressable>
+        {!puerta ? (
+          <Pressable onPress={nav.volver} accessibilityRole="button" style={{ minHeight: 44, alignItems: 'center', justifyContent: 'center' }}>
+            <Text style={{ fontSize: 14, fontWeight: '700', color: C.suave }}>Ahora no, sigo mirando recetas</Text>
+          </Pressable>
+        ) : null}
       </View>
     </Pantalla>
   );
