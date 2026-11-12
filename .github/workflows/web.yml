@@ -1,0 +1,52 @@
+# Versión web de Qué Hay en GitHub Pages: https://lafkenariasp-alt.github.io/Quehay/
+# Se publica sola cada vez que se sube un cambio a main.
+# Usa el SDK 54, el mismo que Snack, para que la web se comporte igual que lo que ya probamos.
+name: Versión web
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  construir:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Instalar dependencias (SDK 54, igual que Snack)
+        run: |
+          npm pkg set dependencies.expo="~54.0.0"
+          npm install --legacy-peer-deps --no-audit --no-fund
+          npx expo install --fix -- --legacy-peer-deps
+          npx expo install react-dom react-native-web @expo/metro-runtime -- --legacy-peer-deps
+      - name: Armar la versión web
+        run: npx expo export --platform web --output-dir dist
+      - name: Preparar para GitHub Pages
+        run: |
+          cp dist/index.html dist/404.html
+          touch dist/.nojekyll
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  publicar:
+    needs: construir
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.publicar.outputs.page_url }}
+    steps:
+      - id: publicar
+        uses: actions/deploy-pages@v4

@@ -1,3 +1,4 @@
+import './src/web';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, Pressable, Keyboard, Platform, Animated } from 'react-native';
 import { StatusBar } from 'expo-status-bar';

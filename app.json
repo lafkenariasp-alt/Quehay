@@ -21,6 +21,18 @@
           "cameraPermission": "Qué Hay usa la cámara para que fotografíes tus platos."
         }
       ]
-    ]
+    ],
+    "web": {
+      "output": "single",
+      "bundler": "metro",
+      "name": "Qué Hay",
+      "shortName": "Qué Hay",
+      "backgroundColor": "#FBF7F0",
+      "themeColor": "#C93F18",
+      "lang": "es"
+    },
+    "experiments": {
+      "baseUrl": "/Quehay"
+    }
   }
 }
