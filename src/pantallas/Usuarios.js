@@ -7,6 +7,7 @@ import { C } from '../theme';
 import { Encabezado, Avatar, Vacio, Hueso, Chip, Boton, useRefrescar, s } from '../ui';
 import { registrar } from '../analitica';
 import { efecto } from '../sonido';
+import { Cascada } from '../anim';
 
 const CAMPOS = 'id, nombre, usuario, avatar_url, nivel, titulo, ciudad';
 const PESTANAS = [
@@ -118,14 +119,14 @@ export default function Usuarios({ pestana: inicial = 'sugerencias' }) {
   let vacio = null;
   if (buscando) {
     datos = resultados.map((p) => ({ p }));
-    vacio = <Vacio titulo="No encontramos a nadie" texto="Revisa cómo se escribe su nick o mira las sugerencias." accion={{ titulo: 'Ver sugerencias', icono: 'sparkles-outline', tipo: 'secundario', onPress: () => { setQ(''); setPestana('sugerencias'); } }} />;
+    vacio = <Vacio objeto="search" titulo="No encontramos a nadie" texto="Revisa cómo se escribe su nick o mira las sugerencias." accion={{ titulo: 'Ver sugerencias', icono: 'sparkles-outline', tipo: 'secundario', onPress: () => { setQ(''); setPestana('sugerencias'); } }} />;
   } else if (pestana === 'sugerencias') {
     datos = (sugerencias || []).map((p) => ({ p, detalle: p.motivo }));
     vacio = sugerencias === null ? (
       <View style={{ gap: 12 }}>
         {[0, 1, 2, 3].map((k) => <View key={k} style={[s.fila, { gap: 12 }]}><Hueso ancho={48} alto={48} radio={24} /><View style={{ flex: 1, gap: 6 }}><Hueso ancho="55%" /><Hueso ancho="35%" alto={11} /></View><Hueso ancho={84} alto={40} radio={12} /></View>)}
       </View>
-    ) : <Vacio titulo="Aún no hay sugerencias" texto="Invita a tus amigos a Qué Hay y síguelos aquí." accion={{ titulo: 'Invitar amigos', icono: 'share-outline', tipo: 'secundario', onPress: invitar }} />;
+    ) : <Vacio objeto="share-outline" expresion="feliz" titulo="Aún no hay sugerencias" texto="Invita a tus amigos a Qué Hay y síguelos aquí." accion={{ titulo: 'Invitar amigos', icono: 'share-outline', tipo: 'secundario', onPress: invitar }} />;
   } else if (invitado) {
     vacio = (
             <View style={{ gap: 12, paddingVertical: 16 }}>
@@ -135,13 +136,13 @@ export default function Usuarios({ pestana: inicial = 'sugerencias' }) {
     );
   } else if (pestana === 'amigos') {
     datos = ordenar(amigosIds).map((p) => ({ p }));
-    vacio = <Vacio titulo="Aún no tienes amigos aquí" texto="Cuando tú y otra persona se sigan, aparecerá en esta lista." accion={{ titulo: 'Ver sugerencias', icono: 'sparkles-outline', tipo: 'secundario', onPress: () => setPestana('sugerencias') }} />;
+    vacio = <Vacio objeto="heart-outline" titulo="Aún no tienes amigos aquí" texto="Cuando tú y otra persona se sigan, aparecerá en esta lista." accion={{ titulo: 'Ver sugerencias', icono: 'sparkles-outline', tipo: 'secundario', onPress: () => setPestana('sugerencias') }} />;
   } else if (pestana === 'siguiendo') {
     datos = ordenar([...sigo]).map((p) => ({ p }));
-    vacio = <Vacio titulo="Aún no sigues a nadie" texto="Sigue a otros cocineros para ver lo que cocinan." accion={{ titulo: 'Ver sugerencias', icono: 'sparkles-outline', tipo: 'secundario', onPress: () => setPestana('sugerencias') }} />;
+    vacio = <Vacio objeto="person-add-outline" titulo="Aún no sigues a nadie" texto="Sigue a otros cocineros para ver lo que cocinan." accion={{ titulo: 'Ver sugerencias', icono: 'sparkles-outline', tipo: 'secundario', onPress: () => setPestana('sugerencias') }} />;
   } else {
     datos = ordenar([...meSiguen]).map((p) => ({ p }));
-    vacio = <Vacio titulo="Todavía nadie te sigue" texto="Publica una receta para que te conozcan." accion={{ titulo: 'Publicar una receta', icono: 'add', tipo: 'secundario', onPress: () => { nav.volver(); nav.irA('publicar'); } }} />;
+    vacio = <Vacio objeto="megaphone-outline" expresion="feliz" titulo="Todavía nadie te sigue" texto="Publica una receta para que te conozcan." accion={{ titulo: 'Publicar una receta', icono: 'add', tipo: 'secundario', onPress: () => { nav.volver(); nav.irA('publicar'); } }} />;
   }
 
   function invitar() {
@@ -204,7 +205,7 @@ export default function Usuarios({ pestana: inicial = 'sugerencias' }) {
     <FlatList
       data={datos}
       keyExtractor={(x) => x.p.id}
-      renderItem={({ item }) => fila(item.p, item.detalle)}
+      renderItem={({ item, index }) => <Cascada i={index}>{fila(item.p, item.detalle)}</Cascada>}
       ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
       ListHeaderComponent={cabecera}
       ListEmptyComponent={vacio}

@@ -9,6 +9,7 @@ import { Pantalla, Encabezado, Seccion, TarjetaReceta, Vacio, Esqueleto, ErrorCa
 import { Mascota } from '../mascota';
 import { registrar } from '../analitica';
 import { efecto } from '../sonido';
+import { Cascada } from '../anim';
 
 const GRUPOS = [
   { titulo: 'Puedes cocinarla ya', color: C.verde, f: (n) => n === 0 },
@@ -70,7 +71,7 @@ export default function Resultados({ tengo = [], maxFaltan = 4, basicos = true, 
   }
 
   return (
-    <Pantalla onRefrescar={() => cargar(true)}>
+    <Pantalla onRefrescar={() => cargar(true)} tituloFijo={titulo || `${recetas.length} ${recetas.length === 1 ? 'receta' : 'recetas'}`}>
       <Encabezado
         onVolver={nav.volver}
         titulo={titulo || `${recetas.length} ${recetas.length === 1 ? 'receta' : 'recetas'} para ti`}
@@ -98,11 +99,12 @@ export default function Resultados({ tengo = [], maxFaltan = 4, basicos = true, 
         </View>
       ) : null}
       {recetas.length === 0 ? (
-        <Vacio titulo="No encontramos recetas con eso" texto="Agrega más ingredientes o permite que falten algunos."
+        <Vacio objeto="search" titulo="No encontramos recetas con eso" texto="Agrega más ingredientes o permite que falten algunos."
           accion={{ titulo: 'Cambiar ingredientes', icono: 'options-outline', onPress: nav.volver }} />
       ) : (
         GRUPOS.map((g, gi) => {
           const lista = recetas.filter((r) => g.f(r.faltan_n));
+          const antes = recetas.filter((r) => GRUPOS.slice(0, gi).some((x) => x.f(r.faltan_n))).length; // posición en la cascada
           if (!lista.length) return null;
           const primerGrupo = GRUPOS.findIndex((x) => recetas.some((r) => x.f(r.faltan_n))) === gi;
           const seccion = (
@@ -110,11 +112,11 @@ export default function Resultados({ tengo = [], maxFaltan = 4, basicos = true, 
               {lista.map((r, ri) => {
                 const nota = Number(r.nota_promedio) > 0 ? ` · ${Number(r.nota_promedio).toFixed(1).replace('.', ',')} estrellas` : '';
                 const tarjeta = (
-                  <TarjetaReceta key={r.receta_id} titulo={r.titulo} foto={r.foto_url}
+                  <Cascada key={r.receta_id} i={antes + ri}><TarjetaReceta titulo={r.titulo} foto={r.foto_url}
                     meta={`${r.minutos} min · ${r.dificultad}${nota} · por ${r.autor}`}
                     estado={r.faltan_n > 0 ? 'falta' : 'ya'}
                     detalle={r.faltan_n > 0 ? `Te falta: ${r.faltantes.join(', ').toLowerCase()}` : 'Tienes todo'}
-                    onPress={() => nav.abrir('receta', { id: r.receta_id, tengo, basicos })} />
+                    onPress={() => nav.abrir('receta', { id: r.receta_id, tengo, basicos })} /></Cascada>
                 );
                 // la primera receta de la lista es la que el tutorial señala
                 return primerGrupo && ri === 0 ? <Foco key={r.receta_id} id="receta_0">{tarjeta}</Foco> : tarjeta;

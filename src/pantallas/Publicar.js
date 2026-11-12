@@ -5,6 +5,7 @@ import { supabase } from '../supabase';
 import { useApp } from '../contexto';
 import { C, CATEGORIAS_RECETA } from '../theme';
 import { Pantalla, Encabezado, Seccion, Chip, Boton, Tarjeta, s } from '../ui';
+import { emojiDe } from '../emoji';
 import SelectorIngredientes from '../SelectorIngredientes';
 import { PideCuenta } from '../mascota';
 import { elegirFoto, subirFoto } from '../fotos';
@@ -162,7 +163,7 @@ export default function Publicar() {
             {f.ingredientes.map((i) => (
               <Tarjeta key={i.id} style={{ gap: 8 }}>
                 <View style={s.filaEntre}>
-                  <Text style={s.etiqueta}>{i.nombre}</Text>
+                  <Text style={s.etiqueta}>{emojiDe(i.nombre)} {i.nombre}</Text>
                   <Pressable onPress={() => cambiar('ingredientes', f.ingredientes.filter((x) => x.id !== i.id))} hitSlop={12} accessibilityRole="button" accessibilityLabel={`Quitar ${i.nombre}`}>
                     <Ionicons name="trash-outline" size={20} color={C.suave} />
                   </Pressable>

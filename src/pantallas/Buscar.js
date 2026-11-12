@@ -8,6 +8,8 @@ import { C, CATEGORIAS_RECETA } from '../theme';
 import { Pantalla, Encabezado, Seccion, Chip, Boton, Tarjeta, Interruptor, s } from '../ui';
 import SelectorIngredientes from '../SelectorIngredientes';
 import { efecto } from '../sonido';
+import { emojiDe } from '../emoji';
+import { Rebote } from '../anim';
 import { guardarIngredientesInvitado, leerIngredientesInvitado } from '../analitica';
 
 const CLAVE_RECIENTES = 'busquedas_recientes_v1';
@@ -117,6 +119,7 @@ export default function Buscar({ activa }) {
   return (
     <View style={{ flex: 1 }}>
       <Pantalla
+        tituloFijo="Buscar"
         pie={
           <Boton
             titulo="Ver recetas"
@@ -136,7 +139,7 @@ export default function Buscar({ activa }) {
           {elegidos.length ? (
             <View style={s.chips}>
               {[...elegidos].reverse().map((e) => (
-                <Chip key={e.id} texto={e.nombre} icono="close" onPress={() => quitar(e.id)} />
+                <Chip key={e.id} texto={`${emojiDe(e.nombre)} ${e.nombre}`} icono="close" onPress={() => quitar(e.id)} />
               ))}
             </View>
           ) : null}
@@ -158,9 +161,9 @@ export default function Buscar({ activa }) {
                 return (
                   <Pressable key={ing.id} onPress={() => elegir(ing)} accessibilityRole="button" accessibilityLabel={ya ? `Quitar ${ing.nombre}` : `Agregar ${ing.nombre}`}
                     style={({ pressed }) => [s.fila, { gap: 12, minHeight: 48, borderBottomWidth: 1, borderBottomColor: C.linea, opacity: pressed ? 0.6 : 1 }]}>
-                    <Ionicons name={ya ? 'checkmark-circle' : 'add-circle-outline'} size={24} color={ya ? C.verde : C.tomate} />
+                    <Text style={{ fontSize: 24, width: 30, textAlign: 'center' }} maxFontSizeMultiplier={1.2} accessible={false}>{emojiDe(ing.nombre, ing.categoria)}</Text>
                     <View style={{ flex: 1 }}><Resaltado texto={ing.nombre} q={q} /></View>
-                    <Text style={{ fontSize: 12, color: C.suave }}>{ing.categoria}</Text>
+                    <Rebote activo={ya}><Ionicons name={ya ? 'checkmark-circle' : 'add-circle-outline'} size={24} color={ya ? C.verde : C.tomate} /></Rebote>
                   </Pressable>
                 );
               })}

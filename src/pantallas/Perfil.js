@@ -8,6 +8,7 @@ import { Pantalla, Seccion, Boton, Tarjeta, TarjetaReceta, Pastilla, Interruptor
 import { desdeCamara, desdeGaleria, subirFoto } from '../fotos';
 import { Mascota, PideCuenta } from '../mascota';
 import { useAjustesSonido } from '../sonido';
+import { Cascada, Balanceo } from '../anim';
 
 // Sonidos y vibración se pueden apagar; en iPhone el modo silencio también los apaga
 function AjustesSonido() {
@@ -24,6 +25,18 @@ function AjustesSonido() {
 
 const TRAJES = ['Clásico', 'Andino', 'Patriota', 'Gourmet', 'Aventurero']; // por ahora solo el Clásico está disponible
 
+// Racha: días seguidos (hasta hoy o ayer) en que cocinaste con foto o publicaste una receta
+const diaLocal = (d) => `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+export function calcularRacha(fechas, hoy = new Date()) {
+  const dias = new Set(fechas.map((f) => diaLocal(new Date(f))));
+  const d = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
+  const hoyCuenta = dias.has(diaLocal(d));
+  if (!hoyCuenta) d.setDate(d.getDate() - 1); // la racha sigue viva si ayer cocinaste
+  let n = 0;
+  while (dias.has(diaLocal(d))) { n += 1; d.setDate(d.getDate() - 1); }
+  return { dias: n, hoy: hoyCuenta };
+}
+
 export default function Perfil({ activa }) {
   const { uid, invitado, perfil, recargarPerfil, nav, pedirCuenta, tutorial, chefpu } = useApp();
   const repetirTutorial = () => { tutorial.reiniciar(); nav.abrir('tutorial'); };
@@ -33,18 +46,22 @@ export default function Perfil({ activa }) {
   const [conteo, setConteo] = useState({ seguidores: 0, siguiendo: 0 });
   const [orden, setOrden] = useState('nuevas'); // nuevas | antiguas | nota
   const [guardadas, setGuardadas] = useState([]);
+  const [racha, setRacha] = useState({ dias: 0, hoy: false });
 
   const cargar = useCallback(async () => {
     if (!uid) return;
     recargarPerfil();
     const cuenta = (col) => supabase.from('seguidores').select('*', { count: 'exact', head: true }).eq(col, uid);
-    const [l, lu, rec, c1, c2, g] = await Promise.all([
+    const desde = new Date(Date.now() - 400 * 86400000).toISOString();
+    const [l, lu, rec, c1, c2, g, coc] = await Promise.all([
       supabase.from('logros').select('*').eq('clase', 'base'),
       supabase.from('logros_usuario').select('codigo').eq('usuario_id', uid),
       supabase.from('recetas').select('id, titulo, foto_url, num_likes, num_cocinadas, nota_promedio, num_notas, creado_en').eq('autor_id', uid),
       cuenta('seguido_id'), cuenta('seguidor_id'),
       supabase.from('guardadas').select('creado_en, recetas(id, titulo, foto_url, minutos, nota_promedio, num_notas)').eq('usuario_id', uid).order('creado_en', { ascending: false }),
+      supabase.from('asi_me_quedo').select('creado_en').eq('usuario_id', uid).not('foto_url', 'is', null).gte('creado_en', desde),
     ]);
+    setRacha(calcularRacha([...(coc.data || []), ...(rec.data || [])].map((x) => x.creado_en)));
     setGuardadas((g.data || []).filter((x) => x.recetas));
     setLogros(l.data || []);
     setMios(new Set((lu.data || []).map((x) => x.codigo)));
@@ -133,7 +150,7 @@ export default function Perfil({ activa }) {
     [recetas.length, 'Recetas', null],
   ];
   return (
-    <Pantalla onRefrescar={cargar}>
+    <Pantalla onRefrescar={cargar} tituloFijo={perfil.nombre}>
       <View style={[s.fila, { gap: 14 }]}>
         <Pressable onPress={cambiarFoto} accessibilityRole="button" accessibilityLabel="Cambiar foto de perfil">
           <Avatar url={perfil.avatar_url} nombre={perfil.nombre} tam={84} borde={C.dorado} />
@@ -145,6 +162,20 @@ export default function Perfil({ activa }) {
           <Text style={{ fontSize: 26, fontWeight: '800', color: C.texto, letterSpacing: -0.5 }}>{perfil.nombre}</Text>
           <Text style={{ fontSize: 14, color: C.suave }}>{lugar}</Text>
           {perfil.fundador ? <Pastilla texto="Fundador" icono="ribbon-outline" /> : null}
+        </View>
+      </View>
+
+      {/* Racha: la llama se enciende cocinando con foto o publicando */}
+      <View accessible accessibilityLabel={racha.dias ? `Racha de ${racha.dias} ${racha.dias === 1 ? 'día' : 'días'}` : 'Sin racha todavía'}
+        style={[s.fila, { gap: 12, padding: 14, borderRadius: 18, backgroundColor: racha.dias ? C.tomateTinte : C.superficie }]}>
+        {racha.dias ? <Balanceo><Text style={{ fontSize: 34 }}>🔥</Text></Balanceo> : <Text style={{ fontSize: 34, opacity: 0.35 }}>🔥</Text>}
+        <View style={{ flex: 1 }}>
+          <Text style={{ fontSize: 17, fontWeight: '800', color: racha.dias ? C.tomateOscuro : C.texto }}>
+            {racha.dias ? `${racha.dias} ${racha.dias === 1 ? 'día' : 'días'} de racha` : 'Enciende tu racha'}
+          </Text>
+          <Text style={{ fontSize: 13, color: C.suave }}>
+            {!racha.dias ? 'Cocina con foto o publica una receta hoy.' : racha.hoy ? '¡Hoy ya cumpliste! Vuelve mañana para seguir.' : 'Cocina o publica hoy para no perderla.'}
+          </Text>
         </View>
       </View>
 
@@ -214,11 +245,11 @@ export default function Perfil({ activa }) {
               <Chip texto="Más antiguas" activo={orden === 'antiguas'} onPress={() => setOrden('antiguas')} />
               <Chip texto="Mejor calificadas" activo={orden === 'nota'} onPress={() => setOrden('nota')} />
             </View>
-            {misRecetas.map((r) => (
-              <TarjetaReceta key={r.id} titulo={r.titulo} foto={r.foto_url}
+            {misRecetas.map((r, k) => (
+              <Cascada key={r.id} i={k}><TarjetaReceta titulo={r.titulo} foto={r.foto_url}
                 meta={`${r.num_notas ? `${Number(r.nota_promedio).toFixed(1).replace('.', ',')} estrellas (${r.num_notas})` : 'Sin notas'} · ${fechaCorta(r.creado_en)}`}
                 abajo={<Text style={{ fontSize: 13, color: C.suave }}>{r.num_likes} me gusta · {r.num_cocinadas} la cocinaron</Text>}
-                onPress={() => nav.abrir('receta', { id: r.id })} />
+                onPress={() => nav.abrir('receta', { id: r.id })} /></Cascada>
             ))}
           </>
         )}

@@ -7,6 +7,7 @@ import { C } from '../theme';
 import { Boton, TarjetaReceta, Pastilla, Pantalla, Esqueleto, ErrorCarga, Avatar, useRefrescar, s } from '../ui';
 import { reportar } from '../reportar';
 import { efecto } from '../sonido';
+import { Cascada } from '../anim';
 
 // Perfil de otro cocinero
 export default function PerfilPublico({ id }) {
@@ -102,10 +103,10 @@ export default function PerfilPublico({ id }) {
         <Ionicons name="restaurant-outline" size={28} color={C.suave} />
         <Text style={[s.sub, { textAlign: 'center' }]}>{p.nombre} todavía no publica recetas.{!loSigo && id !== uid ? ' Síguelo y te enteras cuando lo haga.' : ''}</Text>
       </View>}
-      renderItem={({ item: r }) => (
-        <TarjetaReceta titulo={r.titulo} foto={r.foto_url}
+      renderItem={({ item: r, index }) => (
+        <Cascada i={index}><TarjetaReceta titulo={r.titulo} foto={r.foto_url}
           meta={`${r.num_notas ? `${Number(r.nota_promedio).toFixed(1).replace('.', ',')} estrellas (${r.num_notas})` : 'Sin notas'} · ${r.num_cocinadas} la cocinaron`}
-          onPress={() => nav.abrir('receta', { id: r.id })} />
+          onPress={() => nav.abrir('receta', { id: r.id })} /></Cascada>
       )}
     />
   );

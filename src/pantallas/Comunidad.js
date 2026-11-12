@@ -5,6 +5,7 @@ import { useApp } from '../contexto';
 import { C } from '../theme';
 import { Encabezado, Chip, Boton, TarjetaReceta, Avatar, Vacio, Esqueleto, ErrorCarga, DobleToque, VisorFotos, useVolverArriba, useRefrescar, s } from '../ui';
 import { efecto } from '../sonido';
+import { Cascada, useTituloFijo } from '../anim';
 
 // Comunidad: lo que cocinan y publican las personas que sigues (o todos)
 const LIMITE = 30;
@@ -28,6 +29,7 @@ export default function Comunidad({ activa }) {
   const [visor, setVisor] = useState(null); // foto a pantalla completa
   const lista = useRef(null);
   useVolverArriba(lista);
+  const fijo = useTituloFijo('Comunidad');
 
   // a quién sigo
   useEffect(() => {
@@ -82,7 +84,8 @@ export default function Comunidad({ activa }) {
     </Pressable>
   );
 
-  const renderItem = ({ item }) => (item.tipo === 'cocino' ? (
+  const renderItem = ({ item, index }) => <Cascada i={index}>{tarjeta(item)}</Cascada>;
+  const tarjeta = (item) => (item.tipo === 'cocino' ? (
     <View style={{ gap: 10, padding: 14, borderRadius: 18, backgroundColor: C.blanco, borderWidth: 1.5, borderColor: C.linea }}>
       {quien(item.perfiles, item.usuario_id, 'cocinó', item.fecha)}
       <DobleToque onDoble={() => meGusta(item.receta_id)}
@@ -145,15 +148,18 @@ export default function Comunidad({ activa }) {
       renderItem={renderItem}
       ListHeaderComponent={cabecera}
       ListEmptyComponent={vista === 'siguiendo'
-        ? <Vacio titulo="Tus amigos aún no publican" texto="Mientras, mira lo que cocinan todos." accion={{ titulo: 'Ver lo de todos', icono: 'globe-outline', onPress: () => setVista('todos') }} />
-        : <Vacio titulo="Todavía no hay nada por aquí" texto="¡Sé el primero en compartir una receta!" accion={{ titulo: 'Publicar una receta', icono: 'add', onPress: () => nav.irA('publicar') }} />}
+        ? <Vacio objeto="people-outline" titulo="Tus amigos aún no publican" texto="Mientras, mira lo que cocinan todos." accion={{ titulo: 'Ver lo de todos', icono: 'globe-outline', onPress: () => setVista('todos') }} />
+        : <Vacio objeto="camera-outline" expresion="feliz" titulo="Todavía no hay nada por aquí" texto="¡Sé el primero en compartir una receta!" accion={{ titulo: 'Publicar una receta', icono: 'add', onPress: () => nav.irA('publicar') }} />}
       contentContainerStyle={[s.contenido, { gap: 18 }]}
       refreshControl={refreshControl}
+      onScroll={fijo.alScroll}
+      scrollEventThrottle={16}
       keyboardShouldPersistTaps="handled"
       initialNumToRender={6}
       windowSize={7}
       removeClippedSubviews
     />
+    {fijo.barra}
     <VisorFotos fotos={visor ? [visor] : []} visible={!!visor} onCerrar={() => setVisor(null)} />
     </>
   );

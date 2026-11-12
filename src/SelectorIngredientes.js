@@ -6,6 +6,8 @@ import { C, CATEGORIAS_ING } from './theme';
 import { s, Chip } from './ui';
 import { useApp } from './contexto';
 import { efecto } from './sonido';
+import { emojiDe } from './emoji';
+import { Rebote } from './anim';
 
 // Ventana para agregar ingredientes del catálogo.
 // - Tocar un resultado lo agrega al tiro (y limpia el buscador para el siguiente).
@@ -102,7 +104,7 @@ export default function SelectorIngredientes({ visible, titulo = 'Agregar ingred
               {[...ya].reverse().map((i) => (
                 <Pressable key={i.id} onPress={() => { if (onQuitar) { efecto('desmarcar'); onQuitar(i); } }} accessibilityRole="button" accessibilityLabel={onQuitar ? `Quitar ${i.nombre}` : i.nombre} hitSlop={{ top: 4, bottom: 4 }}
                   style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 12, minHeight: 36, borderRadius: 999, backgroundColor: C.verdeTinte, borderWidth: 1, borderColor: C.verde }}>
-                  <Text style={{ fontSize: 13, fontWeight: '800', color: C.verdeOscuro }}>{i.nombre}</Text>
+                  <Text style={{ fontSize: 13, fontWeight: '800', color: C.verdeOscuro }}>{emojiDe(i.nombre)} {i.nombre}</Text>
                   {onQuitar ? <Ionicons name="close" size={14} color={C.verdeOscuro} /> : null}
                 </Pressable>
               ))}
@@ -163,11 +165,14 @@ export default function SelectorIngredientes({ visible, titulo = 'Agregar ingred
             const marcado = idsYa.has(item.id);
             return (
               <Pressable onPress={() => agregar(item)} accessibilityRole="button" accessibilityLabel={`Agregar ${item.nombre}`} style={[s.fila, { paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: C.linea }]}>
-                <Ionicons name={marcado ? 'checkmark-circle' : 'add-circle-outline'} size={26} color={marcado ? C.verde : C.tomate} />
+                <Text style={{ fontSize: 26, width: 34, textAlign: 'center' }} maxFontSizeMultiplier={1.2} accessible={false}>{emojiDe(item.nombre, item.categoria)}</Text>
                 <View style={{ flex: 1 }}>
                   <Text style={{ fontSize: 16, fontWeight: '700', color: C.texto }}>{item.nombre}</Text>
                   <Text style={s.sub}>{marcado ? 'Agregado · toca para quitar' : item.categoria}</Text>
                 </View>
+                <Rebote activo={marcado}>
+                  <Ionicons name={marcado ? 'checkmark-circle' : 'add-circle-outline'} size={26} color={marcado ? C.verde : C.tomate} />
+                </Rebote>
               </Pressable>
             );
           }}

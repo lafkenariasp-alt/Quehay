@@ -6,13 +6,15 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '../supabase';
 import { useApp, tieneIngrediente } from '../contexto';
 import { C } from '../theme';
-import { Pantalla, Seccion, Boton, Estrellas, Tarjeta, ErrorCarga, Avatar, Esqueleto, DobleToque, VisorFotos, avisar, s } from '../ui';
+import { Pantalla, Seccion, Boton, Estrellas, Tarjeta, ErrorCarga, Avatar, Esqueleto, DobleToque, VisorFotos, ScrollYCtx, avisar, s } from '../ui';
 import { fotoDelPlato, subirFoto } from '../fotos';
 import { reportar } from '../reportar';
 import { registrar } from '../analitica';
 import { TutorialCapa } from '../tutorial';
 import { Foco } from '../foco';
 import { efecto } from '../sonido';
+import { emojiDe } from '../emoji';
+import { Corazon, Presionable, movimientoReducido } from '../anim';
 
 const sinDatos = Promise.resolve({ data: null });
 
@@ -85,7 +87,7 @@ export default function Receta({ id, tengo = null, basicos = true }) {
     setError(false);
     const [rec, nev, nota, like, asi, guard] = await Promise.all([
       supabase.from('recetas')
-        .select('*, perfiles!recetas_autor_id_fkey(nombre, xp, avatar_url), receta_ingredientes(cantidad, opcional, ingrediente_id, ingredientes(id, nombre, padre_id, es_basico))')
+        .select('*, perfiles!recetas_autor_id_fkey(nombre, xp, avatar_url), receta_ingredientes(cantidad, opcional, ingrediente_id, ingredientes(id, nombre, padre_id, es_basico, categoria))')
         .eq('id', id).maybeSingle(),
       uid ? supabase.from('nevera').select('ingrediente_id').eq('usuario_id', uid) : sinDatos,
       uid ? supabase.from('notas').select('estrellas').eq('usuario_id', uid).eq('receta_id', id).maybeSingle() : sinDatos,
@@ -237,8 +239,8 @@ export default function Receta({ id, tengo = null, basicos = true }) {
 
   return (
     <Foco id="pantalla_receta" style={{ flex: 1 }}>
-      <Pantalla onRefrescar={cargar}>
-        <View style={s.filaEntre}>
+      <Pantalla onRefrescar={cargar} tituloFijo={r.titulo}>
+        <View style={[s.filaEntre, { zIndex: 2 }]}>
           <Pressable onPress={nav.volver} accessibilityRole="button" accessibilityLabel="Volver" style={[s.fila, { gap: 2, minHeight: 44 }]}>
             <Ionicons name="chevron-back" size={22} color={C.suave} />
             <Text style={{ fontSize: 15, fontWeight: '700', color: C.suave }}>Volver</Text>
@@ -258,10 +260,10 @@ export default function Receta({ id, tengo = null, basicos = true }) {
               style={{ minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' }}>
               <Ionicons name={guardada ? 'bookmark' : 'bookmark-outline'} size={24} color={C.texto} />
             </Pressable>
-            <Pressable onPress={alternarLike} accessibilityRole="button" accessibilityState={{ selected: !!meGusta }} accessibilityLabel={meGusta ? 'Quitar me gusta' : 'Me gusta'}
+            <Presionable escala={0.85} onPress={alternarLike} accessibilityRole="button" accessibilityState={{ selected: !!meGusta }} accessibilityLabel={meGusta ? 'Quitar me gusta' : 'Me gusta'}
               style={{ minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' }}>
-              <Ionicons name={meGusta ? 'heart' : 'heart-outline'} size={28} color={C.tomate} />
-            </Pressable>
+              <Corazon activo={meGusta} tam={28} />
+            </Presionable>
           </View>
         </View>
 
@@ -271,15 +273,17 @@ export default function Receta({ id, tengo = null, basicos = true }) {
           </View>
         ) : null}
 
-        <DobleToque onDoble={meGustaDoble} onSimple={r.foto_url ? () => setVisor(0) : undefined} style={{ marginHorizontal: -24 }}>
-          {r.foto_url ? (
-            <Image source={{ uri: r.foto_url }} style={{ aspectRatio: 16 / 10, backgroundColor: C.superficie }} accessibilityLabel={`Foto de ${r.titulo}. Toca para verla grande`} />
-          ) : (
-            <View style={{ height: 200, backgroundColor: C.superficie, alignItems: 'center', justifyContent: 'center' }}>
-              <Ionicons name="restaurant-outline" size={48} color="#B9A68E" />
-            </View>
-          )}
-        </DobleToque>
+        <FotoElastica>
+          <DobleToque onDoble={meGustaDoble} onSimple={r.foto_url ? () => setVisor(0) : undefined}>
+            {r.foto_url ? (
+              <Image source={{ uri: r.foto_url }} style={{ aspectRatio: 16 / 10, backgroundColor: C.superficie }} accessibilityLabel={`Foto de ${r.titulo}. Toca para verla grande`} />
+            ) : (
+              <View style={{ height: 200, backgroundColor: C.superficie, alignItems: 'center', justifyContent: 'center' }}>
+                <Ionicons name="restaurant-outline" size={48} color="#B9A68E" />
+              </View>
+            )}
+          </DobleToque>
+        </FotoElastica>
 
         <View style={{ gap: 6 }}>
           <Text style={{ fontSize: 28, fontWeight: '800', color: C.texto, letterSpacing: -0.5 }}>{r.titulo}</Text>
@@ -340,6 +344,7 @@ export default function Receta({ id, tengo = null, basicos = true }) {
               return (
                 <View key={i.ingrediente_id} style={[s.fila, { minHeight: 28 }]}
                   accessible accessibilityLabel={`${[cant, i.ing.nombre].filter(Boolean).join(' ')}, ${i.ok ? 'lo tienes' : 'te falta'}${i.opcional ? ', opcional' : ''}`}>
+                  <Text style={{ fontSize: 20, width: 28, textAlign: 'center' }} maxFontSizeMultiplier={1.2} accessible={false}>{emojiDe(i.ing.nombre, i.ing.categoria)}</Text>
                   <Ionicons name={i.ok ? 'checkmark' : 'ellipse-outline'} size={18} color={i.ok ? C.verde : C.ambar} />
                   <Text style={{ flex: 1, fontSize: 15, fontWeight: '700', color: i.ok ? C.verdeOscuro : C.ambarOscuro }}>
                     {[cant, i.ing.nombre.toLowerCase()].filter(Boolean).join(' ')}{i.opcional ? ' (opcional)' : ''}
@@ -443,6 +448,29 @@ export default function Receta({ id, tengo = null, basicos = true }) {
         onListo={() => { setCocine(false); cargar(); recargarPerfil(); setTimeout(() => chefpu?.decir('cocine', '¡Qué buena pinta! Sigue así y subes de nivel.', 'celebrando'), 1200); }}
       />
     </Foco>
+  );
+}
+
+// Foto de la receta: entra con un zoom suave, se estira al tirar hacia abajo (como Spotify)
+// y se desvanece un poco al bajar
+function FotoElastica({ children }) {
+  const y = React.useContext(ScrollYCtx);
+  const [alto, setAlto] = useState(240);
+  const entra = useRef(new Animated.Value(movimientoReducido() ? 1 : 0)).current;
+  useEffect(() => {
+    if (movimientoReducido()) return;
+    Animated.timing(entra, { toValue: 1, duration: 300, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start();
+  }, []);
+  const estira = y ? y.interpolate({ inputRange: [-200, 0], outputRange: [1 + 200 / alto, 1], extrapolateRight: 'clamp' }) : 1;
+  // crece hacia arriba: ocupa el espacio que deja la lista al tirar
+  const sube = y ? y.interpolate({ inputRange: [-200, 0], outputRange: [-100, 0], extrapolateRight: 'clamp' }) : 0;
+  const opaco = y ? y.interpolate({ inputRange: [0, 300], outputRange: [1, 0.55], extrapolate: 'clamp' }) : 1;
+  return (
+    <Animated.View onLayout={(e) => setAlto(e.nativeEvent.layout.height || 240)}
+      style={{ marginHorizontal: -24, overflow: 'hidden', opacity: Animated.multiply(entra, opaco),
+        transform: [{ translateY: sube }, { scale: Animated.multiply(estira, entra.interpolate({ inputRange: [0, 1], outputRange: [1.08, 1] })) }] }}>
+      {children}
+    </Animated.View>
   );
 }
 

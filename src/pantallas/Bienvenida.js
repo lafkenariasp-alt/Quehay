@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../supabase';
 import { C } from '../theme';
 import { Boton, Grilla, Casilla, s } from '../ui';
+import { emojiDe } from '../emoji';
 import { Mascota, Globo } from '../mascota';
 import { registrar, guardarIngredientesInvitado } from '../analitica';
 import { useApp } from '../contexto';
@@ -78,14 +79,14 @@ export default function Bienvenida({ onTerminar, repetir = false }) {
         </View>
         <Foco id="grilla"><Grilla>
           {tipicos.map((t) => (
-            <Casilla key={t.id} ancho="31%" nombre={t.nombre} estado={ids.has(t.id) ? 'tengo' : 'vacia_nombre'} onPress={() => alternar(t)} />
+            <Casilla key={t.id} ancho="31%" emoji={emojiDe(t.nombre)} nombre={t.nombre} estado={ids.has(t.id) ? 'tengo' : 'vacia_nombre'} onPress={() => alternar(t)} />
           ))}
         </Grilla></Foco>
         {elegidos.filter((e) => !TIPICOS.includes(e.nombre)).length ? (
           <View style={s.chips}>
             {elegidos.filter((e) => !TIPICOS.includes(e.nombre)).map((e) => (
               <Pressable key={e.id} onPress={() => alternar(e)} accessibilityRole="button" accessibilityLabel={`Quitar ${e.nombre}`} style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 12, minHeight: 44, borderRadius: 999, backgroundColor: C.verdeTinte, borderWidth: 1, borderColor: C.verde }}>
-                <Text style={{ fontSize: 13, fontWeight: '800', color: C.verdeOscuro }}>{e.nombre}</Text>
+                <Text style={{ fontSize: 13, fontWeight: '800', color: C.verdeOscuro }}>{emojiDe(e.nombre)} {e.nombre}</Text>
                 <Ionicons name="close" size={14} color={C.verdeOscuro} />
               </Pressable>
             ))}

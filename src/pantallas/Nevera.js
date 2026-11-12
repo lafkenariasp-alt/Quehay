@@ -8,6 +8,8 @@ import { Boton, Encabezado, Vacio, Tarjeta, Interruptor, ErrorCarga, Esqueleto, 
 import { PideCuenta } from '../mascota';
 import SelectorIngredientes from '../SelectorIngredientes';
 import { efecto } from '../sonido';
+import { emojiDe } from '../emoji';
+import { useTituloFijo } from '../anim';
 
 // Dos listas en la misma pestaña: lo que hay en casa y lo que hay que comprar
 export default function Nevera({ activa }) {
@@ -21,6 +23,7 @@ export default function Nevera({ activa }) {
   const vencimiento = !!perfil?.control_vencimiento;
   const ref = useRef(null);
   useVolverArriba(ref);
+  const fijo = useTituloFijo('Mi nevera');
 
   const cargar = useCallback(async () => {
     if (!uid) return;
@@ -146,6 +149,8 @@ export default function Nevera({ activa }) {
         contentContainerStyle={s.contenido}
         keyboardShouldPersistTaps="handled"
         refreshControl={refreshControl}
+        onScroll={fijo.alScroll}
+        scrollEventThrottle={16}
       >
         <Encabezado titulo="Mi nevera" />
 
@@ -190,7 +195,7 @@ export default function Nevera({ activa }) {
             ) : null}
 
             {grupos.length === 0 ? (
-              <Vacio titulo="Tu nevera está vacía" texto="Agrega lo que tienes y te digo qué puedes cocinar."
+              <Vacio objeto="add" titulo="Tu nevera está vacía" texto="Agrega lo que tienes y te digo qué puedes cocinar."
                 accion={{ titulo: 'Agregar alimentos', icono: 'add', onPress: () => setSelector('nevera') }} />
             ) : (
               <>
@@ -203,7 +208,7 @@ export default function Nevera({ activa }) {
                         <FilaDeslizable key={i.ingrediente_id} onQuitar={() => quitar(i)}
                           etiqueta={`${i.ingredientes.nombre}${vence ? `, vence ${textoVence(i.dias).toLowerCase()}` : ''}`}>
                           <View style={[s.fila, { minHeight: 52, paddingHorizontal: 14, gap: 12, borderWidth: 1.5, borderColor: vence ? C.ambar : C.linea, borderRadius: 14, backgroundColor: vence ? C.ambarTinte : C.blanco }]}>
-                            <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: vence ? C.ambar : C.verde }} />
+                            <Text style={{ fontSize: 24 }} maxFontSizeMultiplier={1.2} accessible={false}>{emojiDe(i.ingredientes.nombre, g.cat)}</Text>
                             <Text style={{ flex: 1, fontSize: 16, fontWeight: '700', color: C.texto }}>{i.ingredientes.nombre}</Text>
                             {vence ? <Text style={{ fontSize: 13, fontWeight: '800', color: C.ambarOscuro }}>{textoVence(i.dias)}</Text> : null}
                           </View>
@@ -223,7 +228,7 @@ export default function Nevera({ activa }) {
           <>
             {compras.length ? <Boton titulo="Agregar a la lista" icono="add" tipo="secundario" onPress={() => setSelector('compras')} /> : null}
             {gruposCompra.length === 0 ? (
-              <Vacio titulo="Tu lista de compras está vacía" texto="Anota lo que te falta. En una receta, toca «Agregar lo que falta» y llega solo."
+              <Vacio objeto="cart-outline" expresion="feliz" titulo="Tu lista de compras está vacía" texto="Anota lo que te falta. En una receta, toca «Agregar lo que falta» y llega solo."
                 accion={{ titulo: 'Agregar a la lista', icono: 'add', onPress: () => setSelector('compras') }} />
             ) : (
               <>
@@ -237,7 +242,8 @@ export default function Nevera({ activa }) {
                             style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}>
                             <Ionicons name="ellipse-outline" size={26} color={C.ambar} />
                           </Pressable>
-                          <Text style={{ flex: 1, fontSize: 16, fontWeight: '700', color: C.texto }}>{i.ingredientes.nombre}</Text>
+                          <Text style={{ fontSize: 22 }} maxFontSizeMultiplier={1.2} accessible={false}>{emojiDe(i.ingredientes.nombre, g.cat)}</Text>
+                          <Text style={{ flex: 1, fontSize: 16, fontWeight: '700', color: C.texto, marginLeft: 6 }}>{i.ingredientes.nombre}</Text>
                         </View>
                       </FilaDeslizable>
                     ))}
@@ -249,6 +255,7 @@ export default function Nevera({ activa }) {
           </>
         )}
       </ScrollView>
+      {fijo.barra}
 
       {enCasa && items.length ? (
         <View style={s.pie}>

@@ -6,6 +6,7 @@ import { C } from './theme';
 import { Mascota } from './chefpu';
 import { ScrollCtx } from './foco';
 import { efecto } from './sonido';
+import { Presionable, Rebote, OndaVerde, Brillo, Balanceo, useTituloFijo } from './anim';
 
 // ---------- Tocar la pestaña activa: vuelve arriba ----------
 export const PestanaCtx = React.createContext(null); // id de la pestaña donde vive la pantalla
@@ -38,8 +39,12 @@ export function useRefrescar(onRefrescar) {
   return onRefrescar ? <RefreshControl refreshing={girando} onRefresh={refrescar} tintColor={C.tomate} colors={[C.tomate]} /> : undefined;
 }
 
-export function Pantalla({ children, scroll = true, pie = null, onRefrescar }) {
+// Posición del scroll de la pantalla (Animated.Value): la usa la foto elástica de la receta
+export const ScrollYCtx = React.createContext(null);
+
+export function Pantalla({ children, scroll = true, pie = null, onRefrescar, tituloFijo }) {
   const ref = React.useRef(null);
+  const fijo = useTituloFijo(tituloFijo);
   const offset = React.useRef(0);
   const ctx = React.useMemo(() => ({ ref, offset }), []);
   useVolverArriba(ref);
@@ -48,10 +53,11 @@ export function Pantalla({ children, scroll = true, pie = null, onRefrescar }) {
     <View style={{ flex: 1, backgroundColor: C.fondo }}>
       {scroll ? (
         <ScrollCtx.Provider value={ctx}>
+          <ScrollYCtx.Provider value={fijo.y}>
           <ScrollView
             ref={ref}
-            onScroll={(e) => { offset.current = e.nativeEvent.contentOffset.y; }}
-            scrollEventThrottle={32}
+            onScroll={(e) => { offset.current = e.nativeEvent.contentOffset.y; fijo.alScroll(e); }}
+            scrollEventThrottle={16}
             contentContainerStyle={s.contenido}
             keyboardShouldPersistTaps="handled"
             keyboardDismissMode="interactive"
@@ -60,6 +66,8 @@ export function Pantalla({ children, scroll = true, pie = null, onRefrescar }) {
           >
             {children}
           </ScrollView>
+          </ScrollYCtx.Provider>
+          {fijo.barra}
         </ScrollCtx.Provider>
       ) : (
         <View style={[s.contenido, { flex: 1 }]}>{children}</View>
@@ -106,15 +114,15 @@ export function Boton({ titulo, onPress, tipo = 'principal', icono, cargando, de
     verde: { bg: C.verde, fg: C.blanco, borde: C.verde },
   }[tipo];
   return (
-    <Pressable
+    <Presionable
       onPress={onPress}
       disabled={deshabilitado || cargando}
       accessibilityRole="button"
       accessibilityLabel={titulo}
       accessibilityState={{ disabled: !!(deshabilitado || cargando), busy: !!cargando }}
-      style={({ pressed }) => [
+      style={[
         s.boton,
-        { backgroundColor: estilos.bg, borderColor: estilos.borde, opacity: deshabilitado ? 0.5 : pressed ? 0.85 : 1 },
+        { backgroundColor: estilos.bg, borderColor: estilos.borde, opacity: deshabilitado ? 0.5 : 1 },
         style,
       ]}
     >
@@ -126,13 +134,13 @@ export function Boton({ titulo, onPress, tipo = 'principal', icono, cargando, de
           <Text style={[s.botonTexto, { color: estilos.fg }]}>{titulo}</Text>
         </>
       )}
-    </Pressable>
+    </Presionable>
   );
 }
 
 export function Chip({ texto, activo, onPress, icono }) {
   return (
-    <Pressable
+    <Presionable escala={0.94}
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={texto}
@@ -142,12 +150,12 @@ export function Chip({ texto, activo, onPress, icono }) {
     >
       {icono ? <Ionicons name={icono} size={15} color={activo ? C.blanco : C.texto} /> : null}
       <Text style={[s.chipTexto, activo && { color: C.blanco }]}>{texto}</Text>
-    </Pressable>
+    </Presionable>
   );
 }
 
 // Casilla de inventario (estilo taller de Dofus)
-export function Casilla({ nombre, estado = 'tengo', detalle, onPress, onLongPress, ancho = '23%' }) {
+export function Casilla({ nombre, estado = 'tengo', detalle, onPress, onLongPress, ancho = '23%', emoji }) {
   const e = {
     tengo: { bg: C.verdeTinte, borde: C.verde, fg: C.verdeOscuro, estilo: 'solid' },
     falta: { bg: C.ambarTinte, borde: C.ambar, fg: C.ambarOscuro, estilo: 'dashed' },
@@ -158,7 +166,7 @@ export function Casilla({ nombre, estado = 'tengo', detalle, onPress, onLongPres
   const dice = { tengo: 'lo tienes', falta: 'te falta', vence: 'por vencer', vacia: '', vacia_nombre: 'no lo tienes' }[estado];
   const etiqueta = estado === 'vacia' ? 'Agregar ingrediente' : [nombre, dice, detalle].filter(Boolean).join(', ');
   return (
-    <Pressable
+    <Presionable escala={0.94}
       onPress={onPress}
       onLongPress={onLongPress}
       disabled={!onPress && !onLongPress}
@@ -166,17 +174,24 @@ export function Casilla({ nombre, estado = 'tengo', detalle, onPress, onLongPres
       accessibilityLabel={etiqueta}
       accessibilityState={estado === 'vacia_nombre' || (estado === 'tengo' && onPress) ? { selected: estado === 'tengo' } : undefined}
       accessibilityHint={onLongPress ? 'Mantén presionado para más opciones' : undefined}
-      style={({ pressed }) => [s.casilla, { width: ancho, backgroundColor: e.bg, borderColor: e.borde, borderStyle: e.estilo, borderWidth: estado === 'tengo' || estado === 'vence' ? 2 : 1.5, opacity: pressed ? 0.8 : 1 }]}
+      style={[s.casilla, { width: ancho, overflow: 'hidden', backgroundColor: e.bg, borderColor: e.borde, borderStyle: e.estilo, borderWidth: estado === 'tengo' || estado === 'vence' ? 2 : 1.5 }]}
     >
+      <OndaVerde activo={estado === 'tengo'} />
       {estado === 'vacia' ? (
         <Ionicons name="add" size={22} color={e.fg} />
       ) : (
         <>
-          <Text style={[s.casillaTexto, { color: e.fg }]} numberOfLines={3} maxFontSizeMultiplier={1.6}>{nombre}</Text>
+          {emoji ? <Text style={{ fontSize: 24 }} maxFontSizeMultiplier={1.2} accessible={false}>{emoji}</Text> : null}
+          <Text style={[s.casillaTexto, { color: e.fg }]} numberOfLines={emoji ? 2 : 3} maxFontSizeMultiplier={1.6}>{nombre}</Text>
           {detalle ? <Text style={[s.casillaDetalle, { color: e.fg }]} numberOfLines={1} maxFontSizeMultiplier={1.4}>{detalle}</Text> : null}
+          {estado === 'tengo' && onPress ? (
+            <Rebote activo alMontar style={{ position: 'absolute', top: 4, right: 4 }}>
+              <Ionicons name="checkmark-circle" size={18} color={C.verde} />
+            </Rebote>
+          ) : null}
         </>
       )}
-    </Pressable>
+    </Presionable>
   );
 }
 
@@ -187,10 +202,9 @@ export function Grilla({ children }) {
 export function Tarjeta({ children, style, onPress }) {
   if (!onPress) return <View style={[s.tarjeta, style]}>{children}</View>;
   return (
-    <Pressable onPress={onPress} accessibilityRole="button"
-      style={({ pressed }) => [s.tarjeta, style, pressed && { opacity: 0.9 }]}>
+    <Presionable onPress={onPress} accessibilityRole="button" style={[s.tarjeta, style]}>
       {children}
-    </Pressable>
+    </Presionable>
   );
 }
 
@@ -232,10 +246,18 @@ export function Avatar({ url, nombre = '?', tam = 44, borde = C.linea }) {
 }
 
 // Pantalla vacía: siempre dice qué hacer y trae el botón para hacerlo
-export function Vacio({ texto, titulo, accion }) {
+// objeto: ícono que acompaña a Chefpu (lupa, carrito, marcador…) para que cada pantalla vacía se vea distinta
+export function Vacio({ texto, titulo, accion, expresion = 'pensando', objeto }) {
   return (
     <View style={{ alignItems: 'center', gap: 10, paddingVertical: 28 }}>
-      <Mascota tam={96} expresion="pensando" />
+      <View>
+        <Mascota tam={96} expresion={expresion} />
+        {objeto ? (
+          <Balanceo style={{ position: 'absolute', right: -22, top: -6, width: 44, height: 44, borderRadius: 22, backgroundColor: C.blanco, borderWidth: 2, borderColor: C.dorado, alignItems: 'center', justifyContent: 'center' }}>
+            <Ionicons name={objeto} size={22} color={C.tomate} />
+          </Balanceo>
+        ) : null}
+      </View>
       {titulo ? <Text style={[s.etiqueta, { textAlign: 'center', fontSize: 17 }]}>{titulo}</Text> : null}
       {texto ? <Text style={[s.sub, { textAlign: 'center', fontSize: 15 }]}>{texto}</Text> : null}
       {accion ? <Boton titulo={accion.titulo} icono={accion.icono} tipo={accion.tipo || 'principal'} onPress={accion.onPress} style={{ alignSelf: 'stretch', marginTop: 6 }} /> : null}
@@ -244,24 +266,11 @@ export function Vacio({ texto, titulo, accion }) {
 }
 
 // ---------- Esqueletos de carga (como Instagram) ----------
-function usePulso() {
-  const v = React.useRef(new Animated.Value(0.45)).current;
-  React.useEffect(() => {
-    const a = Animated.loop(Animated.sequence([
-      Animated.timing(v, { toValue: 1, duration: 650, useNativeDriver: true }),
-      Animated.timing(v, { toValue: 0.45, duration: 650, useNativeDriver: true }),
-    ]));
-    a.start();
-    return () => a.stop();
-  }, []);
-  return v;
-}
 export function Hueso({ ancho = '100%', alto = 14, radio = 8, style }) {
   return <View style={[{ width: ancho, height: alto, borderRadius: radio, backgroundColor: '#E9DCCB' }, style]} />;
 }
 // tipo: 'tarjetas' (lista de recetas) | 'fotos' (comunidad) | 'receta' | 'perfil'
 export function Esqueleto({ tipo = 'tarjetas', n = 4 }) {
-  const pulso = usePulso();
   let cuerpo;
   if (tipo === 'fotos') {
     cuerpo = Array.from({ length: Math.min(n, 3) }, (_, k) => (
@@ -274,7 +283,7 @@ export function Esqueleto({ tipo = 'tarjetas', n = 4 }) {
   } else if (tipo === 'receta') {
     cuerpo = (
       <>
-        <Hueso alto={260} radio={0} style={{ marginHorizontal: -24, marginTop: -24, width: undefined }} />
+        <Hueso alto={220} radio={18} />
         <Hueso ancho="80%" alto={30} />
         <Hueso ancho="50%" />
         <View style={s.fila}><Hueso ancho="48%" alto={56} radio={18} /><Hueso ancho="48%" alto={56} radio={18} /></View>
@@ -299,9 +308,9 @@ export function Esqueleto({ tipo = 'tarjetas', n = 4 }) {
     ));
   }
   return (
-    <Animated.View style={{ gap: 16, opacity: pulso }} accessible accessibilityLabel="Cargando">
+    <Brillo style={{ gap: 16 }}>
       {cuerpo}
-    </Animated.View>
+    </Brillo>
   );
 }
 
@@ -507,8 +516,8 @@ export function Cargando() {
 export function TarjetaReceta({ titulo, foto, meta, estado = null, detalle, abajo, onPress }) {
   const borde = estado === 'ya' ? C.verde : estado === 'falta' ? C.ambar : C.linea;
   return (
-    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={[titulo, meta, detalle].filter(Boolean).join(', ')}
-      style={({ pressed }) => [s.tarjetaReceta, { borderColor: borde, borderWidth: estado ? 2 : 1.5, opacity: pressed ? 0.9 : 1 }]}>
+    <Presionable onPress={onPress} accessibilityRole="button" accessibilityLabel={[titulo, meta, detalle].filter(Boolean).join(', ')}
+      style={[s.tarjetaReceta, { borderColor: borde, borderWidth: estado ? 2 : 1.5 }]}>
       {foto ? (
         <Image source={{ uri: foto }} style={s.tarjetaRecetaFoto} />
       ) : (
@@ -523,7 +532,7 @@ export function TarjetaReceta({ titulo, foto, meta, estado = null, detalle, abaj
         {estado === 'ya' ? <Pastilla texto={detalle || 'Tienes todo'} fondo={C.verdeTinte} color={C.verde} icono="checkmark" /> : null}
         {estado === 'falta' ? <Pastilla texto={detalle || 'Te falta 1'} fondo={C.ambarTinte} color={C.ambarOscuro} /> : null}
       </View>
-    </Pressable>
+    </Presionable>
   );
 }
 

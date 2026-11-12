@@ -9,6 +9,7 @@ import { Foco } from './foco';
 import { useMovimientoReducido } from './tutorial';
 import { registrar } from './analitica';
 import { efecto, vibrar } from './sonido';
+import { Aura } from './anim';
 
 const TAM = 72;
 const CLAVE_POS = 'chefpu_pos_v1';
@@ -187,9 +188,12 @@ export function ChefpuFlotante({ voz, visible, onQueCocino, onConsejo, onAmigos 
       <Animated.View {...arrastre.panHandlers} style={{ position: 'absolute', left: pos.x, top: pos.y, width: TAM, height: TAM, zIndex: 920, transform: [{ scale: rebote }] }}
         accessible accessibilityRole="button" accessibilityLabel="Chefpu" accessibilityHint="Toca para ver opciones. Arrastra para moverlo."
         accessibilityActions={[{ name: 'activate' }]} onAccessibilityAction={() => setMenu((x) => !x)}>
-        <Foco id="chefpu_flotante" style={{ width: TAM, height: TAM, borderRadius: TAM / 2, backgroundColor: C.blanco, borderWidth: 2, borderColor: C.linea, overflow: 'hidden',
-          alignItems: 'center', justifyContent: 'center', shadowColor: '#2A211C', shadowOpacity: 0.22, shadowRadius: 8, shadowOffset: { width: 0, height: 6 } }}>
-          <Mascota tam={TAM - 6} expresion={m?.cara || null} />
+        <Foco id="chefpu_flotante" style={{ width: TAM, height: TAM, borderRadius: TAM / 2,
+          shadowColor: m ? C.dorado : '#2A211C', shadowOpacity: m ? 0.6 : 0.22, shadowRadius: m ? 14 : 8, shadowOffset: { width: 0, height: m ? 0 : 6 } }}>
+          {/* Aura: anillo de colores que gira; más rápido y con resplandor cuando tiene algo que decir */}
+          <Aura tam={TAM} activo={!!m}>
+            <Mascota tam={TAM - 14} expresion={m?.cara || null} />
+          </Aura>
         </Foco>
       </Animated.View>
     </>

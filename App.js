@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, Pressable, Keyboard, Platform } from 'react-native';
+import { View, Text, Pressable, Keyboard, Platform, Animated } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -16,6 +16,7 @@ import { useTutorialEstado, RegaloTutorial, TutorialCapa } from './src/tutorial'
 import { ChefpuFlotante, useChefpuVoz } from './src/chefpuFlotante';
 import { Foco } from './src/foco';
 import { prepararSonidos, efecto } from './src/sonido';
+import { Rebote, XPHost, CelebracionHost, mostrarXP, celebrar, usePulsoXP } from './src/anim';
 import Acceso from './src/pantallas/Acceso';
 import Nevera from './src/pantallas/Nevera';
 import Buscar from './src/pantallas/Buscar';
@@ -28,11 +29,11 @@ import Usuarios from './src/pantallas/Usuarios';
 import PerfilPublico from './src/pantallas/PerfilPublico';
 
 const PESTANAS = [
-  { id: 'nevera', nombre: 'Nevera', icono: 'file-tray-stacked-outline', comp: Nevera },
-  { id: 'buscar', nombre: 'Buscar', icono: 'search', comp: Buscar },
-  { id: 'comunidad', nombre: 'Comunidad', icono: 'people-outline', comp: Comunidad },
-  { id: 'publicar', nombre: 'Publicar', icono: 'add-circle-outline', comp: Publicar },
-  { id: 'perfil', nombre: 'Perfil', icono: 'person-outline', comp: Perfil },
+  { id: 'nevera', nombre: 'Nevera', icono: 'file-tray-stacked-outline', lleno: 'file-tray-stacked', comp: Nevera },
+  { id: 'buscar', nombre: 'Buscar', icono: 'search-outline', lleno: 'search', comp: Buscar },
+  { id: 'comunidad', nombre: 'Comunidad', icono: 'people-outline', lleno: 'people', comp: Comunidad },
+  { id: 'publicar', nombre: 'Publicar', icono: 'add-circle-outline', lleno: 'add-circle', comp: Publicar },
+  { id: 'perfil', nombre: 'Perfil', icono: 'person-outline', lleno: 'person', comp: Perfil },
 ];
 // El tutorial también se puede repetir desde el perfil
 function TutorialRepetido() {
@@ -81,6 +82,7 @@ const APILADAS = Object.fromEntries(Object.entries(PANTALLAS).map(([k, Comp]) =>
 function Inicio({ pestana, visitadas, uid, teclado, irA }) {
   const insets = useSafeAreaInsets();
   const enfocada = useIsFocused();
+  const pulsoXP = usePulsoXP(); // la pestaña Perfil se ilumina en verde claro cuando llega XP
   return (
     <View style={{ flex: 1, paddingTop: insets.top, backgroundColor: C.fondo }}>
       <View style={{ flex: 1 }}>
@@ -105,7 +107,14 @@ function Inicio({ pestana, visitadas, uid, teclado, irA }) {
               <Foco key={p.id} id={`tab_${p.id}`} style={{ flex: 1 }}>
                 <Pressable onPress={() => { if (activa) subirArriba(p.id); else irA(p.id); }} style={{ flex: 1, alignItems: 'center', gap: 2, minHeight: 48, justifyContent: 'center' }}
                   accessibilityRole="tab" accessibilityLabel={p.nombre} accessibilityState={{ selected: activa }}>
-                  <Ionicons name={p.icono} size={24} color={activa ? C.tomate : C.suave} />
+                  {p.id === 'perfil' ? (
+                    <Animated.View pointerEvents="none" style={{ position: 'absolute', top: 0, width: 52, height: 52, borderRadius: 26, backgroundColor: '#BBF7D0', opacity: pulsoXP,
+                      transform: [{ scale: pulsoXP.interpolate({ inputRange: [0, 1], outputRange: [0.6, 1.15] }) }] }} />
+                  ) : null}
+                  {/* el ícono se rellena y rebota al elegir la pestaña */}
+                  <Rebote activo={activa}>
+                    <Ionicons name={activa ? p.lleno : p.icono} size={24} color={activa ? C.tomate : C.suave} />
+                  </Rebote>
                   <Text numberOfLines={1} style={{ fontSize: 11, fontWeight: "700", color: activa ? C.tomate : C.suave }} maxFontSizeMultiplier={1.3}>{p.nombre}</Text>
                 </Pressable>
               </Foco>
@@ -141,18 +150,27 @@ function Contenido() {
     const n = perfil?.nivel;
     if (!n) return;
     if (nivelAnterior.current && n > nivelAnterior.current) {
-      efecto('nivel');
-      setTimeout(() => voz.decir(`nivel_${n}`, `¡Subiste a nivel ${n}! Ahora eres ${perfil.titulo}.`, 'celebrando', { forzar: true }), 900);
+      // después del "+XP" flotante: celebración a pantalla completa
+      setTimeout(() => { efecto('nivel'); celebrar({ etiqueta: 'SUBISTE DE NIVEL', titulo: `Nivel ${n}`, texto: `Ahora eres ${perfil.titulo}. ¡Sigue cocinando!` }); }, 1300);
     }
     nivelAnterior.current = n;
   }, [perfil?.nivel]);
+
+  // XP ganado: "+20 XP" sube flotando con un brillo verde claro
+  const xpAnterior = useRef({ id: null, xp: null });
+  useEffect(() => {
+    if (!perfil?.id) { xpAnterior.current = { id: null, xp: null }; return; }
+    const a = xpAnterior.current;
+    if (a.id === perfil.id && a.xp !== null && perfil.xp > a.xp) mostrarXP(perfil.xp - a.xp);
+    xpAnterior.current = { id: perfil.id, xp: perfil.xp };
+  }, [perfil?.id, perfil?.xp]);
 
   // Logro nuevo: sonido de logro y Chefpu lo anuncia (se revisa cada vez que cambia el XP)
   const logrosVistos = useRef({ uid: null, codigos: null });
   useEffect(() => {
     const id = perfil?.id;
     if (!id) return;
-    supabase.from('logros_usuario').select('codigo, logros(nombre)').eq('usuario_id', id).then(({ data, error }) => {
+    supabase.from('logros_usuario').select('codigo, logros(nombre, descripcion)').eq('usuario_id', id).then(({ data, error }) => {
       if (error || !data) return;
       const antes = logrosVistos.current;
       const ahora = new Set(data.map((d) => d.codigo));
@@ -162,8 +180,8 @@ function Contenido() {
       if (!nuevo) return;
       setTimeout(() => {
         efecto('logro');
-        voz.decir(`logro_${nuevo.codigo}`, `¡Nuevo logro: ${nuevo.logros?.nombre || 'desbloqueado'}! Míralo en tu perfil.`, 'celebrando', { forzar: true });
-      }, 2200); // después del sonido de XP o de nivel
+        celebrar({ etiqueta: 'NUEVO LOGRO', titulo: nuevo.logros?.nombre || 'Logro desbloqueado', texto: nuevo.logros?.descripcion || 'Míralo en tu perfil.' });
+      }, 2200); // después del "+XP" o de la celebración de nivel (se muestran en fila)
     });
   }, [perfil?.id, perfil?.xp]);
 
@@ -407,6 +425,8 @@ function Contenido() {
       <TutorialCapa />
       <RegaloTutorial />
       <AvisoHost abajo={teclado ? 8 : 72} />
+      <XPHost />
+      <CelebracionHost />
       {teclado ? (
         <Pressable onPress={() => Keyboard.dismiss()} accessibilityRole="button" accessibilityLabel="Cerrar teclado"
           style={{ position: 'absolute', right: 12, bottom: (Platform.OS === 'ios' ? altoTeclado : 0) + 8, flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: 44, paddingHorizontal: 14, borderRadius: 999, backgroundColor: C.texto }}>
