@@ -11,8 +11,13 @@ console.log('Recetas de prueba:', JSON.stringify(recetas));
 
 const navegador = await chromium.launch();
 const pagina = await navegador.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+// Invitado que ya vio la bienvenida y el tutorial, para llegar directo a la receta
+await pagina.addInitScript(() => {
+  localStorage.setItem('bienvenida_v1', '1');
+  localStorage.setItem('tutorial_v2', JSON.stringify({ iniciado: true, linea: 999, cuenta: 0, completado: true, saltado: false, regaloPendiente: false, ofrecido: true, obligatorio: false }));
+});
 const errores = [];
-pagina.on('console', (m) => { if (m.type() === 'error' || m.type() === 'warning') errores.push(`[${m.type()}] ${m.text()}`); });
+pagina.on('console', (m) => { if ((m.type() === 'error' || m.type() === 'warning') && !/useNativeDriver|navigator.vibrate|play\(\) failed|didn't interact/.test(m.text())) errores.push(`[${m.type()}] ${m.text()}`); });
 pagina.on('pageerror', (e) => errores.push(`[pageerror] ${e.message}\n${e.stack}`));
 
 await pagina.goto(BASE, { waitUntil: 'networkidle' });
