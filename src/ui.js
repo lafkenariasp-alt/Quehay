@@ -399,7 +399,7 @@ export function DobleToque({ onDoble, onSimple, children, style }) {
 }
 
 // ---------- Fila que se desliza a la izquierda para quitar (como Mail) ----------
-export function FilaDeslizable({ children, onQuitar, textoQuitar = 'Quitar', etiqueta, onActivar, textoActivar }) {
+export function FilaDeslizable({ children, onQuitar, textoQuitar = 'Quitar', etiqueta, onActivar, textoActivar, onPress, marcado }) {
   const x = React.useRef(new Animated.Value(0)).current;
   const abierto = React.useRef(false);
   const ANCHO = 92;
@@ -422,6 +422,7 @@ export function FilaDeslizable({ children, onQuitar, textoQuitar = 'Quitar', eti
   return (
     <View style={{ overflow: 'hidden', borderRadius: 14 }}
       accessible accessibilityLabel={etiqueta} accessibilityHint={textoActivar}
+      accessibilityState={marcado === undefined ? undefined : { checked: marcado }}
       accessibilityActions={[...(onActivar ? [{ name: 'activate', label: textoActivar }] : []), { name: 'quitar', label: textoQuitar }]}
       onAccessibilityAction={(e) => { if (e.nativeEvent.actionName === 'quitar') onQuitar(); else if (e.nativeEvent.actionName === 'activate') onActivar?.(); }}>
       <Pressable onPress={quitar} accessibilityRole="button" accessibilityLabel={textoQuitar}
@@ -430,7 +431,7 @@ export function FilaDeslizable({ children, onQuitar, textoQuitar = 'Quitar', eti
         <Text style={{ color: C.blanco, fontWeight: '800', fontSize: 13 }}>{textoQuitar}</Text>
       </Pressable>
       <Animated.View {...pan.panHandlers} style={{ transform: [{ translateX: x }], backgroundColor: C.blanco }}>
-        <Pressable onPress={() => { if (abierto.current) ir(0); }}>{children}</Pressable>
+        <Pressable onPress={() => { if (abierto.current) ir(0); else onPress?.(); }}>{children}</Pressable>
       </Animated.View>
     </View>
   );

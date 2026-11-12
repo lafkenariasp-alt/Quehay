@@ -357,7 +357,7 @@ function Contenido() {
     const ruta = navRef.isReady() ? navRef.getCurrentRoute()?.name : null;
     const donde = !ruta || ruta === 'inicio' ? pestana : ruta;
     const CONSEJOS = {
-      nevera: 'Anota lo que tienes y te digo qué cocinar. Desliza un alimento a la izquierda para quitarlo. En Por comprar está tu lista del súper.',
+      nevera: 'Anota lo que tienes y te digo qué cocinar. Toca alimentos para cocinar solo con esos, y desliza a la izquierda para quitar. En Por comprar está tu lista del súper.',
       buscar: 'Elige lo que tienes y toca Ver recetas. Con 3 o más ingredientes salen muchas más.',
       comunidad: 'Aquí ves lo que cocinan las personas que sigues. Toca una foto para verla grande.',
       publicar: 'Sube tu receta con foto y gana 50 XP. Elige los ingredientes del catálogo.',

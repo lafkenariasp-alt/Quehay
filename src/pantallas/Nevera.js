@@ -20,10 +20,15 @@ export default function Nevera({ activa }) {
   const [cargando, setCargando] = useState(true);
   const [selector, setSelector] = useState(null); // 'nevera' | 'compras' | null
   const [vista, setVista] = useState('casa'); // 'casa' | 'comprar'
-  const [eligiendo, setEligiendo] = useState(false); // modo selección: elegir qué alimentos usar (como elegir fotos en el iPhone)
+  // Tocar un alimento lo elige (verde) para cocinar solo con esos; dos toques fuera desmarcan todo
   const [elegidos, setElegidos] = useState([]); // ids de ingredientes elegidos
   const alternarElegido = (id) => { efecto('marcar'); setElegidos((l) => (l.includes(id) ? l.filter((x) => x !== id) : [...l, id])); };
-  const salirDeEligiendo = () => { setEligiendo(false); setElegidos([]); };
+  const desmarcarTodo = () => { if (elegidos.length) { efecto('desmarcar'); setElegidos([]); } };
+  const ultimoToqueFuera = useRef(0);
+  const tocarFuera = () => {
+    const ahora = Date.now();
+    if (ahora - ultimoToqueFuera.current < 350) { ultimoToqueFuera.current = 0; desmarcarTodo(); } else ultimoToqueFuera.current = ahora;
+  };
   const vencimiento = !!perfil?.control_vencimiento;
   const ref = useRef(null);
   useVolverArriba(ref);
@@ -159,26 +164,22 @@ export default function Nevera({ activa }) {
     <View style={{ flex: 1 }}>
       <ScrollView
         ref={ref}
-        contentContainerStyle={s.contenido}
+        contentContainerStyle={[s.contenido, { flexGrow: 1 }]}
         keyboardShouldPersistTaps="handled"
         refreshControl={refreshControl}
         onScroll={fijo.alScroll}
         scrollEventThrottle={16}
       >
-        <Encabezado titulo="Mi nevera" derecha={enCasa && items.length >= 2 ? (
-            <Pressable onPress={() => { efecto('boton'); if (eligiendo) salirDeEligiendo(); else setEligiendo(true); }} hitSlop={10}
-              accessibilityRole="button" accessibilityLabel={eligiendo ? 'Cancelar selección' : 'Elegir alimentos para cocinar'}
-              style={{ minHeight: 44, paddingHorizontal: 14, borderRadius: 999, justifyContent: 'center', backgroundColor: eligiendo ? C.superficie : C.tomateTinte }}>
-              <Text style={{ fontSize: 15, fontWeight: '800', color: eligiendo ? C.texto : C.tomate }}>{eligiendo ? 'Cancelar' : 'Elegir'}</Text>
-            </Pressable>
-          ) : null} />
+        {/* Fondo que escucha los toques fuera de la lista: dos toques desmarcan todo */}
+        <Pressable onPress={tocarFuera} accessible={false} style={{ gap: 16, flexGrow: 1 }}>
+        <Encabezado titulo="Mi nevera" />
 
         {/* Selector de lista, como el control segmentado de iOS */}
         <View style={{ flexDirection: 'row', padding: 4, borderRadius: 14, backgroundColor: C.superficie }} accessibilityRole="tablist">
           {[['casa', 'En casa', items.length], ['comprar', 'Por comprar', compras.length]].map(([id, txt, n]) => {
             const sel = vista === id;
             return (
-              <Pressable key={id} onPress={() => { if (!sel) { efecto('boton'); setVista(id); salirDeEligiendo(); } }} accessibilityRole="tab" accessibilityState={{ selected: sel }} accessibilityLabel={`${txt}, ${n}`}
+              <Pressable key={id} onPress={() => { if (!sel) { efecto('boton'); setVista(id); setElegidos([]); } }} accessibilityRole="tab" accessibilityState={{ selected: sel }} accessibilityLabel={`${txt}, ${n}`}
                 style={{ flex: 1, minHeight: 40, borderRadius: 11, alignItems: 'center', justifyContent: 'center', backgroundColor: sel ? C.blanco : 'transparent', flexDirection: 'row', gap: 6 }}>
                 <Text style={{ fontSize: 15, fontWeight: '800', color: sel ? C.texto : C.suave }}>{txt}</Text>
                 {n ? <View style={{ minWidth: 22, paddingHorizontal: 6, height: 22, borderRadius: 11, backgroundColor: sel ? (id === 'casa' ? C.verde : C.ambar) : '#D9CBB8', alignItems: 'center', justifyContent: 'center' }}>
@@ -191,11 +192,9 @@ export default function Nevera({ activa }) {
 
         {cargando ? <Esqueleto n={3} /> : enCasa ? (
           <>
-            {eligiendo ? (
-              <Text style={[s.sub, { fontSize: 15 }]}>Toca los alimentos que quieres usar. Te muestro recetas con ellos.</Text>
-            ) : items.length ? <Boton titulo="Agregar alimentos" icono="add" tipo="secundario" onPress={() => setSelector('nevera')} /> : null}
+            {items.length ? <Boton titulo="Agregar alimentos" icono="add" tipo="secundario" onPress={() => setSelector('nevera')} /> : null}
 
-            {porVencer.length && !eligiendo ? (
+            {porVencer.length && !elegidos.length ? (
               <View style={{ gap: 10, padding: 16, borderRadius: 18, backgroundColor: C.ambarTinte, borderWidth: 1.5, borderColor: C.ambar }}>
                 <Text style={[s.seccion, { color: C.ambarOscuro }]}>
                   {porVencer.length === 1 ? '1 alimento por vencer' : `${porVencer.length} alimentos por vencer`}
@@ -225,41 +224,29 @@ export default function Nevera({ activa }) {
                     <Text style={{ fontSize: 12, fontWeight: '800', color: C.suave, letterSpacing: 0.5 }}>{g.cat.toUpperCase()} · {g.lista.length}</Text>
                     {g.lista.map((i) => {
                       const vence = vencimiento && i.dias !== null && i.dias <= 3;
-                      if (eligiendo) {
-                        const sel = elegidos.includes(i.ingrediente_id);
-                        return (
-                          <Pressable key={i.ingrediente_id} onPress={() => alternarElegido(i.ingrediente_id)}
-                            accessibilityRole="checkbox" accessibilityState={{ checked: sel }} accessibilityLabel={i.ingredientes.nombre}
-                            style={[s.fila, { minHeight: 52, paddingHorizontal: 14, gap: 12, borderWidth: sel ? 2 : 1.5, borderColor: sel ? C.verde : C.linea, borderRadius: 14, backgroundColor: sel ? C.verdeTinte : C.blanco }]}>
+                      const sel = elegidos.includes(i.ingrediente_id);
+                      return (
+                        <FilaDeslizable key={i.ingrediente_id} onQuitar={() => { setElegidos((l) => l.filter((x) => x !== i.ingrediente_id)); quitar(i); }}
+                          onPress={() => alternarElegido(i.ingrediente_id)} onActivar={() => alternarElegido(i.ingrediente_id)} marcado={sel}
+                          textoActivar={sel ? 'Toca para no usarlo' : 'Toca para cocinar con este'}
+                          etiqueta={`${i.ingredientes.nombre}${vence ? `, vence ${textoVence(i.dias).toLowerCase()}` : ''}`}>
+                          <View style={[s.fila, { minHeight: 52, paddingHorizontal: 14, gap: 12, borderWidth: sel ? 2 : 1.5, borderColor: sel ? C.verde : vence ? C.ambar : C.linea, borderRadius: 14, backgroundColor: sel ? C.verdeTinte : vence ? C.ambarTinte : C.blanco }]}>
                             <Text style={{ fontSize: 24 }} maxFontSizeMultiplier={1.2} accessible={false}>{emojiDe(i.ingredientes.nombre, g.cat)}</Text>
                             <Text style={{ flex: 1, fontSize: 16, fontWeight: '700', color: sel ? C.verdeOscuro : C.texto }}>{i.ingredientes.nombre}</Text>
-                            <Rebote activo={sel}>
-                              <Ionicons name={sel ? 'checkmark-circle' : 'ellipse-outline'} size={26} color={sel ? C.verde : '#CBBBA6'} />
-                            </Rebote>
-                          </Pressable>
-                        );
-                      }
-                      return (
-                        <FilaDeslizable key={i.ingrediente_id} onQuitar={() => quitar(i)}
-                          etiqueta={`${i.ingredientes.nombre}${vence ? `, vence ${textoVence(i.dias).toLowerCase()}` : ''}`}>
-                          <View style={[s.fila, { minHeight: 52, paddingHorizontal: 14, gap: 12, borderWidth: 1.5, borderColor: vence ? C.ambar : C.linea, borderRadius: 14, backgroundColor: vence ? C.ambarTinte : C.blanco }]}>
-                            <Text style={{ fontSize: 24 }} maxFontSizeMultiplier={1.2} accessible={false}>{emojiDe(i.ingredientes.nombre, g.cat)}</Text>
-                            <Text style={{ flex: 1, fontSize: 16, fontWeight: '700', color: C.texto }}>{i.ingredientes.nombre}</Text>
-                            {vence ? <Text style={{ fontSize: 13, fontWeight: '800', color: C.ambarOscuro }}>{textoVence(i.dias)}</Text> : null}
+                            {vence && !sel ? <Text style={{ fontSize: 13, fontWeight: '800', color: C.ambarOscuro }}>{textoVence(i.dias)}</Text> : null}
+                            {sel ? <Rebote activo={sel} alMontar><Ionicons name="checkmark-circle" size={24} color={C.verde} /></Rebote> : null}
                           </View>
                         </FilaDeslizable>
                       );
                     })}
                   </View>
                 ))}
-                {!eligiendo ? (
-                  <>
-                    <Text style={[s.sub, { textAlign: 'center', fontSize: 13 }]}>Desliza un alimento a la izquierda para quitarlo · Toca «Elegir» para cocinar con algunos</Text>
-                    <Tarjeta>
-                      <Interruptor texto="Control de vencimiento" sub="Te mostramos lo que vence y recetas para aprovecharlo" valor={vencimiento} onCambiar={cambiarVencimiento} />
-                    </Tarjeta>
-                  </>
-                ) : null}
+                <Text style={[s.sub, { textAlign: 'center', fontSize: 13 }]}>
+                  {elegidos.length ? 'Toca dos veces fuera de la lista para desmarcar todo' : 'Toca alimentos para cocinar solo con esos · Desliza a la izquierda para quitar'}
+                </Text>
+                <Tarjeta>
+                  <Interruptor texto="Control de vencimiento" sub="Te mostramos lo que vence y recetas para aprovecharlo" valor={vencimiento} onCambiar={cambiarVencimiento} />
+                </Tarjeta>
               </>
             )}
           </>
@@ -293,16 +280,16 @@ export default function Nevera({ activa }) {
             )}
           </>
         )}
+        </Pressable>
       </ScrollView>
       {fijo.barra}
 
-      {enCasa && eligiendo ? (
+      {enCasa && elegidos.length ? (
         <View style={s.pie}>
           <Boton
             tipo="verde"
             icono="restaurant-outline"
-            deshabilitado={!elegidos.length}
-            titulo={elegidos.length ? `Qué cocino con ${elegidos.length === 1 ? 'este' : `estos ${elegidos.length}`}` : 'Elige al menos uno'}
+            titulo={`Qué cocino con ${elegidos.length === 1 ? 'este' : `estos ${elegidos.length}`}`}
             onPress={cocinarConElegidos}
           />
         </View>
