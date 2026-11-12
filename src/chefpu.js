@@ -24,9 +24,10 @@ export function Mascota({ tam = 96, accesorio = null, expresion = null }) {
       <Image source={{ uri: src }} style={{ width: tam, height: tam }} resizeMode="contain" />
       {accesorio === 'delantal_bienvenida' ? (
         // Insignia del regalo de bienvenida
-        <View style={{ position: 'absolute', right: 0, bottom: 0, width: Math.max(22, tam * 0.26), height: Math.max(22, tam * 0.26), borderRadius: 999,
+        // fuera de la cara: esquina inferior derecha, chica y corrida hacia afuera
+        <View style={{ position: 'absolute', right: -Math.max(6, tam * 0.1), bottom: -Math.max(4, tam * 0.04), width: Math.max(20, tam * 0.22), height: Math.max(20, tam * 0.22), borderRadius: 999,
           backgroundColor: C.dorado, borderWidth: 2, borderColor: C.blanco, alignItems: 'center', justifyContent: 'center' }}>
-          <Ionicons name="ribbon" size={Math.max(12, tam * 0.14)} color={C.texto} />
+          <Ionicons name="ribbon" size={Math.max(11, tam * 0.12)} color={C.texto} />
         </View>
       ) : null}
     </View>

@@ -113,10 +113,10 @@ export default function Perfil({ activa }) {
       </View>
 
       <Tarjeta style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
-        <Mascota tam={64} accesorio={(perfil.accesorios || [])[0]} />
+        <View style={{ marginRight: 6 }}><Mascota tam={72} accesorio={(perfil.accesorios || [])[0]} /></View>
         <View style={{ flex: 1, gap: 2 }}>
           <Text style={s.etiqueta}>Tu mascota</Text>
-          <Text style={s.sub}>{(perfil.accesorios || []).includes('delantal_bienvenida') ? 'Lleva su delantal de bienvenida. Gana accesorios nuevos al subir de nivel.' : 'Gana accesorios al subir de nivel.'}</Text>
+          <Text style={s.sub}>{(perfil.accesorios || []).includes('delantal_bienvenida') ? 'Tiene la insignia del regalo de bienvenida. Gana trajes nuevos al subir de nivel.' : 'Gana accesorios al subir de nivel.'}</Text>
         </View>
       </Tarjeta>
 
