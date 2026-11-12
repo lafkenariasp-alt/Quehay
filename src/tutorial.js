@@ -121,7 +121,7 @@ export function RegaloTutorial() {
       <View style={{ flex: 1, backgroundColor: 'rgba(42,33,28,0.55)', justifyContent: 'center', padding: 24 }}>
         <Animated.View style={{ opacity: opacidad, transform: [{ scale: escala }], backgroundColor: C.fondo, borderRadius: 28, padding: 24, gap: 16, alignItems: 'center', maxWidth: 440, width: '100%', alignSelf: 'center' }}
           accessibilityViewIsModal>
-          <Mascota tam={170} accesorio="delantal_bienvenida" />
+          <Mascota tam={170} expresion="celebrando" accesorio="delantal_bienvenida" />
           <Text style={{ fontSize: 26, fontWeight: '800', color: C.texto, textAlign: 'center' }} accessibilityRole="header">¡Tutorial completado!</Text>
           <Text style={[s.sub, { fontSize: 15, textAlign: 'center' }]}>Ya sabes usar Qué Hay. Chefpu te dejó un regalo:</Text>
           <View style={{ gap: 10, padding: 16, borderRadius: 18, backgroundColor: C.doradoTinte, alignSelf: 'stretch' }}>

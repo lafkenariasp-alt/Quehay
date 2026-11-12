@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, Pressable, ActivityIndicator, StyleSheet, ScrollView, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { C } from './theme';
+import { Mascota } from './chefpu';
 
 export function Pantalla({ children, scroll = true, pie = null }) {
   return (
@@ -187,8 +188,8 @@ export function Avatar({ url, nombre = '?', tam = 44, borde = C.linea }) {
 export function Vacio({ icono = 'restaurant-outline', texto }) {
   return (
     <View style={{ alignItems: 'center', gap: 8, paddingVertical: 32 }}>
-      <Ionicons name={icono} size={40} color="#B9A68E" />
-      <Text style={[s.sub, { textAlign: 'center' }]}>{texto}</Text>
+      <Mascota tam={96} expresion="pensando" />
+      <Text style={[s.sub, { textAlign: 'center', fontSize: 15 }]}>{texto}</Text>
     </View>
   );
 }
@@ -197,7 +198,7 @@ export function Vacio({ icono = 'restaurant-outline', texto }) {
 export function ErrorCarga({ mensaje, onReintentar, onVolver }) {
   return (
     <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, padding: 24, backgroundColor: C.fondo }}>
-      <Ionicons name="cloud-offline-outline" size={44} color="#B9A68E" />
+      <Mascota tam={120} expresion="triste" />
       <Text style={[s.etiqueta, { textAlign: 'center', fontSize: 17 }]}>No pudimos cargar esto</Text>
       <Text style={[s.sub, { textAlign: 'center' }]}>{mensaje || 'Revisa tu conexión a internet e intenta de nuevo.'}</Text>
       <Boton titulo="Reintentar" icono="refresh" onPress={onReintentar} style={{ alignSelf: 'stretch' }} />

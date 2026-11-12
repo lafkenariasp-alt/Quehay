@@ -66,7 +66,7 @@ export default function Bienvenida({ onTerminar, repetir = false }) {
     <View style={{ flex: 1 }}>
       <ScrollView contentContainerStyle={{ padding: 20, gap: 18 }}>
         <View style={[s.fila, { gap: 12, alignItems: 'flex-end' }]}>
-          <Mascota tam={64} />
+          <Mascota tam={72} expresion="pensando" />
           <View style={{ flex: 1, gap: 6 }}>
             <Text style={{ fontSize: 12, fontWeight: '800', color: C.ambarOscuro, letterSpacing: 0.5 }}>TUTORIAL · PASO 1 DE {TOTAL_PASOS}</Text>
             <Globo texto="¿Qué tienes a mano? No tiene que ser todo: con 3 basta." />
