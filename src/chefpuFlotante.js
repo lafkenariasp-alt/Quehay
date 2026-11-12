@@ -1,7 +1,9 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text, Pressable, Animated, Easing, PanResponder, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import * as Haptics from 'expo-haptics';
+// Vibración opcional al arrastrar
+let Haptics = null;
+try { Haptics = require('expo-haptics'); } catch (e) { Haptics = null; }
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { C } from './theme';
@@ -107,7 +109,7 @@ export function ChefpuFlotante({ voz, visible, onQueCocino, onConsejo }) {
       if (!inicio.current.movio && Math.abs(g.dx) + Math.abs(g.dy) > 6) {
         inicio.current.movio = true;
         setMenu(false); voz.callar();
-        Haptics.selectionAsync().catch(() => {});
+        Haptics?.selectionAsync?.().catch(() => {});
       }
       pos.setValue({ x: g.dx, y: g.dy });
     },

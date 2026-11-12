@@ -1,7 +1,9 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text, Pressable, Modal, Animated, Easing, AccessibilityInfo, Alert, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { BlurView } from 'expo-blur';
+// Desenfoque opcional: si la librería no está disponible, el fondo queda solo oscuro
+let BlurView = null;
+try { BlurView = require('expo-blur').BlurView; } catch (e) { BlurView = null; }
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useApp } from './contexto';
@@ -81,8 +83,8 @@ export function useTutorialEstado() {
 function Panel({ style, onPress }) {
   return (
     <Pressable onPress={onPress} style={[{ position: 'absolute', overflow: 'hidden' }, style]} accessible={false}>
-      <BlurView intensity={18} tint="dark" style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 }} />
-      <View style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, backgroundColor: 'rgba(24,16,12,0.58)' }} />
+      {BlurView ? <BlurView intensity={18} tint="dark" style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 }} /> : null}
+      <View style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, backgroundColor: BlurView ? 'rgba(24,16,12,0.58)' : 'rgba(24,16,12,0.72)' }} />
     </Pressable>
   );
 }
