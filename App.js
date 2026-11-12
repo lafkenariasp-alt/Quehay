@@ -269,6 +269,19 @@ function Contenido() {
     }
   }, [uidActual, tutorial.estado?.completado, tutorialCuenta]);
 
+  // Saltar el tutorial cierra su pantalla (antes quedaba la bienvenida abierta y parecía que había que hacerlo de nuevo)
+  const saltadoAntes = useRef(null);
+  useEffect(() => {
+    if (!tutorial.estado) return;
+    const s = !!tutorial.estado.saltado;
+    if (s && saltadoAntes.current === false) {
+      if (!uidActual && !bienvenidaVista) terminarBienvenida(null); // invitado: pasa directo a la app
+      else if (navRef.isReady() && navRef.getCurrentRoute()?.name === 'tutorial') nav.volver();
+      if (uidActual) marcarTutorialCuenta('iniciado'); // en la cuenta queda como visto: no se fuerza otra vez
+    }
+    saltadoAntes.current = s;
+  }, [tutorial.estado?.saltado]);
+
   // Chefpu ofrece el tutorial a quien no lo ha visto (usuarios que ya tenían la app)
   const enApp = sesion !== undefined && bienvenidaVista !== null && !!tutorial.estado && (uidActual || bienvenidaVista);
   useEffect(() => {
