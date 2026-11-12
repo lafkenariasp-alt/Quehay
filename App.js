@@ -9,7 +9,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from './src/supabase';
 import { AppCtx } from './src/contexto';
 import { C } from './src/theme';
-import { Cargando } from './src/ui';
+import { Cargando, PestanaCtx, subirArriba, AvisoHost } from './src/ui';
 import { registrar, leerIngredientesInvitado, borrarIngredientesInvitado } from './src/analitica';
 import Bienvenida from './src/pantallas/Bienvenida';
 import { useTutorialEstado, RegaloTutorial, TutorialCapa } from './src/tutorial';
@@ -90,7 +90,9 @@ function Inicio({ pestana, visitadas, uid, teclado, irA }) {
           const Comp = p.comp;
           return (
             <View key={`${p.id}-${uid || 'invitado'}`} style={{ flex: 1, display: visible ? 'flex' : 'none' }}>
-              <Comp activa={visible && enfocada} />
+              <PestanaCtx.Provider value={p.id}>
+                <Comp activa={visible && enfocada} />
+              </PestanaCtx.Provider>
             </View>
           );
         })}
@@ -101,7 +103,7 @@ function Inicio({ pestana, visitadas, uid, teclado, irA }) {
             const activa = p.id === pestana;
             return (
               <Foco key={p.id} id={`tab_${p.id}`} style={{ flex: 1 }}>
-                <Pressable onPress={() => irA(p.id)} style={{ flex: 1, alignItems: 'center', gap: 2, minHeight: 48, justifyContent: 'center' }}
+                <Pressable onPress={() => { if (activa) subirArriba(p.id); else irA(p.id); }} style={{ flex: 1, alignItems: 'center', gap: 2, minHeight: 48, justifyContent: 'center' }}
                   accessibilityRole="tab" accessibilityLabel={p.nombre} accessibilityState={{ selected: activa }}>
                   <Ionicons name={p.icono} size={24} color={activa ? C.tomate : C.suave} />
                   <Text numberOfLines={1} style={{ fontSize: 11, fontWeight: "700", color: activa ? C.tomate : C.suave }} maxFontSizeMultiplier={1.3}>{p.nombre}</Text>
@@ -322,7 +324,7 @@ function Contenido() {
     const ruta = navRef.isReady() ? navRef.getCurrentRoute()?.name : null;
     const donde = !ruta || ruta === 'inicio' ? pestana : ruta;
     const CONSEJOS = {
-      nevera: 'Anota lo que compras y te digo qué cocinar. Mantén presionado un alimento para quitarlo.',
+      nevera: 'Anota lo que tienes y te digo qué cocinar. Desliza un alimento a la izquierda para quitarlo. En Por comprar está tu lista del súper.',
       buscar: 'Elige lo que tienes y toca Ver recetas. Con 3 o más ingredientes salen muchas más.',
       comunidad: 'Aquí ves lo que cocinan tus amigos. Toca una foto para ver la receta.',
       publicar: 'Sube tu receta con foto y gana 50 XP. Elige los ingredientes del catálogo.',
@@ -404,6 +406,7 @@ function Contenido() {
       <ChefpuFlotante voz={voz} visible={verFlotante} onQueCocino={queCocino} onConsejo={consejo} onAmigos={() => nav.abrir('amigos')} />
       <TutorialCapa />
       <RegaloTutorial />
+      <AvisoHost abajo={teclado ? 8 : 72} />
       {teclado ? (
         <Pressable onPress={() => Keyboard.dismiss()} accessibilityRole="button" accessibilityLabel="Cerrar teclado"
           style={{ position: 'absolute', right: 12, bottom: (Platform.OS === 'ios' ? altoTeclado : 0) + 8, flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: 44, paddingHorizontal: 14, borderRadius: 999, backgroundColor: C.texto }}>

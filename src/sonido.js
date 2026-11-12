@@ -165,6 +165,8 @@ const MOMENTOS = {
   me_gusta: ['tap', 'medio'],
   seguir: ['tap', 'suave'],
   listas: ['logro', 'exito'],
+  temporizador: ['fanfarria', 'exito'],
+  guardar: ['tap', 'medio'],
   xp: ['xp', 'exito'],
   logro: ['logro', 'exito'],
   nivel: ['nivel', 'exito'],

@@ -5,7 +5,7 @@ import { supabase } from '../supabase';
 import { useApp } from '../contexto';
 import { C } from '../theme';
 import { Foco } from '../foco';
-import { Pantalla, Encabezado, Seccion, TarjetaReceta, Vacio, Cargando, ErrorCarga, s } from '../ui';
+import { Pantalla, Encabezado, Seccion, TarjetaReceta, Vacio, Esqueleto, ErrorCarga, s } from '../ui';
 import { Mascota } from '../mascota';
 import { registrar } from '../analitica';
 import { efecto } from '../sonido';
@@ -25,9 +25,9 @@ export default function Resultados({ tengo = [], maxFaltan = 4, basicos = true, 
   const [ayuda, setAyuda] = useState(primeraVez); // explicación de colores la primera vez
   const [cercanas, setCercanas] = useState(false); // sin resultados en el límite: mostramos las más cercanas
 
-  const cargar = useCallback(async () => {
+  const cargar = useCallback(async (refrescando) => {
     setError(null);
-    setRecetas(null);
+    if (refrescando !== true) setRecetas(null);
     {
       const buscar = (max) => supabase.rpc('buscar_recetas', {
         tengo, max_faltantes: max, incluir_basicos: basicos, categoria, max_minutos: maxMinutos, limite: 60,
@@ -46,6 +46,7 @@ export default function Resultados({ tengo = [], maxFaltan = 4, basicos = true, 
         lista = lista.filter((r) => usan.has(r.receta_id));
       }
       setRecetas(lista);
+      if (refrescando === true) return;
       // Chefpu comenta lo que encontró
       const listas = lista.filter((r) => r.faltan_n === 0).length;
       if (listas) efecto('listas');
@@ -59,10 +60,17 @@ export default function Resultados({ tengo = [], maxFaltan = 4, basicos = true, 
   useEffect(() => { cargar(); }, [cargar]);
 
   if (recetas === 'error') return <ErrorCarga mensaje={error} onReintentar={cargar} onVolver={nav.volver} />;
-  if (!recetas) return <Cargando />;
+  if (!recetas) {
+    return (
+      <Pantalla scroll={false}>
+        <Encabezado onVolver={nav.volver} titulo={titulo || 'Buscando recetas…'} sub={`Con ${tengo.length} ingredientes`} />
+        <Esqueleto n={5} />
+      </Pantalla>
+    );
+  }
 
   return (
-    <Pantalla>
+    <Pantalla onRefrescar={() => cargar(true)}>
       <Encabezado
         onVolver={nav.volver}
         titulo={titulo || `${recetas.length} ${recetas.length === 1 ? 'receta' : 'recetas'} para ti`}
@@ -90,7 +98,8 @@ export default function Resultados({ tengo = [], maxFaltan = 4, basicos = true, 
         </View>
       ) : null}
       {recetas.length === 0 ? (
-        <Vacio texto={'No encontramos recetas con eso.\nPrueba permitir más faltantes o agrega ingredientes.'} />
+        <Vacio titulo="No encontramos recetas con eso" texto="Agrega más ingredientes o permite que falten algunos."
+          accion={{ titulo: 'Cambiar ingredientes', icono: 'options-outline', onPress: nav.volver }} />
       ) : (
         GRUPOS.map((g, gi) => {
           const lista = recetas.filter((r) => g.f(r.faltan_n));

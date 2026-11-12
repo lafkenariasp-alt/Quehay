@@ -1,9 +1,10 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, Image, Pressable, FlatList, RefreshControl } from 'react-native';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { View, Text, Image, Pressable, FlatList } from 'react-native';
 import { supabase } from '../supabase';
 import { useApp } from '../contexto';
 import { C } from '../theme';
-import { Encabezado, Chip, Boton, TarjetaReceta, Avatar, Vacio, Cargando, ErrorCarga, s } from '../ui';
+import { Encabezado, Chip, Boton, TarjetaReceta, Avatar, Vacio, Esqueleto, ErrorCarga, DobleToque, VisorFotos, useVolverArriba, useRefrescar, s } from '../ui';
+import { efecto } from '../sonido';
 
 // Comunidad: lo que cocinan y publican las personas que sigues (o todos)
 const LIMITE = 30;
@@ -24,6 +25,9 @@ export default function Comunidad({ activa }) {
   const [vista, setVista] = useState('siguiendo'); // siguiendo | todos
   const [items, setItems] = useState(null);
   const [error, setError] = useState(false);
+  const [visor, setVisor] = useState(null); // foto a pantalla completa
+  const lista = useRef(null);
+  useVolverArriba(lista);
 
   // a quién sigo
   useEffect(() => {
@@ -56,6 +60,14 @@ export default function Comunidad({ activa }) {
   }, [sigo, vista]);
 
   useEffect(() => { if (activa !== false) cargar(); }, [cargar, activa]);
+  const refreshControl = useRefrescar(cargar);
+
+  // Doble toque en la foto: Me gusta a la receta (no lo quita, como Instagram)
+  async function meGusta(recetaId) {
+    if (invitado) { pedirCuenta('Crea tu cuenta para dar Me gusta'); return; }
+    efecto('me_gusta');
+    await supabase.from('likes').upsert({ usuario_id: uid, receta_id: recetaId }, { onConflict: 'usuario_id,receta_id', ignoreDuplicates: true });
+  }
 
   if (error && items && !items.length) return <ErrorCarga onReintentar={cargar} />;
 
@@ -73,9 +85,17 @@ export default function Comunidad({ activa }) {
   const renderItem = ({ item }) => (item.tipo === 'cocino' ? (
     <View style={{ gap: 10, padding: 14, borderRadius: 18, backgroundColor: C.blanco, borderWidth: 1.5, borderColor: C.linea }}>
       {quien(item.perfiles, item.usuario_id, 'cocinó', item.fecha)}
+      <DobleToque onDoble={() => meGusta(item.receta_id)}
+        onSimple={() => setVisor({ url: item.foto_url, texto: [item.perfiles?.nombre, item.nota].filter(Boolean).join(': ') })}
+        style={{ borderRadius: 14, overflow: 'hidden' }}>
+        <Image source={{ uri: item.foto_url }} style={{ width: '100%', aspectRatio: 4 / 3, backgroundColor: C.superficie }}
+          accessibilityLabel={`Foto de ${item.recetas?.titulo}. Toca para verla grande, dos veces para Me gusta`} />
+      </DobleToque>
       <Pressable onPress={() => nav.abrir('receta', { id: item.receta_id })} accessibilityRole="button" accessibilityLabel={`Abrir ${item.recetas?.titulo}`} style={{ gap: 8 }}>
-        <Image source={{ uri: item.foto_url }} style={{ width: '100%', aspectRatio: 4 / 3, borderRadius: 14, backgroundColor: C.superficie }} />
-        <Text style={{ fontSize: 16, fontWeight: '800', color: C.texto }}>{item.recetas?.titulo}</Text>
+        <View style={s.filaEntre}>
+          <Text style={{ fontSize: 16, fontWeight: '800', color: C.texto, flex: 1 }}>{item.recetas?.titulo}</Text>
+          <Text style={{ fontSize: 13, fontWeight: '800', color: C.tomate }}>Ver receta</Text>
+        </View>
         {item.nota ? <Text style={{ fontSize: 15, color: C.texto, lineHeight: 21 }}>«{item.nota}»</Text> : null}
       </Pressable>
     </View>
@@ -114,21 +134,27 @@ export default function Comunidad({ activa }) {
     </View>
   );
 
-  if (items === null) return <View style={{ flex: 1 }}><View style={s.contenido}>{cabecera}</View><Cargando /></View>;
+  if (items === null) return <View style={{ flex: 1 }}><View style={s.contenido}>{cabecera}<Esqueleto tipo="fotos" /></View></View>;
 
   return (
+    <>
     <FlatList
+      ref={lista}
       data={items}
       keyExtractor={(x) => x.clave}
       renderItem={renderItem}
       ListHeaderComponent={cabecera}
-      ListEmptyComponent={<Vacio texto={vista === 'siguiendo' ? 'Tus amigos aún no cocinan ni publican nada.\nMira lo de todos.' : 'Todavía no hay nada por aquí.\n¡Sé el primero en publicar!'} />}
+      ListEmptyComponent={vista === 'siguiendo'
+        ? <Vacio titulo="Tus amigos aún no publican" texto="Mientras, mira lo que cocinan todos." accion={{ titulo: 'Ver lo de todos', icono: 'globe-outline', onPress: () => setVista('todos') }} />
+        : <Vacio titulo="Todavía no hay nada por aquí" texto="¡Sé el primero en compartir una receta!" accion={{ titulo: 'Publicar una receta', icono: 'add', onPress: () => nav.irA('publicar') }} />}
       contentContainerStyle={[s.contenido, { gap: 18 }]}
-      refreshControl={<RefreshControl refreshing={false} onRefresh={cargar} tintColor={C.tomate} />}
+      refreshControl={refreshControl}
       keyboardShouldPersistTaps="handled"
       initialNumToRender={6}
       windowSize={7}
       removeClippedSubviews
     />
+    <VisorFotos fotos={visor ? [visor] : []} visible={!!visor} onCerrar={() => setVisor(null)} />
+    </>
   );
 }

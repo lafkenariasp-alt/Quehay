@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../supabase';
 import { useApp } from '../contexto';
 import { C, RAREZA, xpParaNivel } from '../theme';
-import { Pantalla, Seccion, Boton, Tarjeta, TarjetaReceta, Pastilla, Interruptor, Cargando, Chip, Avatar, s } from '../ui';
+import { Pantalla, Seccion, Boton, Tarjeta, TarjetaReceta, Pastilla, Interruptor, Esqueleto, Chip, Avatar, s } from '../ui';
 import { desdeCamara, desdeGaleria, subirFoto } from '../fotos';
 import { Mascota, PideCuenta } from '../mascota';
 import { useAjustesSonido } from '../sonido';
@@ -32,18 +32,20 @@ export default function Perfil({ activa }) {
   const [recetas, setRecetas] = useState([]);
   const [conteo, setConteo] = useState({ seguidores: 0, siguiendo: 0 });
   const [orden, setOrden] = useState('nuevas'); // nuevas | antiguas | nota
+  const [guardadas, setGuardadas] = useState([]);
 
   const cargar = useCallback(async () => {
     if (!uid) return;
     recargarPerfil();
     const cuenta = (col) => supabase.from('seguidores').select('*', { count: 'exact', head: true }).eq(col, uid);
-    const [l, lu, rec, c1, c2] = await Promise.all([
-      
+    const [l, lu, rec, c1, c2, g] = await Promise.all([
       supabase.from('logros').select('*').eq('clase', 'base'),
       supabase.from('logros_usuario').select('codigo').eq('usuario_id', uid),
       supabase.from('recetas').select('id, titulo, foto_url, num_likes, num_cocinadas, nota_promedio, num_notas, creado_en').eq('autor_id', uid),
       cuenta('seguido_id'), cuenta('seguidor_id'),
+      supabase.from('guardadas').select('creado_en, recetas(id, titulo, foto_url, minutos, nota_promedio, num_notas)').eq('usuario_id', uid).order('creado_en', { ascending: false }),
     ]);
+    setGuardadas((g.data || []).filter((x) => x.recetas));
     setLogros(l.data || []);
     setMios(new Set((lu.data || []).map((x) => x.codigo)));
     setRecetas(rec.data || []);
@@ -68,7 +70,7 @@ export default function Perfil({ activa }) {
       </View>
     );
   }
-  if (!perfil) return <Cargando />;
+  if (!perfil) return <Pantalla scroll={false}><Esqueleto tipo="perfil" /></Pantalla>;
 
   const base = xpParaNivel(perfil.nivel);
   const sig = xpParaNivel(perfil.nivel + 1);
@@ -131,7 +133,7 @@ export default function Perfil({ activa }) {
     [recetas.length, 'Recetas', null],
   ];
   return (
-    <Pantalla>
+    <Pantalla onRefrescar={cargar}>
       <View style={[s.fila, { gap: 14 }]}>
         <Pressable onPress={cambiarFoto} accessibilityRole="button" accessibilityLabel="Cambiar foto de perfil">
           <Avatar url={perfil.avatar_url} nombre={perfil.nombre} tam={84} borde={C.dorado} />
@@ -220,6 +222,20 @@ export default function Perfil({ activa }) {
             ))}
           </>
         )}
+      </Seccion>
+
+      <Seccion titulo="Guardadas" derecha={<Text style={s.sub}>{guardadas.length}</Text>}>
+        {guardadas.length === 0 ? (
+          <Tarjeta style={{ alignItems: 'center', gap: 8 }}>
+            <Ionicons name="bookmark-outline" size={28} color={C.suave} />
+            <Text style={[s.sub, { textAlign: 'center' }]}>Toca el marcador de una receta para guardarla aquí y encontrarla rápido.</Text>
+            <Boton tipo="secundario" icono="search" titulo="Buscar recetas" onPress={() => nav.irA('buscar')} style={{ alignSelf: 'stretch' }} />
+          </Tarjeta>
+        ) : guardadas.map(({ recetas: r }) => (
+          <TarjetaReceta key={r.id} titulo={r.titulo} foto={r.foto_url}
+            meta={`${r.minutos} min · ${r.num_notas ? `${Number(r.nota_promedio).toFixed(1).replace('.', ',')} estrellas` : 'Sin notas'}`}
+            onPress={() => nav.abrir('receta', { id: r.id })} />
+        ))}
       </Seccion>
 
       <AjustesSonido />

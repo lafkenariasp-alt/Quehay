@@ -18,6 +18,7 @@ App de recetas: cocina con lo que tienes en la nevera, comparte recetas y sube d
 | `migrations/003_seguidores.sql` | Seguir a otros cocineros |
 | `seed/02_recetas_demo.sql` | 12 recetas de prueba (ejecutar después de crear tu cuenta) |
 | `migrations/009_sin_limite_admin.sql` | El límite de 3 cuentas por día no aplica a teléfonos que entraron con una cuenta admin, oficial o quehay |
+| `migrations/010_lista_compras.sql` | Lista de compras en la Nevera (tabla `compras`) y `comprado()`, que la pasa a la nevera |
 | `migrations/008_regalo_y_cuentas.sql` | El regalo se gana terminando el tutorial; máx. 3 cuentas por día por teléfono; eliminar cuenta; «Lo cociné» sin foto (comentario sin XP) |
 | `migrations/007_tutorial_por_cuenta.sql` | El tutorial se guarda en la cuenta: cada cuenta nueva lo hace la primera vez, en cualquier teléfono |
 | `migrations/006_amigos.sql` | Sugerencias de amigos (te sigue, amigos en común, misma ciudad, mismos gustos) |

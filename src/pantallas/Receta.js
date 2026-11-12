@@ -1,12 +1,12 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { View, Text, Alert, Pressable, Image, Modal, TextInput, Switch, ScrollView, Animated, Easing, PanResponder } from 'react-native';
+import { View, Text, Alert, Pressable, Image, Modal, TextInput, Switch, ScrollView, Animated, Easing, PanResponder, Share, Vibration } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useKeepAwake } from 'expo-keep-awake';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '../supabase';
 import { useApp, tieneIngrediente } from '../contexto';
 import { C } from '../theme';
-import { Pantalla, Seccion, Boton, Estrellas, Tarjeta, Cargando, ErrorCarga, Avatar, s } from '../ui';
+import { Pantalla, Seccion, Boton, Estrellas, Tarjeta, ErrorCarga, Avatar, Esqueleto, DobleToque, VisorFotos, avisar, s } from '../ui';
 import { fotoDelPlato, subirFoto } from '../fotos';
 import { reportar } from '../reportar';
 import { registrar } from '../analitica';
@@ -15,6 +15,54 @@ import { Foco } from '../foco';
 import { efecto } from '../sonido';
 
 const sinDatos = Promise.resolve({ data: null });
+
+// ---------- Porciones: recalcula las cantidades ----------
+const FRACC = { '½': 0.5, '¼': 0.25, '¾': 0.75, '⅓': 1 / 3, '⅔': 2 / 3 };
+const NUM = /(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?\s*[½¼¾⅓⅔]|\d+(?:[.,]\d+)?|[½¼¾⅓⅔])/g;
+function aNumero(txt) {
+  const t = txt.trim();
+  let m = t.match(/^(\d+)\s+(\d+)\/(\d+)$/);
+  if (m) return Number(m[1]) + Number(m[2]) / Number(m[3]);
+  m = t.match(/^(\d+)\/(\d+)$/);
+  if (m) return Number(m[1]) / Number(m[2]);
+  m = t.match(/^(\d+(?:[.,]\d+)?)\s*([½¼¾⅓⅔])$/);
+  if (m) return Number(m[1].replace(',', '.')) + FRACC[m[2]];
+  if (FRACC[t]) return FRACC[t];
+  return Number(t.replace(',', '.'));
+}
+function bonito(n) {
+  if (n >= 10) return String(Math.round(n));
+  const ent = Math.floor(n + 0.02);
+  const resto = n - ent;
+  const opciones = [[0, ''], [0.25, '¼'], [1 / 3, '⅓'], [0.5, '½'], [2 / 3, '⅔'], [0.75, '¾'], [1, '']];
+  const [v, f] = opciones.reduce((a, b) => (Math.abs(b[0] - resto) < Math.abs(a[0] - resto) ? b : a));
+  if (Math.abs(v - resto) > 0.09) return (Math.round(n * 10) / 10).toString().replace('.', ',');
+  const e = v === 1 ? ent + 1 : ent;
+  if (!f) return String(e);
+  return e ? `${e} ${f}` : f;
+}
+export function escalar(cantidad, factor) {
+  if (!cantidad || factor === 1) return cantidad;
+  return cantidad.replace(NUM, (m) => {
+    const n = aNumero(m);
+    return Number.isFinite(n) && n > 0 ? bonito(n * factor) : m;
+  });
+}
+
+// ---------- Temporizador: busca "10 minutos", "1 hora", "20-25 min" en el paso ----------
+export function tiempoDelPaso(texto) {
+  const m = (texto || '').match(/(\d+(?:[.,]\d+)?|media|un|una)(?:\s*(?:-|a|o)\s*\d+)?\s*(minutos?|min\b|mins\b|horas?|hrs?\b|segundos?|seg\b)/i);
+  if (!m) return null;
+  const palabra = m[1].toLowerCase();
+  const n = palabra === 'media' ? 0.5 : palabra === 'un' || palabra === 'una' ? 1 : Number(palabra.replace(',', '.'));
+  const u = m[2].toLowerCase();
+  const seg = u.startsWith('h') ? n * 3600 : u.startsWith('s') ? n : n * 60;
+  return seg >= 10 && seg <= 6 * 3600 ? Math.round(seg) : null;
+}
+const reloj = (seg) => {
+  const h = Math.floor(seg / 3600); const m = Math.floor((seg % 3600) / 60); const x = seg % 60;
+  return `${h ? `${h}:${String(m).padStart(2, '0')}` : m}:${String(x).padStart(2, '0')}`;
+};
 
 export default function Receta({ id, tengo = null, basicos = true }) {
   const { uid, invitado, nav, recargarPerfil, pedirCuenta, tutorial, chefpu } = useApp();
@@ -29,10 +77,13 @@ export default function Receta({ id, tengo = null, basicos = true }) {
   const [cocine, setCocine] = useState(false); // ventana "Lo cociné"
   const [modoCocina, setModoCocina] = useState(false);
   const [respuestas, setRespuestas] = useState({}); // borradores de respuesta del creador
+  const [guardada, setGuardada] = useState(false);
+  const [porciones, setPorciones] = useState(null);
+  const [visor, setVisor] = useState(null); // índice de la foto abierta a pantalla completa
 
   const cargar = useCallback(async () => {
     setError(false);
-    const [rec, nev, nota, like, asi] = await Promise.all([
+    const [rec, nev, nota, like, asi, guard] = await Promise.all([
       supabase.from('recetas')
         .select('*, perfiles!recetas_autor_id_fkey(nombre, xp, avatar_url), receta_ingredientes(cantidad, opcional, ingrediente_id, ingredientes(id, nombre, padre_id, es_basico))')
         .eq('id', id).maybeSingle(),
@@ -40,6 +91,7 @@ export default function Receta({ id, tengo = null, basicos = true }) {
       uid ? supabase.from('notas').select('estrellas').eq('usuario_id', uid).eq('receta_id', id).maybeSingle() : sinDatos,
       uid ? supabase.from('likes').select('receta_id').eq('usuario_id', uid).eq('receta_id', id).maybeSingle() : sinDatos,
       supabase.from('asi_me_quedo').select('id, foto_url, nota, respuesta_creador, usuario_id, perfiles(nombre)').eq('receta_id', id).order('creado_en', { ascending: false }).limit(20),
+      uid ? supabase.from('guardadas').select('receta_id').eq('usuario_id', uid).eq('receta_id', id).maybeSingle() : sinDatos,
     ]);
     if (rec.error || !rec.data) { setError(true); return; }
     const neveraIds = (nev.data || []).map((n) => n.ingrediente_id);
@@ -56,6 +108,8 @@ export default function Receta({ id, tengo = null, basicos = true }) {
     setMiNota(nota.data?.estrellas || 0);
     setMeGusta(!!like.data);
     setVersiones(asi.data || []);
+    setGuardada(!!guard.data);
+    setPorciones((p) => p || rec.data.porciones || 1);
   }, [id, uid]);
 
   useEffect(() => { cargar(); }, [cargar]);
@@ -70,7 +124,7 @@ export default function Receta({ id, tengo = null, basicos = true }) {
   }, [r]);
 
   if (error) return <ErrorCarga mensaje="Esta receta no se pudo abrir. Puede que ya no esté disponible o que falle tu conexión." onReintentar={cargar} onVolver={nav.volver} />;
-  if (!r) return <Cargando />;
+  if (!r) return <Pantalla scroll={false}><Esqueleto tipo="receta" /></Pantalla>;
 
   const ings = r.receta_ingredientes.map((ri) => {
     const ing = ri.ingredientes;
@@ -81,6 +135,70 @@ export default function Receta({ id, tengo = null, basicos = true }) {
   const faltan = ings.filter((i) => !i.ok && !i.opcional);
   const usados = ings.filter((i) => !i.ing.es_basico && enNevera.has(i.ingrediente_id)).map((i) => i.ingrediente_id);
   const esMia = !!uid && r.autor_id === uid;
+  const base = r.porciones || 1;
+  const porc = porciones || base;
+  const factor = porc / base;
+  // Fotos para ver a pantalla completa: la de la receta y las de "Así me quedó"
+  const fotos = [
+    ...(r.foto_url ? [{ url: r.foto_url, texto: r.titulo }] : []),
+    ...versiones.filter((v) => v.foto_url).map((v) => ({ url: v.foto_url, id: v.id, texto: [v.perfiles?.nombre, v.nota].filter(Boolean).join(': ') })),
+  ];
+
+  // Doble toque en la foto: solo da Me gusta (como Instagram, no lo quita)
+  function meGustaDoble() {
+    if (invitado) { pedirCuenta('Crea tu cuenta para guardar las recetas que te gustan'); return; }
+    if (meGusta) { efecto('me_gusta'); return; }
+    alternarLike();
+  }
+
+  async function alternarGuardada() {
+    if (invitado) { pedirCuenta('Crea tu cuenta para guardar recetas y verlas cuando quieras'); return; }
+    const nuevo = !guardada;
+    setGuardada(nuevo);
+    efecto(nuevo ? 'guardar' : 'desmarcar');
+    const { error: e } = nuevo
+      ? await supabase.from('guardadas').insert({ usuario_id: uid, receta_id: id })
+      : await supabase.from('guardadas').delete().eq('usuario_id', uid).eq('receta_id', id);
+    if (e) { setGuardada(!nuevo); Alert.alert('Error', e.message); return; }
+    avisar({ texto: nuevo ? 'Guardada · la encuentras en tu perfil' : 'Ya no está en tus guardadas', duracion: 2500 });
+  }
+
+  // Compartir por WhatsApp (o lo que el teléfono ofrezca)
+  async function compartir() {
+    const lineas = [
+      `🍲 ${r.titulo}`,
+      `${r.minutos} min · ${porc} ${porc === 1 ? 'porción' : 'porciones'}`,
+      '',
+      'Ingredientes:',
+      ...visibles.map((i) => `• ${[escalar(i.cantidad, factor), i.ing.nombre.toLowerCase()].filter(Boolean).join(' ')}${i.opcional ? ' (opcional)' : ''}`),
+      '',
+      'Preparación:',
+      ...r.pasos.map((p, n) => `${n + 1}. ${p}`),
+      '',
+      'Receta de Qué Hay, la app de qué cocino con lo que tengo.',
+    ];
+    try {
+      const res = await Share.share({ message: lineas.join('\n'), title: r.titulo });
+      if (res.action === Share.sharedAction) registrar('compartir_receta', { receta: r.id }, uid);
+    } catch (e) { /* cancelado */ }
+  }
+
+  // Lo que falta va a la lista de compras de la Nevera
+  async function agregarFaltantes() {
+    if (invitado) { pedirCuenta('Crea tu cuenta para armar tu lista de compras'); return; }
+    const ids = faltan.map((i) => i.ingrediente_id);
+    const { data: ya, error: e1 } = await supabase.from('compras').select('ingrediente_id').eq('usuario_id', uid).in('ingrediente_id', ids);
+    if (e1) { Alert.alert('Falta un paso', 'La lista de compras necesita la migración 010 en Supabase.'); return; }
+    const nuevos = ids.filter((x) => !(ya || []).some((y) => y.ingrediente_id === x));
+    if (!nuevos.length) { avisar({ texto: 'Ya estaba todo en tu lista de compras', duracion: 2500 }); return; }
+    const { error: e2 } = await supabase.from('compras').insert(nuevos.map((x) => ({ usuario_id: uid, ingrediente_id: x, receta_id: r.id })));
+    if (e2) { Alert.alert('Error', e2.message); return; }
+    efecto('marcar');
+    avisar({
+      texto: `${nuevos.length === 1 ? 'Agregamos 1 ingrediente' : `Agregamos ${nuevos.length} ingredientes`} a tu lista de compras`,
+      onDeshacer: () => supabase.from('compras').delete().eq('usuario_id', uid).in('ingrediente_id', nuevos),
+    });
+  }
 
   async function puntuar(n) {
     if (invitado) { pedirCuenta('Crea tu cuenta para calificar recetas'); return; }
@@ -119,7 +237,7 @@ export default function Receta({ id, tengo = null, basicos = true }) {
 
   return (
     <Foco id="pantalla_receta" style={{ flex: 1 }}>
-      <Pantalla>
+      <Pantalla onRefrescar={cargar}>
         <View style={s.filaEntre}>
           <Pressable onPress={nav.volver} accessibilityRole="button" accessibilityLabel="Volver" style={[s.fila, { gap: 2, minHeight: 44 }]}>
             <Ionicons name="chevron-back" size={22} color={C.suave} />
@@ -132,6 +250,14 @@ export default function Receta({ id, tengo = null, basicos = true }) {
                 <Ionicons name="flag-outline" size={22} color={C.suave} />
               </Pressable>
             ) : null}
+            <Pressable onPress={compartir} accessibilityRole="button" accessibilityLabel="Compartir receta"
+              style={{ minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' }}>
+              <Ionicons name="share-outline" size={24} color={C.texto} />
+            </Pressable>
+            <Pressable onPress={alternarGuardada} accessibilityRole="button" accessibilityState={{ selected: guardada }} accessibilityLabel={guardada ? 'Quitar de guardadas' : 'Guardar receta'}
+              style={{ minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' }}>
+              <Ionicons name={guardada ? 'bookmark' : 'bookmark-outline'} size={24} color={C.texto} />
+            </Pressable>
             <Pressable onPress={alternarLike} accessibilityRole="button" accessibilityState={{ selected: !!meGusta }} accessibilityLabel={meGusta ? 'Quitar me gusta' : 'Me gusta'}
               style={{ minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' }}>
               <Ionicons name={meGusta ? 'heart' : 'heart-outline'} size={28} color={C.tomate} />
@@ -145,17 +271,19 @@ export default function Receta({ id, tengo = null, basicos = true }) {
           </View>
         ) : null}
 
-        {r.foto_url ? (
-          <Image source={{ uri: r.foto_url }} style={{ marginHorizontal: -24, aspectRatio: 16 / 10, backgroundColor: C.superficie }} accessibilityLabel={`Foto de ${r.titulo}`} />
-        ) : (
-          <View style={{ marginHorizontal: -24, height: 200, backgroundColor: C.superficie, alignItems: 'center', justifyContent: 'center' }}>
-            <Ionicons name="restaurant-outline" size={48} color="#B9A68E" />
-          </View>
-        )}
+        <DobleToque onDoble={meGustaDoble} onSimple={r.foto_url ? () => setVisor(0) : undefined} style={{ marginHorizontal: -24 }}>
+          {r.foto_url ? (
+            <Image source={{ uri: r.foto_url }} style={{ aspectRatio: 16 / 10, backgroundColor: C.superficie }} accessibilityLabel={`Foto de ${r.titulo}. Toca para verla grande`} />
+          ) : (
+            <View style={{ height: 200, backgroundColor: C.superficie, alignItems: 'center', justifyContent: 'center' }}>
+              <Ionicons name="restaurant-outline" size={48} color="#B9A68E" />
+            </View>
+          )}
+        </DobleToque>
 
         <View style={{ gap: 6 }}>
           <Text style={{ fontSize: 28, fontWeight: '800', color: C.texto, letterSpacing: -0.5 }}>{r.titulo}</Text>
-          <Text style={{ fontSize: 14, color: C.suave }}>por {r.perfiles?.nombre} · {r.minutos} min · {r.porciones} porciones · {r.dificultad}</Text>
+          <Text style={{ fontSize: 14, color: C.suave }}>por {r.perfiles?.nombre} · {r.minutos} min · {r.dificultad}</Text>
           <View style={s.fila}>
             <Estrellas valor={Number(r.nota_promedio)} />
             <Text style={{ fontSize: 13, color: C.suave }}>{r.num_notas ? `${Number(r.nota_promedio).toFixed(1).replace('.', ',')} (${r.num_notas}) · ${r.num_likes} me gusta` : `Sin notas aún · ${r.num_likes} me gusta`}</Text>
@@ -190,16 +318,39 @@ export default function Receta({ id, tengo = null, basicos = true }) {
                 {faltan.length ? `Te ${faltan.length === 1 ? 'falta' : 'faltan'} ${faltan.length}` : 'Tienes todo'}
               </Text>
             </View>
-            {visibles.map((i) => (
-              <View key={i.ingrediente_id} style={[s.fila, { minHeight: 28 }]}
-                accessible accessibilityLabel={`${[i.cantidad, i.ing.nombre].filter(Boolean).join(' ')}, ${i.ok ? 'lo tienes' : 'te falta'}${i.opcional ? ', opcional' : ''}`}>
-                <Ionicons name={i.ok ? 'checkmark' : 'ellipse-outline'} size={18} color={i.ok ? C.verde : C.ambar} />
-                <Text style={{ flex: 1, fontSize: 15, fontWeight: '700', color: i.ok ? C.verdeOscuro : C.ambarOscuro }}>
-                  {[i.cantidad, i.ing.nombre.toLowerCase()].filter(Boolean).join(' ')}{i.opcional ? ' (opcional)' : ''}
-                </Text>
+            {/* Porciones: los botones recalculan las cantidades */}
+            <View style={[s.filaEntre, { paddingVertical: 4 }]}>
+              <Text style={{ fontSize: 15, fontWeight: '700', color: C.texto }}>Porciones</Text>
+              <View style={[s.fila, { gap: 4 }]} accessibilityRole="adjustable" accessibilityLabel="Porciones" accessibilityValue={{ text: String(porc) }}
+                accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]}
+                onAccessibilityAction={(e) => setPorciones((p) => Math.min(20, Math.max(1, (p || base) + (e.nativeEvent.actionName === 'increment' ? 1 : -1))))}>
+                <Pressable onPress={() => { efecto('boton'); setPorciones((p) => Math.max(1, (p || base) - 1)); }} disabled={porc <= 1} hitSlop={6} accessibilityLabel="Menos porciones"
+                  style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: C.superficie, alignItems: 'center', justifyContent: 'center', opacity: porc <= 1 ? 0.4 : 1 }}>
+                  <Ionicons name="remove" size={20} color={C.texto} />
+                </Pressable>
+                <Text style={{ minWidth: 34, textAlign: 'center', fontSize: 18, fontWeight: '800', color: factor === 1 ? C.texto : C.tomate }}>{porc}</Text>
+                <Pressable onPress={() => { efecto('boton'); setPorciones((p) => Math.min(20, (p || base) + 1)); }} disabled={porc >= 20} hitSlop={6} accessibilityLabel="Más porciones"
+                  style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: C.superficie, alignItems: 'center', justifyContent: 'center' }}>
+                  <Ionicons name="add" size={20} color={C.texto} />
+                </Pressable>
               </View>
-            ))}
+            </View>
+            {visibles.map((i) => {
+              const cant = escalar(i.cantidad, factor);
+              return (
+                <View key={i.ingrediente_id} style={[s.fila, { minHeight: 28 }]}
+                  accessible accessibilityLabel={`${[cant, i.ing.nombre].filter(Boolean).join(' ')}, ${i.ok ? 'lo tienes' : 'te falta'}${i.opcional ? ', opcional' : ''}`}>
+                  <Ionicons name={i.ok ? 'checkmark' : 'ellipse-outline'} size={18} color={i.ok ? C.verde : C.ambar} />
+                  <Text style={{ flex: 1, fontSize: 15, fontWeight: '700', color: i.ok ? C.verdeOscuro : C.ambarOscuro }}>
+                    {[cant, i.ing.nombre.toLowerCase()].filter(Boolean).join(' ')}{i.opcional ? ' (opcional)' : ''}
+                  </Text>
+                </View>
+              );
+            })}
             {basicos ? <Text style={{ fontSize: 13, color: C.suave }}>Más sal, aceite y lo básico de tu despensa.</Text> : null}
+            {faltan.length ? (
+              <Boton tipo="secundario" icono="cart-outline" titulo={faltan.length === 1 ? 'Agregar lo que falta a mi lista' : `Agregar los ${faltan.length} que faltan a mi lista`} onPress={agregarFaltantes} />
+            ) : null}
           </Tarjeta>
         </Foco>
 
@@ -232,7 +383,11 @@ export default function Receta({ id, tengo = null, basicos = true }) {
           ) : versiones.map((v) => (
             <Tarjeta key={v.id}>
               <View style={{ flexDirection: 'row', gap: 12 }}>
-                {v.foto_url ? <Image source={{ uri: v.foto_url }} style={{ width: 88, height: 88, borderRadius: 12, backgroundColor: C.superficie }} /> : null}
+                {v.foto_url ? (
+                  <Pressable onPress={() => setVisor(Math.max(0, fotos.findIndex((f) => f.id === v.id)))} accessibilityRole="imagebutton" accessibilityLabel={`Foto de ${v.perfiles?.nombre}. Toca para verla grande`}>
+                    <Image source={{ uri: v.foto_url }} style={{ width: 88, height: 88, borderRadius: 12, backgroundColor: C.superficie }} />
+                  </Pressable>
+                ) : null}
                 <View style={{ flex: 1, gap: 2 }}>
                   <View style={s.filaEntre}>
                     <Text style={s.etiqueta}>{v.perfiles?.nombre}{v.usuario_id === uid ? ' (tú)' : ''}</Text>
@@ -276,6 +431,8 @@ export default function Receta({ id, tengo = null, basicos = true }) {
           }} />
         ) : null}
       </Modal>
+
+      <VisorFotos fotos={fotos} inicio={visor || 0} visible={visor !== null} onCerrar={() => setVisor(null)} />
 
       <VentanaCocine
         visible={cocine}
@@ -323,6 +480,26 @@ function ModoCocina({ receta, onCerrar, onTerminar }) {
   })).current;
   const tocar = (e) => ir(e.nativeEvent.locationX < ancho * 0.3 ? -1 : 1);
 
+  // Temporizador: si el paso dice "10 minutos" aparece el botón; sigue corriendo aunque cambies de paso
+  const [timer, setTimer] = useState(null); // { fin, paso, total } | { listo: true, paso }
+  const [ahora, setAhora] = useState(Date.now());
+  const segPaso = tiempoDelPaso(receta.pasos[paso]);
+  useEffect(() => {
+    if (!timer || timer.listo) return undefined;
+    const t = setInterval(() => {
+      const n = Date.now();
+      setAhora(n);
+      if (n >= timer.fin) {
+        efecto('temporizador');
+        Vibration.vibrate([0, 400, 200, 400]);
+        setTimer({ listo: true, paso: timer.paso });
+      }
+    }, 500);
+    return () => clearInterval(t);
+  }, [timer]);
+  const quedan = timer && !timer.listo ? Math.max(0, Math.ceil((timer.fin - ahora) / 1000)) : 0;
+  const iniciarTimer = () => { efecto('boton'); setAhora(Date.now()); setTimer({ fin: Date.now() + segPaso * 1000, paso, total: segPaso }); };
+
   return (
     <View style={{ flex: 1 }}>
     <View style={{ flex: 1, backgroundColor: C.fondo, paddingTop: insets.top + 8, paddingBottom: insets.bottom + 12, paddingHorizontal: 20, gap: 12 }}>
@@ -351,6 +528,28 @@ function ModoCocina({ receta, onCerrar, onTerminar }) {
           </ScrollView>
         </View>
       </Foco>
+
+      {timer ? (
+        <View accessibilityLiveRegion="polite" style={[s.filaEntre, { gap: 10, minHeight: 52, paddingLeft: 16, paddingRight: 6, borderRadius: 16, backgroundColor: timer.listo ? C.verde : C.texto }]}>
+          <View style={[s.fila, { gap: 8, flex: 1 }]}>
+            <Ionicons name={timer.listo ? 'notifications' : 'timer-outline'} size={22} color={C.blanco} />
+            <Text style={{ color: C.blanco, fontSize: timer.listo ? 16 : 22, fontWeight: '800', fontVariant: ['tabular-nums'] }}>
+              {timer.listo ? `¡Tiempo! (paso ${timer.paso + 1})` : reloj(quedan)}
+            </Text>
+            {!timer.listo && timer.paso !== paso ? <Text style={{ color: '#E9DCCB', fontSize: 13, fontWeight: '700' }}>paso {timer.paso + 1}</Text> : null}
+          </View>
+          <Pressable onPress={() => setTimer(null)} accessibilityRole="button" accessibilityLabel={timer.listo ? 'Listo' : 'Detener temporizador'}
+            style={{ minHeight: 44, paddingHorizontal: 14, justifyContent: 'center' }}>
+            <Text style={{ color: C.blanco, fontWeight: '800', fontSize: 15 }}>{timer.listo ? 'OK' : 'Detener'}</Text>
+          </Pressable>
+        </View>
+      ) : segPaso ? (
+        <Pressable onPress={iniciarTimer} accessibilityRole="button" accessibilityLabel={`Iniciar temporizador de ${reloj(segPaso)}`}
+          style={[s.fila, { alignSelf: 'center', gap: 8, minHeight: 48, paddingHorizontal: 18, borderRadius: 999, borderWidth: 1.5, borderColor: C.tomate, backgroundColor: C.blanco }]}>
+          <Ionicons name="timer-outline" size={20} color={C.tomate} />
+          <Text style={{ fontSize: 16, fontWeight: '800', color: C.tomate }}>Iniciar {reloj(segPaso)}</Text>
+        </Pressable>
+      ) : null}
 
       {ayuda && total > 1 ? (
         <Text style={[s.sub, { textAlign: 'center', fontSize: 13 }]}>Toca a la derecha para avanzar y a la izquierda para volver, o desliza</Text>

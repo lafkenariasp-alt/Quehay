@@ -1,15 +1,49 @@
 import React from 'react';
-import { View, Text, Pressable, ActivityIndicator, StyleSheet, ScrollView, Image, Switch } from 'react-native';
+import { View, Text, Pressable, ActivityIndicator, StyleSheet, ScrollView, Image, Switch, RefreshControl, Animated, PanResponder, Modal, FlatList, Dimensions } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { C } from './theme';
 import { Mascota } from './chefpu';
 import { ScrollCtx } from './foco';
 import { efecto } from './sonido';
 
-export function Pantalla({ children, scroll = true, pie = null }) {
+// ---------- Tocar la pestaña activa: vuelve arriba ----------
+export const PestanaCtx = React.createContext(null); // id de la pestaña donde vive la pantalla
+const arriba = {}; // id de pestaña -> función que sube la lista
+export function subirArriba(id) { const fn = arriba[id]; if (fn) fn(); return !!fn; }
+// Registra el ScrollView o FlatList principal de la pantalla
+export function useVolverArriba(ref) {
+  const id = React.useContext(PestanaCtx);
+  React.useEffect(() => {
+    if (!id) return undefined;
+    const fn = () => {
+      const r = ref.current;
+      if (!r) return;
+      if (r.scrollToOffset) r.scrollToOffset({ offset: 0, animated: true });
+      else if (r.scrollTo) r.scrollTo({ y: 0, animated: true });
+    };
+    arriba[id] = fn;
+    return () => { if (arriba[id] === fn) delete arriba[id]; };
+  }, [id]);
+}
+
+// Deslizar hacia abajo para actualizar: maneja el "girando" solo
+export function useRefrescar(onRefrescar) {
+  const [girando, setGirando] = React.useState(false);
+  const refrescar = React.useCallback(async () => {
+    if (!onRefrescar) return;
+    setGirando(true);
+    try { await onRefrescar(); } finally { setGirando(false); }
+  }, [onRefrescar]);
+  return onRefrescar ? <RefreshControl refreshing={girando} onRefresh={refrescar} tintColor={C.tomate} colors={[C.tomate]} /> : undefined;
+}
+
+export function Pantalla({ children, scroll = true, pie = null, onRefrescar }) {
   const ref = React.useRef(null);
   const offset = React.useRef(0);
   const ctx = React.useMemo(() => ({ ref, offset }), []);
+  useVolverArriba(ref);
+  const refreshControl = useRefrescar(onRefrescar);
   return (
     <View style={{ flex: 1, backgroundColor: C.fondo }}>
       {scroll ? (
@@ -22,6 +56,7 @@ export function Pantalla({ children, scroll = true, pie = null }) {
             keyboardShouldPersistTaps="handled"
             keyboardDismissMode="interactive"
             automaticallyAdjustKeyboardInsets // iPhone: desplaza para que el teclado no tape el campo que escribes
+            refreshControl={refreshControl}
           >
             {children}
           </ScrollView>
@@ -196,12 +231,252 @@ export function Avatar({ url, nombre = '?', tam = 44, borde = C.linea }) {
   );
 }
 
-export function Vacio({ icono = 'restaurant-outline', texto }) {
+// Pantalla vacía: siempre dice qué hacer y trae el botón para hacerlo
+export function Vacio({ texto, titulo, accion }) {
   return (
-    <View style={{ alignItems: 'center', gap: 8, paddingVertical: 32 }}>
+    <View style={{ alignItems: 'center', gap: 10, paddingVertical: 28 }}>
       <Mascota tam={96} expresion="pensando" />
-      <Text style={[s.sub, { textAlign: 'center', fontSize: 15 }]}>{texto}</Text>
+      {titulo ? <Text style={[s.etiqueta, { textAlign: 'center', fontSize: 17 }]}>{titulo}</Text> : null}
+      {texto ? <Text style={[s.sub, { textAlign: 'center', fontSize: 15 }]}>{texto}</Text> : null}
+      {accion ? <Boton titulo={accion.titulo} icono={accion.icono} tipo={accion.tipo || 'principal'} onPress={accion.onPress} style={{ alignSelf: 'stretch', marginTop: 6 }} /> : null}
     </View>
+  );
+}
+
+// ---------- Esqueletos de carga (como Instagram) ----------
+function usePulso() {
+  const v = React.useRef(new Animated.Value(0.45)).current;
+  React.useEffect(() => {
+    const a = Animated.loop(Animated.sequence([
+      Animated.timing(v, { toValue: 1, duration: 650, useNativeDriver: true }),
+      Animated.timing(v, { toValue: 0.45, duration: 650, useNativeDriver: true }),
+    ]));
+    a.start();
+    return () => a.stop();
+  }, []);
+  return v;
+}
+export function Hueso({ ancho = '100%', alto = 14, radio = 8, style }) {
+  return <View style={[{ width: ancho, height: alto, borderRadius: radio, backgroundColor: '#E9DCCB' }, style]} />;
+}
+// tipo: 'tarjetas' (lista de recetas) | 'fotos' (comunidad) | 'receta' | 'perfil'
+export function Esqueleto({ tipo = 'tarjetas', n = 4 }) {
+  const pulso = usePulso();
+  let cuerpo;
+  if (tipo === 'fotos') {
+    cuerpo = Array.from({ length: Math.min(n, 3) }, (_, k) => (
+      <View key={k} style={{ gap: 10 }}>
+        <View style={s.fila}><Hueso ancho={40} alto={40} radio={20} /><Hueso ancho="45%" /></View>
+        <Hueso alto={260} radio={18} />
+        <Hueso ancho="70%" />
+      </View>
+    ));
+  } else if (tipo === 'receta') {
+    cuerpo = (
+      <>
+        <Hueso alto={260} radio={0} style={{ marginHorizontal: -24, marginTop: -24, width: undefined }} />
+        <Hueso ancho="80%" alto={30} />
+        <Hueso ancho="50%" />
+        <View style={s.fila}><Hueso ancho="48%" alto={56} radio={18} /><Hueso ancho="48%" alto={56} radio={18} /></View>
+        {[0, 1, 2, 3, 4].map((k) => <Hueso key={k} ancho={`${90 - k * 8}%`} />)}
+      </>
+    );
+  } else if (tipo === 'perfil') {
+    cuerpo = (
+      <>
+        <View style={[s.fila, { gap: 14 }]}><Hueso ancho={84} alto={84} radio={42} /><View style={{ flex: 1, gap: 8 }}><Hueso ancho="60%" alto={22} /><Hueso ancho="40%" /></View></View>
+        <Hueso alto={90} radio={18} />
+        <View style={s.fila}>{[0, 1, 2].map((k) => <Hueso key={k} ancho="31%" alto={70} radio={16} />)}</View>
+        <Hueso alto={120} radio={18} />
+      </>
+    );
+  } else {
+    cuerpo = Array.from({ length: n }, (_, k) => (
+      <View key={k} style={[s.tarjetaReceta, { borderWidth: 1.5, borderColor: C.linea }]}>
+        <Hueso ancho={76} alto={76} radio={14} />
+        <View style={{ flex: 1, gap: 8, justifyContent: 'center' }}><Hueso ancho="75%" alto={16} /><Hueso ancho="45%" alto={12} /><Hueso ancho={90} alto={22} radio={999} /></View>
+      </View>
+    ));
+  }
+  return (
+    <Animated.View style={{ gap: 16, opacity: pulso }} accessible accessibilityLabel="Cargando">
+      {cuerpo}
+    </Animated.View>
+  );
+}
+
+// ---------- Aviso con "Deshacer" (5 segundos, como Gmail) ----------
+let mostrarAviso = null;
+let avisoPendiente = null;
+// avisar({ texto, onDeshacer, alConfirmar }): la acción se confirma al terminar el tiempo
+export function avisar(a) {
+  if (avisoPendiente) { const p = avisoPendiente; avisoPendiente = null; p.alConfirmar?.(); }
+  avisoPendiente = a;
+  if (mostrarAviso) mostrarAviso(a);
+  else { avisoPendiente = null; a.alConfirmar?.(); }
+}
+export function AvisoHost({ abajo = 80 }) {
+  const insets = useSafeAreaInsets();
+  const [aviso, setAviso] = React.useState(null);
+  const y = React.useRef(new Animated.Value(120)).current;
+  const timer = React.useRef(null);
+  const cerrar = React.useCallback((confirmar) => {
+    clearTimeout(timer.current);
+    const a = avisoPendiente;
+    avisoPendiente = null;
+    if (a && confirmar) a.alConfirmar?.();
+    Animated.timing(y, { toValue: 120, duration: 180, useNativeDriver: true }).start(() => setAviso(null));
+  }, []);
+  React.useEffect(() => {
+    mostrarAviso = (a) => {
+      clearTimeout(timer.current);
+      setAviso(a);
+      y.setValue(120);
+      Animated.spring(y, { toValue: 0, useNativeDriver: true, speed: 20, bounciness: 4 }).start();
+      timer.current = setTimeout(() => cerrar(true), a.duracion || 5000);
+    };
+    return () => { mostrarAviso = null; clearTimeout(timer.current); };
+  }, []);
+  if (!aviso) return null;
+  return (
+    <Animated.View pointerEvents="box-none" style={{ position: 'absolute', left: 12, right: 12, bottom: insets.bottom + abajo, transform: [{ translateY: y }] }}>
+      <View accessibilityLiveRegion="polite" style={{ flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 52, paddingLeft: 16, paddingRight: 6, borderRadius: 16, backgroundColor: C.texto }}>
+        <Text style={{ flex: 1, color: C.blanco, fontSize: 15, fontWeight: '700' }} numberOfLines={2}>{aviso.texto}</Text>
+        {aviso.onDeshacer ? (
+          <Pressable hitSlop={8} accessibilityRole="button" accessibilityLabel="Deshacer"
+            onPress={() => { const a = avisoPendiente; avisoPendiente = null; efecto('boton'); a?.onDeshacer?.(); cerrar(false); }}
+            style={{ minHeight: 44, paddingHorizontal: 12, justifyContent: 'center' }}>
+            <Text style={{ color: '#FFB199', fontSize: 15, fontWeight: '800' }}>Deshacer</Text>
+          </Pressable>
+        ) : null}
+      </View>
+    </Animated.View>
+  );
+}
+
+// ---------- Doble toque con corazón (Me gusta, como Instagram) ----------
+export function DobleToque({ onDoble, onSimple, children, style }) {
+  const ultimo = React.useRef(0);
+  const espera = React.useRef(null);
+  const escala = React.useRef(new Animated.Value(0)).current;
+  React.useEffect(() => () => clearTimeout(espera.current), []);
+  function tocar() {
+    const ahora = Date.now();
+    if (ahora - ultimo.current < 280) {
+      clearTimeout(espera.current);
+      ultimo.current = 0;
+      escala.setValue(0);
+      Animated.sequence([
+        Animated.spring(escala, { toValue: 1, useNativeDriver: true, speed: 18, bounciness: 12 }),
+        Animated.delay(350),
+        Animated.timing(escala, { toValue: 0, duration: 200, useNativeDriver: true }),
+      ]).start();
+      onDoble?.();
+      return;
+    }
+    ultimo.current = ahora;
+    if (onSimple) { clearTimeout(espera.current); espera.current = setTimeout(() => { ultimo.current = 0; onSimple(); }, 280); }
+  }
+  return (
+    <Pressable onPress={tocar} style={style} accessibilityHint="Toca dos veces para Me gusta"
+      accessibilityActions={[{ name: 'activate' }, { name: 'magicTap', label: 'Me gusta' }]}
+      onAccessibilityAction={(e) => { if (e.nativeEvent.actionName === 'magicTap') onDoble?.(); else (onSimple || onDoble)?.(); }}>
+      {children}
+      <Animated.View pointerEvents="none" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center', opacity: escala, transform: [{ scale: escala }] }}>
+        <Ionicons name="heart" size={96} color={C.blanco} style={{ textShadowColor: 'rgba(0,0,0,0.3)', textShadowRadius: 12 }} />
+      </Animated.View>
+    </Pressable>
+  );
+}
+
+// ---------- Fila que se desliza a la izquierda para quitar (como Mail) ----------
+export function FilaDeslizable({ children, onQuitar, textoQuitar = 'Quitar', etiqueta, onActivar, textoActivar }) {
+  const x = React.useRef(new Animated.Value(0)).current;
+  const abierto = React.useRef(false);
+  const ANCHO = 92;
+  const ir = (v) => { abierto.current = v !== 0; Animated.spring(x, { toValue: v, useNativeDriver: true, speed: 22, bounciness: 0 }).start(); };
+  const quitar = () => {
+    Animated.timing(x, { toValue: -Dimensions.get('window').width, duration: 180, useNativeDriver: true }).start(() => { onQuitar(); x.setValue(0); abierto.current = false; });
+  };
+  const pan = React.useRef(PanResponder.create({
+    onMoveShouldSetPanResponderCapture: (_, g) => Math.abs(g.dx) > 12 && Math.abs(g.dx) > Math.abs(g.dy) * 1.5,
+    onPanResponderTerminationRequest: () => false,
+    onPanResponderMove: (_, g) => { x.setValue(Math.min(0, (abierto.current ? -ANCHO : 0) + g.dx)); },
+    onPanResponderRelease: (_, g) => {
+      const fin = (abierto.current ? -ANCHO : 0) + g.dx;
+      if (fin < -Dimensions.get('window').width * 0.5) quitar();
+      else if (fin < -ANCHO / 2 || g.vx < -0.6) ir(-ANCHO);
+      else ir(0);
+    },
+    onPanResponderTerminate: () => ir(0),
+  })).current;
+  return (
+    <View style={{ overflow: 'hidden', borderRadius: 14 }}
+      accessible accessibilityLabel={etiqueta} accessibilityHint={textoActivar}
+      accessibilityActions={[...(onActivar ? [{ name: 'activate', label: textoActivar }] : []), { name: 'quitar', label: textoQuitar }]}
+      onAccessibilityAction={(e) => { if (e.nativeEvent.actionName === 'quitar') onQuitar(); else if (e.nativeEvent.actionName === 'activate') onActivar?.(); }}>
+      <Pressable onPress={quitar} accessibilityRole="button" accessibilityLabel={textoQuitar}
+        style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: ANCHO, backgroundColor: C.tomate, alignItems: 'center', justifyContent: 'center', gap: 2 }}>
+        <Ionicons name="trash-outline" size={20} color={C.blanco} />
+        <Text style={{ color: C.blanco, fontWeight: '800', fontSize: 13 }}>{textoQuitar}</Text>
+      </Pressable>
+      <Animated.View {...pan.panHandlers} style={{ transform: [{ translateX: x }], backgroundColor: C.blanco }}>
+        <Pressable onPress={() => { if (abierto.current) ir(0); }}>{children}</Pressable>
+      </Animated.View>
+    </View>
+  );
+}
+
+// ---------- Fotos a pantalla completa, deslizables ----------
+export function VisorFotos({ fotos = [], inicio = 0, visible, onCerrar }) {
+  const { width, height } = Dimensions.get('window');
+  const insets = useSafeAreaInsets();
+  const [i, setI] = React.useState(inicio);
+  React.useEffect(() => { if (visible) setI(inicio); }, [visible, inicio]);
+  const y = React.useRef(new Animated.Value(0)).current;
+  const pan = React.useRef(PanResponder.create({
+    onMoveShouldSetPanResponder: (_, g) => g.dy > 14 && Math.abs(g.dy) > Math.abs(g.dx) * 1.5,
+    onPanResponderMove: (_, g) => y.setValue(Math.max(0, g.dy)),
+    onPanResponderRelease: (_, g) => {
+      if (g.dy > 120 || g.vy > 1) Animated.timing(y, { toValue: height, duration: 180, useNativeDriver: true }).start(() => { y.setValue(0); onCerrar(); });
+      else Animated.spring(y, { toValue: 0, useNativeDriver: true }).start();
+    },
+  })).current;
+  if (!visible) return null;
+  const fondo = y.interpolate({ inputRange: [0, 300], outputRange: [1, 0.3], extrapolate: 'clamp' });
+  return (
+    <Modal visible transparent animationType="fade" onRequestClose={onCerrar} statusBarTranslucent>
+      <Animated.View style={{ flex: 1, backgroundColor: '#000', opacity: fondo }} />
+      <Animated.View {...pan.panHandlers} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, transform: [{ translateY: y }] }}>
+        <FlatList
+          data={fotos}
+          horizontal
+          pagingEnabled
+          initialScrollIndex={Math.min(inicio, Math.max(fotos.length - 1, 0))}
+          getItemLayout={(_, k) => ({ length: width, offset: width * k, index: k })}
+          onMomentumScrollEnd={(e) => setI(Math.round(e.nativeEvent.contentOffset.x / width))}
+          keyExtractor={(f, k) => `${k}-${f.url}`}
+          showsHorizontalScrollIndicator={false}
+          renderItem={({ item }) => (
+            <View style={{ width, height, justifyContent: 'center' }}>
+              <Image source={{ uri: item.url }} style={{ width, height: height * 0.75 }} resizeMode="contain" accessibilityLabel={item.texto || 'Foto'} />
+            </View>
+          )}
+        />
+      </Animated.View>
+      <View pointerEvents="box-none" style={{ position: 'absolute', top: insets.top + 8, left: 16, right: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+        <Text style={{ color: C.blanco, fontWeight: '800', fontSize: 15 }}>{fotos.length > 1 ? `${i + 1} de ${fotos.length}` : ''}</Text>
+        <Pressable onPress={onCerrar} hitSlop={10} accessibilityRole="button" accessibilityLabel="Cerrar"
+          style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center' }}>
+          <Ionicons name="close" size={26} color={C.blanco} />
+        </Pressable>
+      </View>
+      {fotos[i]?.texto ? (
+        <View pointerEvents="none" style={{ position: 'absolute', left: 20, right: 20, bottom: insets.bottom + 24 }}>
+          <Text style={{ color: C.blanco, fontSize: 15, fontWeight: '600' }} numberOfLines={4}>{fotos[i].texto}</Text>
+        </View>
+      ) : null}
+    </Modal>
   );
 }
 

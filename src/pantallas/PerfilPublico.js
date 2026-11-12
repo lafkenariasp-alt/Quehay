@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../supabase';
 import { useApp } from '../contexto';
 import { C } from '../theme';
-import { Boton, TarjetaReceta, Pastilla, Cargando, ErrorCarga, Avatar, s } from '../ui';
+import { Boton, TarjetaReceta, Pastilla, Pantalla, Esqueleto, ErrorCarga, Avatar, useRefrescar, s } from '../ui';
 import { reportar } from '../reportar';
 import { efecto } from '../sonido';
 
@@ -37,9 +37,10 @@ export default function PerfilPublico({ id }) {
   }, [id, uid]);
 
   useEffect(() => { cargar(); }, [cargar]);
+  const refreshControl = useRefrescar(cargar);
 
   if (error) return <ErrorCarga onReintentar={cargar} onVolver={nav.volver} />;
-  if (!p) return <Cargando />;
+  if (!p) return <Pantalla scroll={false}><Esqueleto tipo="perfil" /></Pantalla>;
 
   async function alternar() {
     if (!uid) { pedirCuenta('Crea tu cuenta para seguir a otros cocineros'); return; }
@@ -59,6 +60,7 @@ export default function PerfilPublico({ id }) {
       contentContainerStyle={s.contenido}
       ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
       initialNumToRender={8}
+      refreshControl={refreshControl}
       ListHeaderComponent={<View style={{ gap: 16, marginBottom: 12 }}>
       <View style={s.filaEntre}>
         <Pressable onPress={nav.volver} accessibilityRole="button" accessibilityLabel="Volver" style={[s.fila, { gap: 2, minHeight: 44 }]}>
@@ -96,7 +98,10 @@ export default function PerfilPublico({ id }) {
         <Text style={s.sub}>{recetas.length}</Text>
       </View>
       </View>}
-      ListEmptyComponent={<Text style={s.sub}>Todavía no publica recetas.</Text>}
+      ListEmptyComponent={<View style={{ alignItems: 'center', gap: 6, paddingVertical: 20 }}>
+        <Ionicons name="restaurant-outline" size={28} color={C.suave} />
+        <Text style={[s.sub, { textAlign: 'center' }]}>{p.nombre} todavía no publica recetas.{!loSigo && id !== uid ? ' Síguelo y te enteras cuando lo haga.' : ''}</Text>
+      </View>}
       renderItem={({ item: r }) => (
         <TarjetaReceta titulo={r.titulo} foto={r.foto_url}
           meta={`${r.num_notas ? `${Number(r.nota_promedio).toFixed(1).replace('.', ',')} estrellas (${r.num_notas})` : 'Sin notas'} · ${r.num_cocinadas} la cocinaron`}
