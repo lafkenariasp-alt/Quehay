@@ -1,10 +1,10 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, Alert, Image, Pressable } from 'react-native';
+import { View, Text, Alert, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../supabase';
 import { useApp } from '../contexto';
 import { C } from '../theme';
-import { Pantalla, Encabezado, Seccion, Boton, Tarjeta, Cargando, ErrorCarga, Avatar, Estrellas, s } from '../ui';
+import { Pantalla, Seccion, Boton, TarjetaReceta, Pastilla, Cargando, ErrorCarga, Avatar, s } from '../ui';
 import { reportar } from '../reportar';
 import { efecto } from '../sonido';
 
@@ -51,48 +51,45 @@ export default function PerfilPublico({ id }) {
     cargar();
   }
 
+  const lugar = [`@${p.usuario}`, p.ciudad].filter(Boolean).join(' · ');
   return (
     <Pantalla>
-      <Encabezado onVolver={nav.volver} titulo={p.nombre} sub={`@${p.usuario}`} derecha={id !== uid ? (
-        <Pressable onPress={() => reportar({ uid, tipo: 'perfil', objetoId: id, pedirCuenta })} hitSlop={12} accessibilityRole="button" accessibilityLabel="Reportar perfil">
-          <Ionicons name="flag-outline" size={22} color={C.suave} />
+      <View style={s.filaEntre}>
+        <Pressable onPress={nav.volver} accessibilityRole="button" accessibilityLabel="Volver" style={[s.fila, { gap: 2, minHeight: 44 }]}>
+          <Ionicons name="chevron-back" size={22} color={C.suave} />
+          <Text style={{ fontSize: 15, fontWeight: '700', color: C.suave }}>Volver</Text>
         </Pressable>
-      ) : null} />
-      <View style={[s.fila, { gap: 16 }]}>
+        {id !== uid ? (
+          <Pressable onPress={() => reportar({ uid, tipo: 'perfil', objetoId: id, pedirCuenta })} accessibilityRole="button" accessibilityLabel="Reportar perfil"
+            style={{ minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' }}>
+            <Ionicons name="flag-outline" size={22} color={C.suave} />
+          </Pressable>
+        ) : null}
+      </View>
+      <View style={[s.fila, { gap: 14 }]}>
         <Avatar url={p.avatar_url} nombre={p.nombre} tam={84} borde={C.dorado} />
         <View style={{ flex: 1, gap: 4 }}>
-          <View style={{ alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999, backgroundColor: C.doradoTinte }}>
-            <Text style={{ fontSize: 13, fontWeight: '800', color: C.ambarOscuro }}>Nivel {p.nivel} · {p.titulo}</Text>
-          </View>
-          <Text style={s.sub}>{conteo.seguidores} seguidores · {conteo.siguiendo} siguiendo</Text>
-          {loSigo && meSigue ? <Text style={[s.sub, { color: C.verde }]}>Son amigos</Text> : meSigue ? <Text style={s.sub}>Te sigue</Text> : null}
+          <Text style={{ fontSize: 26, fontWeight: '800', color: C.texto, letterSpacing: -0.5 }}>{p.nombre}</Text>
+          <Text style={{ fontSize: 14, color: C.suave }}>{lugar}</Text>
+          {loSigo && meSigue ? <Pastilla texto="Son amigos" fondo={C.verdeTinte} color={C.verde} icono="checkmark" />
+            : meSigue ? <Pastilla texto="Te sigue" fondo={C.superficie} color={C.texto} /> : null}
         </View>
+      </View>
+      <View style={{ padding: 16, borderRadius: 18, backgroundColor: C.doradoTinte, gap: 4 }}>
+        <Text style={{ fontSize: 16, fontWeight: '800', color: C.ambarOscuro }}>Nivel {p.nivel} · {p.titulo}</Text>
+        <Text style={{ fontSize: 13, color: C.ambarOscuro }}>{conteo.seguidores} seguidores · {conteo.siguiendo} siguiendo</Text>
       </View>
 
       {id !== uid ? (
         <Boton titulo={loSigo ? 'Siguiendo' : meSigue ? 'Seguir también' : 'Seguir'} icono={loSigo ? 'checkmark' : 'person-add-outline'}
-          tipo={loSigo ? 'secundario' : 'principal'} onPress={alternar} />
+          tipo={loSigo ? 'neutro' : 'principal'} onPress={alternar} />
       ) : null}
 
       <Seccion titulo="Recetas" derecha={<Text style={s.sub}>{recetas.length}</Text>}>
         {recetas.length === 0 ? <Text style={s.sub}>Todavía no publica recetas.</Text> : recetas.map((r) => (
-          <Tarjeta key={r.id} onPress={() => nav.abrir('receta', { id: r.id })} style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
-            {r.foto_url ? (
-              <Image source={{ uri: r.foto_url }} style={{ width: 64, height: 64, borderRadius: 12, backgroundColor: C.superficie }} />
-            ) : (
-              <View style={{ width: 64, height: 64, borderRadius: 12, backgroundColor: C.superficie, alignItems: 'center', justifyContent: 'center' }}>
-                <Ionicons name="restaurant-outline" size={24} color="#B9A68E" />
-              </View>
-            )}
-            <View style={{ flex: 1, gap: 3 }}>
-              <Text style={s.etiqueta}>{r.titulo}</Text>
-              <View style={s.fila}>
-                <Estrellas valor={Number(r.nota_promedio)} tam={12} />
-                <Text style={s.sub}>{r.num_notas ? `${Number(r.nota_promedio).toFixed(1)} (${r.num_notas})` : 'Sin notas'}</Text>
-              </View>
-              <Text style={s.sub}>{r.num_likes} me gusta · {r.num_cocinadas} la cocinaron</Text>
-            </View>
-          </Tarjeta>
+          <TarjetaReceta key={r.id} titulo={r.titulo} foto={r.foto_url}
+            meta={`${r.num_notas ? `${Number(r.nota_promedio).toFixed(1).replace('.', ',')} estrellas (${r.num_notas})` : 'Sin notas'} · ${r.num_cocinadas} la cocinaron`}
+            onPress={() => nav.abrir('receta', { id: r.id })} />
         ))}
       </Seccion>
     </Pantalla>

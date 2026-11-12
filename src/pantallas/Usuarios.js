@@ -93,16 +93,15 @@ export default function Usuarios({ pestana: inicial = 'sugerencias' }) {
     const extra = detalle || (amigos ? 'Amigos' : meSiguen.has(p.id) ? 'Te sigue' : null);
     return (
       <Pressable key={p.id} onPress={() => nav.abrir('perfilPublico', { id: p.id })} accessibilityRole="button" accessibilityHint="Abre su perfil"
-        style={[s.fila, { gap: 12, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: C.linea }]}>
+        style={({ pressed }) => [s.fila, { gap: 12, padding: 12, borderRadius: 18, backgroundColor: C.blanco, borderWidth: 1.5, borderColor: C.linea, opacity: pressed ? 0.9 : 1 }]}>
         <Avatar url={p.avatar_url} nombre={p.nombre} tam={48} />
         <View style={{ flex: 1 }}>
           <Text style={s.etiqueta}>{p.nombre}</Text>
-          <Text style={s.sub}>@{p.usuario} · Nivel {p.nivel}</Text>
-          {extra ? <Text style={{ fontSize: 13, fontWeight: '700', color: C.ambarTexto }}>{extra}</Text> : null}
+          <Text style={{ fontSize: 13, color: C.suave }} numberOfLines={2}>{extra ? `${extra} · Nivel ${p.nivel}` : `@${p.usuario} · Nivel ${p.nivel}`}</Text>
         </View>
         <Pressable onPress={() => alternar(p)} hitSlop={6} accessibilityRole="button" accessibilityLabel={loSigo ? `Dejar de seguir a ${p.nombre}` : `Seguir a ${p.nombre}`}
-          style={{ minHeight: 44, paddingHorizontal: 14, borderRadius: 12, justifyContent: 'center', borderWidth: 1, borderColor: C.tomate, backgroundColor: loSigo ? C.blanco : C.tomate }}>
-          <Text style={{ fontSize: 13, fontWeight: '800', color: loSigo ? C.tomate : C.blanco }}>{loSigo ? 'Siguiendo' : meSiguen.has(p.id) ? 'Seguir también' : 'Seguir'}</Text>
+          style={{ minHeight: 44, paddingHorizontal: 14, borderRadius: 12, justifyContent: 'center', borderWidth: 1.5, borderColor: loSigo ? C.linea : C.tomate, backgroundColor: loSigo ? C.blanco : C.tomate }}>
+          <Text style={{ fontSize: 14, fontWeight: '800', color: loSigo ? C.texto : C.blanco }}>{loSigo ? 'Siguiendo' : meSiguen.has(p.id) ? 'Seguir también' : 'Seguir'}</Text>
         </Pressable>
       </Pressable>
     );
@@ -110,7 +109,7 @@ export default function Usuarios({ pestana: inicial = 'sugerencias' }) {
 
   const lista = (ids, vacio) => {
     const ps = ids.map((id) => perfiles[id]).filter(Boolean).sort((a, b) => a.nombre.localeCompare(b.nombre));
-    return ps.length ? <View>{ps.map((p) => fila(p))}</View> : <Vacio texto={vacio} />;
+    return ps.length ? <View style={{ gap: 12 }}>{ps.map((p) => fila(p))}</View> : <Vacio texto={vacio} />;
   };
 
   const buscando = q.trim().length >= 2;
@@ -133,7 +132,7 @@ export default function Usuarios({ pestana: inicial = 'sugerencias' }) {
       </View>
 
       {buscando ? (
-        resultados.length ? <View>{resultados.map((p) => fila(p))}</View> : <Vacio texto="No encontramos a nadie con ese nombre" />
+        resultados.length ? <View style={{ gap: 12 }}>{resultados.map((p) => fila(p))}</View> : <Vacio texto="No encontramos a nadie con ese nombre" />
       ) : (
         <>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }} accessibilityRole="tablist">
@@ -146,8 +145,8 @@ export default function Usuarios({ pestana: inicial = 'sugerencias' }) {
           {pestana === 'sugerencias' ? (
             <>
               {uid && (!perfil?.ciudad || editarCiudad) ? (
-                <View style={{ gap: 10, padding: 14, borderRadius: 16, backgroundColor: C.doradoTinte }}>
-                  <Text style={s.etiqueta}>¿De dónde eres?</Text>
+                <View style={{ gap: 12, padding: 16, borderRadius: 18, backgroundColor: C.blanco, borderWidth: 1.5, borderColor: C.linea }}>
+                  <Text style={{ fontSize: 20, fontWeight: '800', color: C.texto }}>¿De dónde eres?</Text>
                   <Text style={s.sub}>Te sugiero cocineros cerca de ti. Solo se muestra la ciudad, nunca tu ubicación exacta.</Text>
                   <View style={s.chips}>
                     {CIUDADES.map((c) => <Chip key={c} texto={c} onPress={() => guardarCiudad(c)} />)}
@@ -160,12 +159,12 @@ export default function Usuarios({ pestana: inicial = 'sugerencias' }) {
                 </View>
               ) : uid ? (
                 <Pressable onPress={() => setEditarCiudad(true)} accessibilityRole="button" style={[s.fila, { minHeight: 44 }]}>
-                  <Ionicons name="location-outline" size={16} color={C.suave} />
-                  <Text style={s.sub}>Sugerencias cerca de {perfil.ciudad} · <Text style={{ color: C.tomate, fontWeight: '800' }}>cambiar</Text></Text>
+                  <Ionicons name="location-outline" size={16} color={C.texto} />
+                  <Text style={{ fontSize: 14, fontWeight: '800', color: C.texto }}>Sugerencias cerca de {perfil.ciudad} · <Text style={{ color: C.tomate }}>cambiar</Text></Text>
                 </Pressable>
               ) : null}
               {sugerencias === null ? <Cargando /> : sugerencias.length
-                ? <View>{sugerencias.map((p) => fila(p, p.motivo))}</View>
+                ? <View style={{ gap: 12 }}>{sugerencias.map((p) => fila(p, p.motivo))}</View>
                 : <Vacio texto="Aún no hay sugerencias. Cuando más gente se sume, aparecerán aquí." />}
             </>
           ) : invitado ? (

@@ -69,17 +69,16 @@ export default function Bienvenida({ onTerminar, repetir = false }) {
 
   return (
     <View style={{ flex: 1 }}>
-      <ScrollView contentContainerStyle={{ padding: 20, gap: 18 }}>
+      <ScrollView contentContainerStyle={{ padding: 24, gap: 16 }}>
         <View style={[s.fila, { gap: 12, alignItems: 'flex-end' }]}>
           <Mascota tam={72} expresion="pensando" />
           <View style={{ flex: 1, gap: 6 }}>
             <Globo texto="¿Qué tienes a mano? No tiene que ser todo: con 3 basta." />
           </View>
         </View>
-        <Text style={s.titulo}>¿Qué tienes a mano?</Text>
         <Foco id="grilla"><Grilla>
           {tipicos.map((t) => (
-            <Casilla key={t.id} nombre={t.nombre} estado={ids.has(t.id) ? 'tengo' : 'vacia_nombre'} onPress={() => alternar(t)} />
+            <Casilla key={t.id} ancho="31%" nombre={t.nombre} estado={ids.has(t.id) ? 'tengo' : 'vacia_nombre'} onPress={() => alternar(t)} />
           ))}
         </Grilla></Foco>
         {elegidos.filter((e) => !TIPICOS.includes(e.nombre)).length ? (

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, Pressable, ActivityIndicator, StyleSheet, ScrollView, Image } from 'react-native';
+import { View, Text, Pressable, ActivityIndicator, StyleSheet, ScrollView, Image, Switch } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { C } from './theme';
 import { Mascota } from './chefpu';
@@ -68,6 +68,7 @@ export function Boton({ titulo, onPress, tipo = 'principal', icono, cargando, de
     principal: { bg: C.tomate, fg: C.blanco, borde: C.tomate },
     secundario: { bg: C.blanco, fg: C.tomate, borde: C.tomate },
     neutro: { bg: C.blanco, fg: C.texto, borde: C.linea },
+    verde: { bg: C.verde, fg: C.blanco, borde: C.verde },
   }[tipo];
   return (
     <Pressable
@@ -86,7 +87,7 @@ export function Boton({ titulo, onPress, tipo = 'principal', icono, cargando, de
         <ActivityIndicator color={estilos.fg} />
       ) : (
         <>
-          {icono ? <Ionicons name={icono} size={18} color={estilos.fg} /> : null}
+          {icono ? <Ionicons name={icono} size={20} color={estilos.fg} /> : null}
           <Text style={[s.botonTexto, { color: estilos.fg }]}>{titulo}</Text>
         </>
       )}
@@ -102,10 +103,10 @@ export function Chip({ texto, activo, onPress, icono }) {
       accessibilityLabel={texto}
       accessibilityState={{ selected: !!activo }}
       hitSlop={{ top: 4, bottom: 4 }}
-      style={[s.chip, activo && { backgroundColor: C.tomateTinte, borderColor: C.tomate }]}
+      style={[s.chip, activo && { backgroundColor: C.tomate }]}
     >
-      {icono ? <Ionicons name={icono} size={14} color={activo ? C.tomateOscuro : C.texto} /> : null}
-      <Text style={[s.chipTexto, activo && { color: C.tomateOscuro }]}>{texto}</Text>
+      {icono ? <Ionicons name={icono} size={15} color={activo ? C.blanco : C.texto} /> : null}
+      <Text style={[s.chipTexto, activo && { color: C.blanco }]}>{texto}</Text>
     </Pressable>
   );
 }
@@ -130,7 +131,7 @@ export function Casilla({ nombre, estado = 'tengo', detalle, onPress, onLongPres
       accessibilityLabel={etiqueta}
       accessibilityState={estado === 'vacia_nombre' || (estado === 'tengo' && onPress) ? { selected: estado === 'tengo' } : undefined}
       accessibilityHint={onLongPress ? 'Mantén presionado para más opciones' : undefined}
-      style={({ pressed }) => [s.casilla, { width: ancho, backgroundColor: e.bg, borderColor: e.borde, borderStyle: e.estilo, opacity: pressed ? 0.8 : 1 }]}
+      style={({ pressed }) => [s.casilla, { width: ancho, backgroundColor: e.bg, borderColor: e.borde, borderStyle: e.estilo, borderWidth: estado === 'tengo' || estado === 'vence' ? 2 : 1.5, opacity: pressed ? 0.8 : 1 }]}
     >
       {estado === 'vacia' ? (
         <Ionicons name="add" size={22} color={e.fg} />
@@ -226,26 +227,76 @@ export function Cargando() {
   );
 }
 
+// Tarjeta de receta del lienzo: foto a la izquierda, datos y estado a la derecha.
+// estado: 'ya' (verde, tienes todo) | 'falta' (ámbar) | null
+export function TarjetaReceta({ titulo, foto, meta, estado = null, detalle, abajo, onPress }) {
+  const borde = estado === 'ya' ? C.verde : estado === 'falta' ? C.ambar : C.linea;
+  return (
+    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={[titulo, meta, detalle].filter(Boolean).join(', ')}
+      style={({ pressed }) => [s.tarjetaReceta, { borderColor: borde, borderWidth: estado ? 2 : 1.5, opacity: pressed ? 0.9 : 1 }]}>
+      {foto ? (
+        <Image source={{ uri: foto }} style={s.tarjetaRecetaFoto} />
+      ) : (
+        <View style={[s.tarjetaRecetaFoto, { alignItems: 'center', justifyContent: 'center' }]}>
+          <Ionicons name="restaurant-outline" size={26} color="#B9A68E" />
+        </View>
+      )}
+      <View style={{ flex: 1, gap: 4 }}>
+        <Text style={{ fontSize: 16, fontWeight: '800', color: C.texto }}>{titulo}</Text>
+        {meta ? <Text style={{ fontSize: 13, color: C.suave }}>{meta}</Text> : null}
+        {abajo}
+        {estado === 'ya' ? <Pastilla texto={detalle || 'Tienes todo'} fondo={C.verdeTinte} color={C.verde} icono="checkmark" /> : null}
+        {estado === 'falta' ? <Pastilla texto={detalle || 'Te falta 1'} fondo={C.ambarTinte} color={C.ambarOscuro} /> : null}
+      </View>
+    </Pressable>
+  );
+}
+
+export function Pastilla({ texto, fondo = C.doradoTinte, color = C.ambarOscuro, icono }) {
+  return (
+    <View style={{ alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999, backgroundColor: fondo }}>
+      {icono ? <Ionicons name={icono} size={13} color={color} /> : null}
+      <Text style={{ fontSize: 12, fontWeight: '800', color }}>{texto}</Text>
+    </View>
+  );
+}
+
+// Fila de interruptor del lienzo: texto (y explicación) a la izquierda, switch a la derecha
+export function Interruptor({ texto, sub, valor, onCambiar, icono }) {
+  return (
+    <View style={[s.fila, { gap: 12, minHeight: 44 }]}>
+      {icono ? <Ionicons name={icono} size={20} color={C.texto} /> : null}
+      <View style={{ flex: 1, gap: 2 }}>
+        <Text style={{ fontSize: 15, fontWeight: '700', color: C.texto }}>{texto}</Text>
+        {sub ? <Text style={{ fontSize: 13, color: C.suave }}>{sub}</Text> : null}
+      </View>
+      <Switch value={valor} onValueChange={onCambiar} trackColor={{ true: C.verde, false: '#B5A694' }} accessibilityLabel={texto} />
+    </View>
+  );
+}
+
 export const s = StyleSheet.create({
-  contenido: { padding: 20, gap: 20, paddingBottom: 32 },
-  pie: { padding: 16, paddingHorizontal: 20, borderTopWidth: 1, borderTopColor: C.linea, backgroundColor: C.fondo },
+  contenido: { padding: 24, gap: 16, paddingBottom: 32 },
+  pie: { padding: 16, paddingHorizontal: 24, borderTopWidth: 1, borderTopColor: C.linea, backgroundColor: C.fondo },
   encabezado: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   volver: { width: 44, height: 44, justifyContent: 'center', marginLeft: -8 },
-  titulo: { fontSize: 26, fontWeight: '700', color: C.texto },
-  sub: { fontSize: 13, fontWeight: '600', color: C.suave },
-  seccion: { fontSize: 19, fontWeight: '700' },
+  titulo: { fontSize: 32, fontWeight: '800', color: C.texto, letterSpacing: -0.5 },
+  sub: { fontSize: 15, color: C.suave },
+  seccion: { fontSize: 18, fontWeight: '800' },
   filaEntre: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   fila: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  boton: { minHeight: 52, borderRadius: 14, borderWidth: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingHorizontal: 16 },
-  botonTexto: { fontSize: 16, fontWeight: '800' },
-  chip: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 38, paddingHorizontal: 14, borderRadius: 999, borderWidth: 1, borderColor: C.linea, backgroundColor: C.blanco },
-  chipTexto: { fontSize: 13, fontWeight: '700', color: C.texto },
+  boton: { minHeight: 56, borderRadius: 18, borderWidth: 1.5, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingHorizontal: 20 },
+  botonTexto: { fontSize: 17, fontWeight: '800' },
+  chip: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 40, paddingHorizontal: 14, borderRadius: 999, backgroundColor: C.superficie },
+  chipTexto: { fontSize: 14, fontWeight: '700', color: C.texto },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  casilla: { minHeight: 68, paddingVertical: 6, borderRadius: 12, borderWidth: 2, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4, gap: 2 },
-  casillaTexto: { fontSize: 13, fontWeight: '800', textAlign: 'center' },
+  casilla: { minHeight: 68, paddingVertical: 6, borderRadius: 16, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4, gap: 2 },
+  casillaTexto: { fontSize: 14, fontWeight: '700', textAlign: 'center' },
   casillaDetalle: { fontSize: 12, fontWeight: '600' },
-  grilla: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  tarjeta: { backgroundColor: C.blanco, borderRadius: 18, borderWidth: 1, borderColor: C.linea, padding: 14, gap: 10 },
-  input: { minHeight: 48, borderRadius: 14, borderWidth: 1, borderColor: C.linea, backgroundColor: C.blanco, paddingHorizontal: 14, fontSize: 15, color: C.texto },
-  etiqueta: { fontSize: 14, fontWeight: '800', color: C.texto },
+  grilla: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  tarjeta: { backgroundColor: C.blanco, borderRadius: 18, borderWidth: 1.5, borderColor: C.linea, padding: 16, gap: 10 },
+  tarjetaReceta: { flexDirection: 'row', gap: 14, padding: 12, borderRadius: 18, backgroundColor: C.blanco },
+  tarjetaRecetaFoto: { width: 76, height: 76, borderRadius: 14, backgroundColor: C.superficie },
+  input: { minHeight: 56, borderRadius: 16, borderWidth: 1.5, borderColor: C.linea, backgroundColor: C.blanco, paddingHorizontal: 16, fontSize: 16, color: C.texto },
+  etiqueta: { fontSize: 15, fontWeight: '800', color: C.texto },
 });

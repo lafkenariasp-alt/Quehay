@@ -211,30 +211,34 @@ export function TutorialCapa({ capa = 'raiz' }) {
         <Panel onPress={tocar} style={{ left: 0, top: 0, width: W, height: H }} />
       )}
 
-      {/* Progreso (4 cucharas) y saltar */}
-      <View pointerEvents="box-none" style={{ position: 'absolute', top: insets.top + 6, left: 16, right: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-        <View style={{ flexDirection: 'row', gap: 6 }} accessible accessibilityLabel={`Capítulo ${Math.min(linea.cap, CAPITULOS)} de ${CAPITULOS}`}>
-          {Array.from({ length: CAPITULOS }, (_, i) => (
-            <Ionicons key={i} name={i < linea.cap ? 'restaurant' : 'restaurant-outline'} size={20} color={i < linea.cap ? C.dorado : 'rgba(255,255,255,0.6)'} />
-          ))}
-        </View>
-        <Pressable onPress={saltar} accessibilityRole="button" hitSlop={10} style={{ minHeight: 44, justifyContent: 'center', paddingHorizontal: 8 }}>
-          <Text style={{ color: C.blanco, fontWeight: '800', fontSize: 14 }}>Saltar tutorial</Text>
-        </Pressable>
-      </View>
-
-      {/* Chefpu narra */}
-      <Animated.View pointerEvents="box-none" style={[{ position: 'absolute', left: 16, right: 16, flexDirection: 'row', alignItems: 'flex-end', gap: 10, opacity: aparece,
+      {/* Chefpu narra: una tarjeta con su cara, el texto, el avance (4 puntos) y saltar */}
+      <Animated.View pointerEvents="box-none" style={[{ position: 'absolute', left: 16, right: 16, opacity: aparece,
         transform: [{ translateY: aparece.interpolate({ inputRange: [0, 1], outputRange: [8, 0] }) }] }, posNarrador]}>
-        <Mascota tam={hueco ? 76 : 120} expresion={linea.cara} />
-        <Pressable onPress={tocar} accessibilityRole="button" accessibilityLiveRegion="polite"
-          accessibilityLabel={`Chefpu: ${linea.texto}${sigue ? '. Toca para seguir' : ''}`}
-          style={{ flex: 1, backgroundColor: C.blanco, borderRadius: 18, padding: 14, gap: 6, borderWidth: 2, borderColor: C.dorado }}>
-          <Text style={{ fontSize: 16, fontWeight: '700', color: C.texto, lineHeight: 22 }}>{linea.texto.slice(0, letras)}</Text>
-          <Text style={{ fontSize: 12, fontWeight: '800', color: C.ambarOscuro, alignSelf: 'flex-end' }}>
-            {escribiendo ? ' ' : sigue ? 'Toca para seguir ▸' : 'Toca lo que brilla'}
-          </Text>
-        </Pressable>
+        <View style={{ backgroundColor: C.fondo, borderRadius: 24, padding: 18, gap: 12,
+          shadowColor: '#000', shadowOpacity: 0.3, shadowRadius: 16, shadowOffset: { width: 0, height: 12 } }}>
+          <Pressable onPress={tocar} accessibilityRole="button" accessibilityLiveRegion="polite"
+            accessibilityLabel={`Chefpu: ${linea.texto}${sigue ? '. Toca para seguir' : ''}`}
+            style={{ flexDirection: 'row', gap: 12, alignItems: 'flex-start' }}>
+            <Mascota tam={hueco ? 64 : 96} expresion={linea.cara} />
+            <View style={{ flex: 1, gap: 6 }}>
+              <Text style={{ fontSize: 16, fontWeight: '700', color: C.texto, lineHeight: 22 }}>{linea.texto.slice(0, letras)}</Text>
+              <Text style={{ fontSize: 12, fontWeight: '800', color: C.ambarOscuro }}>
+                {escribiendo ? ' ' : sigue ? 'Toca para seguir ▸' : 'Toca lo que brilla'}
+              </Text>
+            </View>
+          </Pressable>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <View style={{ flexDirection: 'row', gap: 6 }} accessible accessibilityLabel={`Capítulo ${Math.max(1, Math.min(linea.cap, CAPITULOS))} de ${CAPITULOS}`}>
+              {Array.from({ length: CAPITULOS }, (_, i) => (
+                <View key={i} style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: i < Math.max(1, linea.cap) ? C.dorado : C.linea }} />
+              ))}
+            </View>
+            <View style={{ flex: 1 }} />
+            <Pressable onPress={saltar} accessibilityRole="button" hitSlop={10} style={{ minHeight: 44, justifyContent: 'center', paddingHorizontal: 4 }}>
+              <Text style={{ color: C.suave, fontWeight: '700', fontSize: 14 }}>Saltar tutorial</Text>
+            </Pressable>
+          </View>
+        </View>
       </Animated.View>
     </View>
   );

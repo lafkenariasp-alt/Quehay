@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '../supabase';
 import { useApp, tieneIngrediente } from '../contexto';
 import { C } from '../theme';
-import { Pantalla, Encabezado, Seccion, Grilla, Casilla, Boton, Estrellas, Tarjeta, Cargando, ErrorCarga, Avatar, s } from '../ui';
+import { Pantalla, Seccion, Boton, Estrellas, Tarjeta, Cargando, ErrorCarga, Avatar, s } from '../ui';
 import { fotoDelPlato, subirFoto } from '../fotos';
 import { reportar } from '../reportar';
 import { registrar } from '../analitica';
@@ -119,31 +119,25 @@ export default function Receta({ id, tengo = null, basicos = true }) {
 
   return (
     <Foco id="pantalla_receta" style={{ flex: 1 }}>
-      <Pantalla pie={
-        <View style={{ flexDirection: 'row', gap: 10 }}>
-          <Foco id="paso_a_paso" style={{ flex: 1 }}>
-            <Boton tipo="secundario" titulo="Paso a paso" icono="play-outline" onPress={() => { setModoCocina(true); registrar('modo_cocina', {}, uid); tutorial?.evento('paso_a_paso'); }} />
-          </Foco>
-          <Boton titulo="Lo cociné" icono="camera-outline" onPress={loCocine} style={{ flex: 1 }} />
-        </View>
-      }>
-        <Encabezado
-          onVolver={nav.volver}
-          titulo={r.titulo}
-          derecha={
-            <View style={[s.fila, { gap: 14 }]}>
-              {!esMia ? (
-                <Pressable onPress={() => reportar({ uid, tipo: 'receta', objetoId: r.id, pedirCuenta })} hitSlop={12} accessibilityRole="button" accessibilityLabel="Reportar receta">
-                  <Ionicons name="flag-outline" size={22} color={C.suave} />
-                </Pressable>
-              ) : null}
-              <Pressable onPress={alternarLike} hitSlop={12} accessibilityRole="button" accessibilityState={{ selected: !!meGusta }} accessibilityLabel={meGusta ? 'Quitar me gusta' : 'Me gusta'}>
-                <Ionicons name={meGusta ? 'heart' : 'heart-outline'} size={28} color={C.tomate} />
+      <Pantalla>
+        <View style={s.filaEntre}>
+          <Pressable onPress={nav.volver} accessibilityRole="button" accessibilityLabel="Volver" style={[s.fila, { gap: 2, minHeight: 44 }]}>
+            <Ionicons name="chevron-back" size={22} color={C.suave} />
+            <Text style={{ fontSize: 15, fontWeight: '700', color: C.suave }}>Volver</Text>
+          </Pressable>
+          <View style={[s.fila, { gap: 4 }]}>
+            {!esMia ? (
+              <Pressable onPress={() => reportar({ uid, tipo: 'receta', objetoId: r.id, pedirCuenta })} accessibilityRole="button" accessibilityLabel="Reportar receta"
+                style={{ minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' }}>
+                <Ionicons name="flag-outline" size={22} color={C.suave} />
               </Pressable>
-            </View>
-          }
-        />
-
+            ) : null}
+            <Pressable onPress={alternarLike} accessibilityRole="button" accessibilityState={{ selected: !!meGusta }} accessibilityLabel={meGusta ? 'Quitar me gusta' : 'Me gusta'}
+              style={{ minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' }}>
+              <Ionicons name={meGusta ? 'heart' : 'heart-outline'} size={28} color={C.tomate} />
+            </Pressable>
+          </View>
+        </View>
 
         {r.oculta ? (
           <View style={{ padding: 12, borderRadius: 14, backgroundColor: C.ambarTinte }}>
@@ -152,47 +146,61 @@ export default function Receta({ id, tengo = null, basicos = true }) {
         ) : null}
 
         {r.foto_url ? (
-          <Image source={{ uri: r.foto_url }} style={{ width: '100%', aspectRatio: 4 / 3, borderRadius: 18, backgroundColor: C.superficie }} />
-        ) : null}
+          <Image source={{ uri: r.foto_url }} style={{ marginHorizontal: -24, aspectRatio: 16 / 10, backgroundColor: C.superficie }} accessibilityLabel={`Foto de ${r.titulo}`} />
+        ) : (
+          <View style={{ marginHorizontal: -24, height: 200, backgroundColor: C.superficie, alignItems: 'center', justifyContent: 'center' }}>
+            <Ionicons name="restaurant-outline" size={48} color="#B9A68E" />
+          </View>
+        )}
 
-        <View style={[s.fila, { flexWrap: 'wrap', gap: 14 }]}>
+        <View style={{ gap: 6 }}>
+          <Text style={{ fontSize: 28, fontWeight: '800', color: C.texto, letterSpacing: -0.5 }}>{r.titulo}</Text>
+          <Text style={{ fontSize: 14, color: C.suave }}>por {r.perfiles?.nombre} · {r.minutos} min · {r.porciones} porciones · {r.dificultad}</Text>
           <View style={s.fila}>
             <Estrellas valor={Number(r.nota_promedio)} />
-            <Text style={s.sub}>{r.num_notas ? `${Number(r.nota_promedio).toFixed(1)} (${r.num_notas})` : 'Sin notas aún'}</Text>
+            <Text style={{ fontSize: 13, color: C.suave }}>{r.num_notas ? `${Number(r.nota_promedio).toFixed(1).replace('.', ',')} (${r.num_notas}) · ${r.num_likes} me gusta` : `Sin notas aún · ${r.num_likes} me gusta`}</Text>
           </View>
-          <Text style={s.sub}>{r.minutos} min</Text>
-          <Text style={s.sub}>{r.porciones} porciones</Text>
-          <Text style={s.sub}>{r.dificultad}</Text>
-          <Text style={s.sub}>{r.num_likes} me gusta</Text>
         </View>
 
-        <Tarjeta onPress={esMia ? undefined : () => nav.abrir('perfilPublico', { id: r.autor_id })}
-          style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: C.superficie, borderWidth: 0 }}>
-          <Avatar url={r.perfiles?.avatar_url} nombre={r.perfiles?.nombre} tam={40} />
-          <View style={{ flex: 1 }}>
-            <Text style={s.etiqueta}>{r.perfiles?.nombre}</Text>
-            <Text style={[s.sub, { color: C.ambarTexto }]}>{esMia ? 'Tu receta' : 'Creador · ver perfil'}</Text>
-          </View>
-          {esMia ? null : <Ionicons name="chevron-forward" size={20} color={C.suave} />}
-        </Tarjeta>
+        <View style={{ flexDirection: 'row', gap: 10 }}>
+          <Foco id="paso_a_paso" style={{ flex: 1 }}>
+            <Boton titulo="Paso a paso" icono="play" onPress={() => { setModoCocina(true); registrar('modo_cocina', {}, uid); tutorial?.evento('paso_a_paso'); }} />
+          </Foco>
+          <Boton tipo="neutro" titulo="Lo cociné" icono="camera-outline" onPress={loCocine} style={{ flex: 1 }} />
+        </View>
+
+        {!esMia ? (
+          <Tarjeta onPress={() => nav.abrir('perfilPublico', { id: r.autor_id })} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: C.superficie, borderWidth: 0 }}>
+            <Avatar url={r.perfiles?.avatar_url} nombre={r.perfiles?.nombre} tam={40} />
+            <View style={{ flex: 1 }}>
+              <Text style={s.etiqueta}>{r.perfiles?.nombre}</Text>
+              <Text style={{ fontSize: 13, fontWeight: '700', color: C.ambarTexto }}>Creador · ver perfil</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={C.suave} />
+          </Tarjeta>
+        ) : null}
 
         {r.descripcion ? <Text style={{ fontSize: 15, color: C.texto, lineHeight: 21 }}>{r.descripcion}</Text> : null}
 
         <Foco id="ingredientes">
-        <Seccion
-          titulo="Ingredientes"
-          derecha={<Text style={{ fontSize: 13, fontWeight: '800', color: faltan.length ? C.ambarTexto : C.verde }}>
-            {faltan.length ? `Te ${faltan.length === 1 ? 'falta' : 'faltan'} ${faltan.length}` : 'Tienes todo'}
-          </Text>}
-        >
-          <Grilla>
+          <Tarjeta style={{ gap: 8 }}>
+            <View style={s.filaEntre}>
+              <Text style={s.seccion}>Ingredientes</Text>
+              <Text style={{ fontSize: 13, fontWeight: '800', color: faltan.length ? C.ambarOscuro : C.verde }}>
+                {faltan.length ? `Te ${faltan.length === 1 ? 'falta' : 'faltan'} ${faltan.length}` : 'Tienes todo'}
+              </Text>
+            </View>
             {visibles.map((i) => (
-              <Casilla key={i.ingrediente_id} nombre={i.ing.nombre} estado={i.ok ? 'tengo' : 'falta'}
-                detalle={[i.cantidad, i.opcional ? 'opcional' : null].filter(Boolean).join(' · ') || null} />
+              <View key={i.ingrediente_id} style={[s.fila, { minHeight: 28 }]}
+                accessible accessibilityLabel={`${[i.cantidad, i.ing.nombre].filter(Boolean).join(' ')}, ${i.ok ? 'lo tienes' : 'te falta'}${i.opcional ? ', opcional' : ''}`}>
+                <Ionicons name={i.ok ? 'checkmark' : 'ellipse-outline'} size={18} color={i.ok ? C.verde : C.ambar} />
+                <Text style={{ flex: 1, fontSize: 15, fontWeight: '700', color: i.ok ? C.verdeOscuro : C.ambarOscuro }}>
+                  {[i.cantidad, i.ing.nombre.toLowerCase()].filter(Boolean).join(' ')}{i.opcional ? ' (opcional)' : ''}
+                </Text>
+              </View>
             ))}
-          </Grilla>
-          {basicos ? <Text style={s.sub}>Más sal, aceite y lo básico de tu despensa.</Text> : null}
-        </Seccion>
+            {basicos ? <Text style={{ fontSize: 13, color: C.suave }}>Más sal, aceite y lo básico de tu despensa.</Text> : null}
+          </Tarjeta>
         </Foco>
 
         <Seccion titulo="Preparación">
@@ -206,16 +214,17 @@ export default function Receta({ id, tengo = null, basicos = true }) {
           ))}
         </Seccion>
 
-        <Seccion titulo="Tu nota">
+        <Tarjeta>
+          <Text style={s.seccion}>Tu nota</Text>
           {esMia ? (
-            <Text style={s.sub}>Es tu receta: la califican los demás. Así nadie puede subirse la nota a sí mismo.</Text>
+            <Text style={{ fontSize: 14, color: C.suave }}>Es tu receta: la califican los demás. Así nadie puede subirse la nota a sí mismo.</Text>
           ) : (
             <>
               <Estrellas valor={miNota} tam={32} onCambiar={puntuar} />
-              <Text style={s.sub}>{miNota ? '¡Gracias! Puedes cambiarla cuando quieras.' : 'Toca una estrella para calificar.'}</Text>
+              <Text style={{ fontSize: 14, color: C.suave }}>{miNota ? '¡Gracias! Puedes cambiarla cuando quieras.' : 'Toca una estrella para calificar.'}</Text>
             </>
           )}
-        </Seccion>
+        </Tarjeta>
 
         <Seccion titulo="Así me quedó" derecha={<Text style={s.sub}>{r.num_cocinadas} veces cocinada</Text>}>
           {versiones.length === 0 ? (
@@ -292,29 +301,25 @@ function ModoCocina({ receta, onCerrar, onTerminar }) {
   useEffect(() => { if (ultimo) tutorial?.evento('ultimo_paso'); }, [ultimo, tutorial?.indice]);
   return (
     <View style={{ flex: 1 }}>
-    <View style={{ flex: 1, backgroundColor: C.fondo, paddingTop: insets.top + 12, paddingBottom: insets.bottom + 16, paddingHorizontal: 20, gap: 16 }}>
-      <View style={s.filaEntre}>
-        <Text style={s.sub}>{receta.titulo}</Text>
-        <Pressable onPress={onCerrar} hitSlop={12} accessibilityRole="button" accessibilityLabel="Salir del modo cocina">
-          <Ionicons name="close" size={28} color={C.texto} />
-        </Pressable>
+    <View style={{ flex: 1, backgroundColor: C.fondo, paddingTop: insets.top + 12, paddingBottom: insets.bottom + 16, paddingHorizontal: 24, gap: 14 }}>
+      <Pressable onPress={onCerrar} accessibilityRole="button" accessibilityLabel="Salir del modo cocina" style={[s.fila, { gap: 6, minHeight: 44, alignSelf: 'flex-start' }]}>
+        <Ionicons name="close" size={22} color={C.suave} />
+        <Text style={{ fontSize: 15, fontWeight: '700', color: C.suave }}>{receta.titulo}</Text>
+      </Pressable>
+      <Text style={{ fontSize: 15, fontWeight: '800', color: C.tomate }}>Paso {paso + 1} de {total}</Text>
+      <View style={{ height: 8, borderRadius: 4, backgroundColor: C.linea, overflow: 'hidden' }}>
+        <View style={{ width: `${Math.round(((paso + 1) / total) * 100)}%`, height: '100%', backgroundColor: C.tomate }} />
       </View>
-      <View style={{ flexDirection: 'row', gap: 6 }}>
-        {receta.pasos.map((_, i) => (
-          <View key={i} style={{ flex: 1, height: 6, borderRadius: 3, backgroundColor: i <= paso ? C.tomate : C.grisTinte }} />
-        ))}
-      </View>
-      <Text style={{ fontSize: 16, fontWeight: '800', color: C.tomate }}>Paso {paso + 1} de {total}</Text>
       <Foco id="texto_paso" style={{ flex: 1 }}>
         <ScrollView style={{ flex: 1 }}>
-          <Text style={{ fontSize: 28, lineHeight: 38, fontWeight: '700', color: C.texto }}>{receta.pasos[paso]}</Text>
+          <Text style={{ fontSize: 30, lineHeight: 39, fontWeight: '700', color: C.texto, letterSpacing: -0.3 }}>{receta.pasos[paso]}</Text>
         </ScrollView>
       </Foco>
       <Text style={[s.sub, { textAlign: 'center' }]}>La pantalla se queda encendida mientras cocinas</Text>
       <View style={{ flexDirection: 'row', gap: 10 }}>
         <Boton tipo="neutro" titulo="Anterior" icono="chevron-back" deshabilitado={paso === 0} onPress={() => { efecto('paso'); setPaso(paso - 1); }} style={{ flex: 1 }} />
         {ultimo ? (
-          <Foco id="termine" style={{ flex: 1 }}><Boton titulo="¡Terminé!" icono="checkmark" onPress={onTerminar} /></Foco>
+          <Foco id="termine" style={{ flex: 1 }}><Boton tipo="verde" titulo="¡Terminé!" icono="checkmark" onPress={onTerminar} /></Foco>
         ) : (
           <Foco id="siguiente" style={{ flex: 1 }}><Boton titulo="Siguiente" icono="chevron-forward" onPress={() => { efecto('paso'); setPaso(paso + 1); }} /></Foco>
         )}
@@ -372,9 +377,9 @@ function VentanaCocine({ visible, receta, usados, esMia, onCerrar, onListo }) {
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onCerrar}>
-      <ScrollView style={{ flex: 1, backgroundColor: C.fondo }} contentContainerStyle={{ padding: 20, gap: 18 }} keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive" automaticallyAdjustKeyboardInsets>
+      <ScrollView style={{ flex: 1, backgroundColor: C.fondo }} contentContainerStyle={{ padding: 24, gap: 16 }} keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive" automaticallyAdjustKeyboardInsets>
         <View style={s.filaEntre}>
-          <Text style={s.seccion}>¿Cómo te quedó?</Text>
+          <Text style={{ fontSize: 30, fontWeight: '800', color: C.texto, letterSpacing: -0.5 }}>¿Cómo te quedó?</Text>
           <Pressable onPress={onCerrar} hitSlop={12} accessibilityRole="button" accessibilityLabel="Cerrar">
             <Ionicons name="close" size={26} color={C.texto} />
           </Pressable>

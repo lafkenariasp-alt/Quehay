@@ -1,10 +1,10 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, Alert, Image, Pressable, Switch } from 'react-native';
+import { View, Text, Alert, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../supabase';
 import { useApp } from '../contexto';
 import { C, RAREZA, xpParaNivel } from '../theme';
-import { Pantalla, Seccion, Boton, Tarjeta, Cargando, Chip, Estrellas, Avatar, s } from '../ui';
+import { Pantalla, Seccion, Boton, Tarjeta, TarjetaReceta, Pastilla, Interruptor, Cargando, Chip, Avatar, s } from '../ui';
 import { desdeCamara, desdeGaleria, subirFoto } from '../fotos';
 import { Mascota, PideCuenta } from '../mascota';
 import { useAjustesSonido } from '../sonido';
@@ -12,22 +12,16 @@ import { useAjustesSonido } from '../sonido';
 // Sonidos y vibración se pueden apagar; en iPhone el modo silencio también los apaga
 function AjustesSonido() {
   const a = useAjustesSonido();
-  const fila = (clave, icono, texto, valor) => (
-    <View style={[s.fila, { justifyContent: 'space-between', minHeight: 44 }]}>
-      <View style={[s.fila, { gap: 10 }]}>
-        <Ionicons name={icono} size={20} color={C.texto} />
-        <Text style={{ fontSize: 15, fontWeight: '700', color: C.texto }}>{texto}</Text>
-      </View>
-      <Switch value={valor} onValueChange={(v) => a.cambiar(clave, v)} trackColor={{ true: C.verde, false: '#CBBBA5' }} accessibilityLabel={texto} />
-    </View>
-  );
   return (
-    <View style={{ gap: 2, padding: 14, borderRadius: 18, backgroundColor: C.blanco, borderWidth: 1, borderColor: C.linea }}>
-      {fila('sonido', 'volume-high-outline', 'Sonidos', a.sonido)}
-      {fila('vibracion', 'phone-portrait-outline', 'Vibración', a.vibracion)}
-    </View>
+    <Tarjeta style={{ gap: 6 }}>
+      <Text style={[s.etiqueta, { fontSize: 16 }]}>Sonido y vibración</Text>
+      <Interruptor icono="volume-high-outline" texto="Sonidos" valor={a.sonido} onCambiar={(v) => a.cambiar('sonido', v)} />
+      <Interruptor icono="phone-portrait-outline" texto="Vibración" valor={a.vibracion} onCambiar={(v) => a.cambiar('vibracion', v)} />
+    </Tarjeta>
   );
 }
+
+const TRAJES = ['Clásico', 'Andino', 'Patriota', 'Gourmet', 'Aventurero']; // por ahora solo el Clásico está disponible
 
 export default function Perfil({ activa }) {
   const { uid, invitado, perfil, recargarPerfil, nav, pedirCuenta, tutorial, chefpu } = useApp();
@@ -67,11 +61,8 @@ export default function Perfil({ activa }) {
     return (
       <View style={{ flex: 1 }}>
         <PideCuenta titulo="Tu perfil de cocinero" texto="Sube de nivel, desbloquea logros y clases, y muestra tus recetas." onCrear={() => pedirCuenta('Crea tu cuenta y abre tu regalo de bienvenida')} />
-        <View style={{ paddingHorizontal: 24, paddingBottom: 16 }}>
+        <View style={{ paddingHorizontal: 24, paddingBottom: 16, gap: 10 }}>
           <Boton tipo="neutro" icono="school-outline" titulo="Repetir tutorial con Chefpu" onPress={repetirTutorial} />
-      <AjustesSonido />
-          <View style={{ height: 10 }} />
-          <AjustesSonido />
         </View>
       </View>
     );
@@ -116,74 +107,67 @@ export default function Perfil({ activa }) {
   });
   const fechaCorta = (iso) => new Date(iso).toLocaleDateString('es-CL', { day: 'numeric', month: 'short', year: 'numeric' });
 
+  const falta = sig - perfil.xp;
+  const lugar = [`@${perfil.usuario}`, perfil.ciudad].filter(Boolean).join(' · ');
+  const stats = [
+    [conteo.seguidores, 'Seguidores', () => nav.abrir('amigos', { pestana: 'seguidores' })],
+    [conteo.siguiendo, 'Siguiendo', () => nav.abrir('amigos', { pestana: 'siguiendo' })],
+    [recetas.length, 'Recetas', null],
+  ];
   return (
     <Pantalla>
-      <View style={[s.fila, { gap: 16 }]}>
+      <View style={[s.fila, { gap: 14 }]}>
         <Pressable onPress={cambiarFoto} accessibilityRole="button" accessibilityLabel="Cambiar foto de perfil">
           <Avatar url={perfil.avatar_url} nombre={perfil.nombre} tam={84} borde={C.dorado} />
           <View style={{ position: 'absolute', left: -4, bottom: -4, width: 30, height: 30, borderRadius: 15, backgroundColor: C.tomate, borderWidth: 3, borderColor: C.fondo, alignItems: 'center', justifyContent: 'center' }}>
             <Ionicons name="camera" size={14} color={C.blanco} />
           </View>
-          <View style={{ position: 'absolute', right: -4, bottom: -4, minWidth: 32, height: 32, borderRadius: 10, backgroundColor: C.dorado, borderWidth: 3, borderColor: C.fondo, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 }}>
-            <Text style={{ fontWeight: '800', color: C.texto }}>{perfil.nivel}</Text>
-          </View>
         </Pressable>
         <View style={{ flex: 1, gap: 4 }}>
-          <Text style={s.titulo}>{perfil.nombre}</Text>
-          <View style={{ alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999, backgroundColor: C.doradoTinte }}>
-            <Text style={{ fontSize: 13, fontWeight: '800', color: C.ambarOscuro }}>{perfil.titulo}</Text>
-          </View>
-          {perfil.fundador ? (
-            <View style={{ alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999, backgroundColor: C.texto }}>
-              <Text style={{ fontSize: 12, fontWeight: '800', color: C.dorado }}>Fundador</Text>
-            </View>
-          ) : null}
-          <View style={[s.fila, { gap: 4 }]}>
-            <Pressable onPress={() => nav.abrir('amigos', { pestana: 'seguidores' })} accessibilityRole="button" hitSlop={8} style={{ minHeight: 32, justifyContent: 'center' }}>
-              <Text style={s.sub}><Text style={{ fontWeight: '800', color: C.texto }}>{conteo.seguidores}</Text> seguidores</Text>
-            </Pressable>
-            <Text style={s.sub}>·</Text>
-            <Pressable onPress={() => nav.abrir('amigos', { pestana: 'siguiendo' })} accessibilityRole="button" hitSlop={8} style={{ minHeight: 32, justifyContent: 'center' }}>
-              <Text style={s.sub}><Text style={{ fontWeight: '800', color: C.texto }}>{conteo.siguiendo}</Text> siguiendo</Text>
-            </Pressable>
-          </View>
+          <Text style={{ fontSize: 26, fontWeight: '800', color: C.texto, letterSpacing: -0.5 }}>{perfil.nombre}</Text>
+          <Text style={{ fontSize: 14, color: C.suave }}>{lugar}</Text>
+          {perfil.fundador ? <Pastilla texto="Fundador" icono="ribbon-outline" /> : null}
         </View>
       </View>
 
-      <Tarjeta style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
-        <View style={{ marginRight: 6 }}><Mascota tam={72} accesorio={(perfil.accesorios || [])[0]} /></View>
-        <View style={{ flex: 1, gap: 2 }}>
-          <Text style={s.etiqueta}>Tu mascota</Text>
-          <Text style={s.sub}>{(perfil.accesorios || []).includes('delantal_bienvenida') ? 'Tiene la insignia del regalo de bienvenida. Gana trajes nuevos al subir de nivel.' : 'Gana accesorios al subir de nivel.'}</Text>
+      <Tarjeta style={{ gap: 8 }}>
+        <Text style={[s.etiqueta, { fontSize: 16 }]}>Nivel {perfil.nivel} · {perfil.titulo}</Text>
+        <View accessibilityRole="progressbar" accessibilityValue={{ min: 0, max: 100, now: Math.round(avance * 100) }}
+          style={{ height: 10, borderRadius: 5, backgroundColor: C.linea, overflow: 'hidden' }}>
+          <View style={{ width: `${Math.round(avance * 100)}%`, height: '100%', backgroundColor: C.dorado }} />
         </View>
+        <Text style={{ fontSize: 13, fontWeight: '700', color: C.suave }}>
+          {perfil.xp - base} / {sig - base} XP{falta > 0 ? ` · ¡Te faltan ${falta} para subir!` : ''}
+        </Text>
       </Tarjeta>
 
-      <Boton tipo="secundario" icono="people-outline" titulo="Amigos" onPress={() => nav.abrir('amigos')} />
-      <Boton tipo="neutro" icono="school-outline" titulo="Repetir tutorial con Chefpu" onPress={repetirTutorial} />
-
-      <Tarjeta>
-        <View style={s.filaEntre}>
-          <Text style={s.etiqueta}>Nivel {perfil.nivel}</Text>
-          <Text style={s.sub}>{perfil.xp - base} / {sig - base} XP</Text>
-        </View>
-        <View style={{ height: 12, borderRadius: 999, backgroundColor: C.grisTinte, overflow: 'hidden' }}>
-          <View style={{ width: `${Math.round(avance * 100)}%`, height: '100%', backgroundColor: C.dorado, borderRadius: 999 }} />
-        </View>
-        <Text style={s.sub}>{perfil.xp} XP en total</Text>
-      </Tarjeta>
-
-      <View style={{ flexDirection: 'row', gap: 8 }}>
-        {[
-          [recetas.length, 'Recetas'],
-          [recetas.reduce((a, r) => a + r.num_cocinadas, 0), 'Cocinadas'],
-          [recetas.reduce((a, r) => a + r.num_likes, 0), 'Me gusta'],
-        ].map(([n, t]) => (
-          <View key={t} style={{ flex: 1, alignItems: 'center', paddingVertical: 12, borderRadius: 14, backgroundColor: C.superficie }}>
+      <View style={{ flexDirection: 'row', gap: 12 }}>
+        {stats.map(([n, t, fn]) => (
+          <Pressable key={t} onPress={fn} disabled={!fn} accessibilityRole={fn ? 'button' : 'text'} accessibilityLabel={`${n} ${t}`}
+            style={{ flex: 1, alignItems: 'center', gap: 2, paddingVertical: 12, borderRadius: 18, backgroundColor: C.blanco, borderWidth: 1.5, borderColor: C.linea }}>
             <Text style={{ fontSize: 22, fontWeight: '800', color: C.texto }}>{n}</Text>
-            <Text style={s.sub}>{t}</Text>
-          </View>
+            <Text style={{ fontSize: 12, fontWeight: '700', color: C.suave }}>{t}</Text>
+          </Pressable>
         ))}
       </View>
+
+      <Boton tipo="neutro" icono="people-outline" titulo="Amigos" onPress={() => nav.abrir('amigos')} />
+
+      <Tarjeta>
+        <Text style={[s.etiqueta, { fontSize: 16 }]}>Tu mascota</Text>
+        <View style={[s.fila, { gap: 12 }]}>
+          <View style={{ marginRight: 6 }}><Mascota tam={80} accesorio={(perfil.accesorios || [])[0]} /></View>
+          <View style={{ flex: 1, gap: 6 }}>
+            {TRAJES.map((nombre, i) => (
+              <View key={nombre} style={[s.fila, { gap: 6 }]}>
+                <Ionicons name={i === 0 ? 'checkmark-circle' : 'lock-closed'} size={15} color={i === 0 ? C.verde : C.suave} />
+                <Text style={{ fontSize: 13, fontWeight: i === 0 ? '800' : '700', color: i === 0 ? C.texto : C.suave }}>{nombre}{i === 0 ? ' (puesto)' : ''}</Text>
+              </View>
+            ))}
+            <Text style={{ fontSize: 12, color: C.suave }}>Gana trajes nuevos al subir de nivel.</Text>
+          </View>
+        </View>
+      </Tarjeta>
 
       <Seccion titulo="Logros" derecha={<Text style={s.sub}>{mios.size} de {logros.length}</Text>}>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
@@ -191,7 +175,7 @@ export default function Perfil({ activa }) {
             const ok = mios.has(l.codigo);
             const color = RAREZA[l.rareza];
             return (
-              <View key={l.codigo} style={{ width: '31.5%', alignItems: 'center', gap: 6, padding: 10, borderRadius: 14, backgroundColor: C.blanco, borderWidth: ok ? 2 : 1, borderColor: ok ? color : C.linea, borderStyle: ok ? 'solid' : 'dashed' }}>
+              <View key={l.codigo} style={{ width: '31.5%', alignItems: 'center', gap: 6, padding: 10, borderRadius: 16, backgroundColor: C.blanco, borderWidth: ok ? 2 : 1.5, borderColor: ok ? color : C.linea, borderStyle: ok ? 'solid' : 'dashed' }}>
                 <View style={{ width: 40, height: 40, borderRadius: 11, backgroundColor: ok ? color : C.grisTinte, alignItems: 'center', justifyContent: 'center', transform: [{ rotate: '45deg' }] }}>
                   <Ionicons name={ok ? 'trophy' : 'lock-closed'} size={18} color={ok ? C.blanco : C.gris} style={{ transform: [{ rotate: '-45deg' }] }} />
                 </View>
@@ -209,34 +193,23 @@ export default function Perfil({ activa }) {
         ) : (
           <>
             <View style={s.chips}>
-              <Chip texto="Más nuevas" icono="arrow-down" activo={orden === 'nuevas'} onPress={() => setOrden('nuevas')} />
-              <Chip texto="Más antiguas" icono="arrow-up" activo={orden === 'antiguas'} onPress={() => setOrden('antiguas')} />
-              <Chip texto="Mejor calificadas" icono="star" activo={orden === 'nota'} onPress={() => setOrden('nota')} />
+              <Chip texto="Más nuevas" activo={orden === 'nuevas'} onPress={() => setOrden('nuevas')} />
+              <Chip texto="Más antiguas" activo={orden === 'antiguas'} onPress={() => setOrden('antiguas')} />
+              <Chip texto="Mejor calificadas" activo={orden === 'nota'} onPress={() => setOrden('nota')} />
             </View>
             {misRecetas.map((r) => (
-              <Tarjeta key={r.id} onPress={() => nav.abrir('receta', { id: r.id })} style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
-                {r.foto_url ? (
-                  <Image source={{ uri: r.foto_url }} style={{ width: 64, height: 64, borderRadius: 12, backgroundColor: C.superficie }} />
-                ) : (
-                  <View style={{ width: 64, height: 64, borderRadius: 12, backgroundColor: C.superficie, alignItems: 'center', justifyContent: 'center' }}>
-                    <Ionicons name="restaurant-outline" size={24} color="#B9A68E" />
-                  </View>
-                )}
-                <View style={{ flex: 1, gap: 3 }}>
-                  <Text style={s.etiqueta}>{r.titulo}</Text>
-                  <View style={s.fila}>
-                    <Estrellas valor={Number(r.nota_promedio)} tam={12} />
-                    <Text style={s.sub}>{r.num_notas ? `${Number(r.nota_promedio).toFixed(1)} (${r.num_notas})` : 'Sin notas'}</Text>
-                  </View>
-                  <Text style={s.sub}>{fechaCorta(r.creado_en)} · {r.num_likes} me gusta · {r.num_cocinadas} la cocinaron</Text>
-                </View>
-              </Tarjeta>
+              <TarjetaReceta key={r.id} titulo={r.titulo} foto={r.foto_url}
+                meta={`${r.num_notas ? `${Number(r.nota_promedio).toFixed(1).replace('.', ',')} estrellas (${r.num_notas})` : 'Sin notas'} · ${fechaCorta(r.creado_en)}`}
+                abajo={<Text style={{ fontSize: 13, color: C.suave }}>{r.num_likes} me gusta · {r.num_cocinadas} la cocinaron</Text>}
+                onPress={() => nav.abrir('receta', { id: r.id })} />
             ))}
           </>
         )}
       </Seccion>
 
-      <Boton tipo="neutro" titulo="Cerrar sesión" icono="log-out-outline" onPress={() => Alert.alert('¿Cerrar sesión?', '', [
+      <AjustesSonido />
+      <Boton tipo="neutro" icono="school-outline" titulo="Repetir tutorial con Chefpu" onPress={repetirTutorial} />
+      <Boton tipo="neutro" titulo="Cerrar sesión" icono="log-out-outline" onPress={() => Alert.alert('¿Cerrar sesión?', 'Tu nevera y tus recetas quedan guardadas en tu cuenta.', [
         { text: 'Cancelar', style: 'cancel' },
         { text: 'Cerrar sesión', style: 'destructive', onPress: () => supabase.auth.signOut() },
       ])} />

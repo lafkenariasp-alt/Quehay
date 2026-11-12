@@ -1,10 +1,9 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, Switch, Alert, RefreshControl, ScrollView } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { View, Text, Alert, RefreshControl, ScrollView, Pressable } from 'react-native';
 import { supabase } from '../supabase';
 import { useApp, diasHasta, textoVence } from '../contexto';
 import { C, CATEGORIAS_ING } from '../theme';
-import { Boton, Casilla, Encabezado, Grilla, Seccion, Vacio, Tarjeta, ErrorCarga, s } from '../ui';
+import { Boton, Encabezado, Vacio, Tarjeta, Interruptor, ErrorCarga, s } from '../ui';
 import { PideCuenta } from '../mascota';
 import SelectorIngredientes from '../SelectorIngredientes';
 import { efecto } from '../sonido';
@@ -95,21 +94,14 @@ export default function Nevera({ activa }) {
           sub={`${items.length} ${items.length === 1 ? 'alimento' : 'alimentos'} · mantén presionado para quitar`}
         />
 
-        <Boton titulo="Agregar alimentos" icono="add" tipo="secundario" onPress={() => setSelector(true)} />
+        <Boton titulo="Agregar alimentos" icono="add" onPress={() => setSelector(true)} />
 
-        <Tarjeta style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-          <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: C.ambarTinte, alignItems: 'center', justifyContent: 'center' }}>
-            <Ionicons name="timer-outline" size={22} color={C.ambarTexto} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={s.etiqueta}>Control de vencimiento</Text>
-            <Text style={s.sub}>Te mostramos lo que vence y recetas para aprovecharlo</Text>
-          </View>
-          <Switch value={vencimiento} onValueChange={cambiarVencimiento} trackColor={{ true: C.verde, false: '#CBBBA5' }} />
+        <Tarjeta>
+          <Interruptor texto="Control de vencimiento" sub="Te mostramos lo que vence y recetas para aprovecharlo" valor={vencimiento} onCambiar={cambiarVencimiento} />
         </Tarjeta>
 
         {porVencer.length ? (
-          <View style={{ gap: 10, padding: 16, borderRadius: 18, backgroundColor: C.ambarTinte, borderWidth: 1, borderColor: '#F3C98B' }}>
+          <View style={{ gap: 10, padding: 16, borderRadius: 18, backgroundColor: C.ambarTinte, borderWidth: 1.5, borderColor: C.ambar }}>
             <Text style={[s.seccion, { color: C.ambarOscuro }]}>
               {porVencer.length === 1 ? '1 alimento por vencer' : `${porVencer.length} alimentos por vencer`}
             </Text>
@@ -131,30 +123,34 @@ export default function Nevera({ activa }) {
         {cargando ? null : grupos.length === 0 ? (
           <Vacio icono="file-tray-outline" texto={'Tu nevera está vacía.\nAgrega lo que tienes para ver qué puedes cocinar.'} />
         ) : (
-          grupos.map((g) => (
-            <Seccion key={g.cat} titulo={g.cat} derecha={<Text style={s.sub}>{g.lista.length}</Text>}>
-              <Grilla>
-                {g.lista.map((i) => {
-                  const vence = vencimiento && i.dias !== null && i.dias <= 3;
-                  return (
-                    <Casilla
-                      key={i.ingrediente_id}
-                      nombre={i.ingredientes.nombre}
-                      estado={vence ? 'vence' : 'tengo'}
-                      detalle={vence ? textoVence(i.dias) : null}
-                      onLongPress={() => quitar(i)}
-                    />
-                  );
-                })}
-              </Grilla>
-            </Seccion>
-          ))
+          <Tarjeta style={{ gap: 12 }}>
+            {grupos.map((g) => (
+              <View key={g.cat} style={{ gap: 8 }}>
+                <Text style={{ fontSize: 12, fontWeight: '800', color: C.suave, letterSpacing: 0.5 }}>{g.cat.toUpperCase()} · {g.lista.length}</Text>
+                <View style={s.chips}>
+                  {g.lista.map((i) => {
+                    const vence = vencimiento && i.dias !== null && i.dias <= 3;
+                    return (
+                      <Pressable key={i.ingrediente_id} onLongPress={() => quitar(i)} delayLongPress={350}
+                        accessibilityRole="button" accessibilityLabel={`${i.ingredientes.nombre}${vence ? `, ${textoVence(i.dias).toLowerCase()}` : ''}`} accessibilityHint="Mantén presionado para quitar"
+                        style={({ pressed }) => [s.chip, vence && { backgroundColor: C.ambarTinte, borderWidth: 1.5, borderColor: C.ambar }, pressed && { opacity: 0.7 }]}>
+                        <Text style={[s.chipTexto, { fontSize: 15 }, vence && { color: C.ambarOscuro }]}>{i.ingredientes.nombre}</Text>
+                        {vence ? <Text style={{ fontSize: 12, fontWeight: '700', color: C.ambarOscuro }}>{textoVence(i.dias).toLowerCase()}</Text> : null}
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              </View>
+            ))}
+          </Tarjeta>
         )}
       </ScrollView>
 
       {items.length ? (
         <View style={s.pie}>
           <Boton
+            tipo="verde"
+            icono="restaurant-outline"
             titulo="Qué cocino con mi nevera"
             onPress={() => nav.abrir('resultados', { tengo: items.map((i) => i.ingrediente_id) })}
           />

@@ -1,9 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, Switch, Alert } from 'react-native';
+import { View, Text, Alert, Pressable } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../supabase';
 import { useApp } from '../contexto';
 import { C, CATEGORIAS_RECETA } from '../theme';
-import { Pantalla, Encabezado, Seccion, Grilla, Casilla, Chip, Boton, Tarjeta, s } from '../ui';
+import { Pantalla, Encabezado, Seccion, Chip, Boton, Tarjeta, Interruptor, s } from '../ui';
 import SelectorIngredientes from '../SelectorIngredientes';
 import { guardarIngredientesInvitado, leerIngredientesInvitado } from '../analitica';
 
@@ -65,23 +66,27 @@ export default function Buscar({ activa }) {
       >
         <Encabezado titulo="¿Qué cocinamos hoy?" sub="Pon lo que tienes y te mostramos qué puedes hacer" />
 
-        <Seccion titulo="Tengo" derecha={<Text style={s.sub}>{elegidos.length} ingredientes</Text>}>
-          <Grilla>
-            <Casilla estado="vacia" onPress={() => setSelector(true)} />
-            {[...elegidos].reverse().map((e) => (
-              <Casilla key={e.id} nombre={e.nombre} estado="tengo" detalle="toca para quitar" onPress={() => quitar(e.id)} />
-            ))}
-          </Grilla>
-          <Boton tipo="neutro" icono="file-tray-stacked-outline" titulo="Usar todo lo de mi nevera" onPress={usarNevera} />
-        </Seccion>
-
-        <Tarjeta style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-          <View style={{ flex: 1 }}>
-            <Text style={s.etiqueta}>Incluir despensa básica</Text>
-            <Text style={s.sub}>Sal, aceite, agua y pimienta</Text>
+        <Tarjeta style={{ gap: 12 }}>
+          <View style={s.filaEntre}>
+            <Text style={s.etiqueta}>Tengo</Text>
+            <Text style={{ fontSize: 13, color: C.suave }}>{elegidos.length} {elegidos.length === 1 ? 'ingrediente' : 'ingredientes'}</Text>
           </View>
-          <Switch value={basicos} onValueChange={setBasicos} trackColor={{ true: C.verde, false: '#CBBBA5' }} />
+          {elegidos.length ? (
+            <View style={s.chips}>
+              {[...elegidos].reverse().map((e) => (
+                <Chip key={e.id} texto={e.nombre} icono="close" onPress={() => quitar(e.id)} />
+              ))}
+            </View>
+          ) : null}
+          <Pressable onPress={() => setSelector(true)} accessibilityRole="button" accessibilityLabel="Agregar ingrediente"
+            style={[s.input, s.fila, { gap: 10 }]}>
+            <Ionicons name="search" size={20} color={C.suave} />
+            <Text style={{ fontSize: 16, color: C.suave }}>¿Qué tienes?</Text>
+          </Pressable>
         </Tarjeta>
+        <Boton tipo="neutro" icono="file-tray-stacked-outline" titulo="Usar todo lo de mi nevera" onPress={usarNevera} />
+
+        <Interruptor texto="Incluir despensa básica" sub="Sal, aceite, agua y pimienta" valor={basicos} onCambiar={setBasicos} />
 
         <Seccion titulo="¿Cuántos te pueden faltar?">
           <View style={s.chips}>

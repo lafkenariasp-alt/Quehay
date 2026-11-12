@@ -10,8 +10,8 @@ import { Mascota } from './chefpu';
 // Globo de diálogo de la mascota
 export function Globo({ texto, style }) {
   return (
-    <View style={[{ backgroundColor: C.blanco, borderRadius: 16, borderWidth: 1, borderColor: C.linea, paddingVertical: 10, paddingHorizontal: 14, flexShrink: 1 }, style]}>
-      <Text style={{ fontSize: 15, fontWeight: '700', color: C.texto, lineHeight: 21 }}>{texto}</Text>
+    <View style={[{ backgroundColor: C.blanco, borderRadius: 20, borderWidth: 1.5, borderColor: C.linea, paddingVertical: 14, paddingHorizontal: 18, flexShrink: 1 }, style]}>
+      <Text style={{ fontSize: 16, fontWeight: '700', color: C.texto, lineHeight: 21 }}>{texto}</Text>
     </View>
   );
 }
@@ -26,7 +26,7 @@ export function PaqueteBienvenida() {
   ];
   return (
     <View style={{ gap: 10, padding: 16, borderRadius: 18, backgroundColor: C.doradoTinte }}>
-      <Text style={[s.etiqueta, { color: C.ambarOscuro }]}>Tu paquete de bienvenida</Text>
+      <Text style={{ fontSize: 12, fontWeight: '800', color: C.ambarOscuro, letterSpacing: 0.5 }}>TU PAQUETE DE BIENVENIDA</Text>
       {items.map(([icono, texto]) => (
         <View key={texto} style={s.fila}>
           <Ionicons name={icono} size={20} color={C.ambarOscuro} />
@@ -40,11 +40,11 @@ export function PaqueteBienvenida() {
 // Pantalla para invitados en secciones que requieren cuenta
 export function PideCuenta({ titulo, texto, onCrear }) {
   return (
-    <View style={{ flex: 1, backgroundColor: C.fondo, padding: 24, gap: 18, justifyContent: 'center' }}>
+    <View style={{ flex: 1, backgroundColor: C.fondo, padding: 24, gap: 16, justifyContent: 'center' }}>
       <View style={{ alignItems: 'center', gap: 14 }}>
-        <Mascota tam={150} />
-        <Text style={[s.titulo, { textAlign: 'center' }]}>{titulo}</Text>
-        <Text style={[s.sub, { textAlign: 'center', fontSize: 15 }]}>{texto}</Text>
+        <Mascota tam={140} />
+        <Text style={{ fontSize: 26, fontWeight: '800', color: C.texto, textAlign: 'center', letterSpacing: -0.5 }}>{titulo}</Text>
+        <Text style={[s.sub, { textAlign: 'center' }]}>{texto}</Text>
       </View>
       <PaqueteBienvenida />
       <Boton titulo="Crear mi cuenta" icono="gift-outline" onPress={onCrear} />

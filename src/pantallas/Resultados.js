@@ -1,11 +1,11 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, Image, Pressable } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../supabase';
 import { useApp } from '../contexto';
 import { C } from '../theme';
 import { Foco } from '../foco';
-import { Pantalla, Encabezado, Seccion, Tarjeta, Estrellas, Vacio, Cargando, ErrorCarga, s } from '../ui';
+import { Pantalla, Encabezado, Seccion, TarjetaReceta, Vacio, Cargando, ErrorCarga, s } from '../ui';
 import { Mascota } from '../mascota';
 import { registrar } from '../analitica';
 
@@ -66,13 +66,14 @@ export default function Resultados({ tengo = [], maxFaltan = 4, basicos = true, 
         titulo={titulo || `${recetas.length} ${recetas.length === 1 ? 'receta' : 'recetas'} para ti`}
         sub={`Con ${tengo.length} ingredientes${basicos ? ' + despensa básica' : ''}`}
       />
+      <View style={[s.fila, { gap: 16, flexWrap: 'wrap' }]} accessible accessibilityLabel="Verde: lo tienes. Ámbar: te falta.">
+        <View style={[s.fila, { gap: 6 }]}><View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: C.verde }} /><Text style={{ fontSize: 13, fontWeight: '700', color: C.verde }}>Verde: lo tienes</Text></View>
+        <View style={[s.fila, { gap: 6 }]}><View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: C.ambar }} /><Text style={{ fontSize: 13, fontWeight: '700', color: C.ambarOscuro }}>Ámbar: te falta</Text></View>
+      </View>
       {ayuda && !tutorial?.activo ? (
-        <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center', padding: 14, borderRadius: 16, backgroundColor: C.blanco, borderWidth: 1, borderColor: C.linea }}>
+        <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center', padding: 14, borderRadius: 18, backgroundColor: C.blanco, borderWidth: 1.5, borderColor: C.linea }}>
           <Mascota tam={56} />
-          <View style={{ flex: 1, gap: 4 }}>
-            <Text style={s.etiqueta}><Text style={{ color: C.verde }}>Verde</Text> = lo tienes · <Text style={{ color: C.ambarTexto }}>Ámbar</Text> = te falta</Text>
-            <Text style={s.sub}>Toca una receta para ver cómo se hace.</Text>
-          </View>
+          <Text style={[s.etiqueta, { flex: 1 }]}>Toca una receta para ver cómo se hace.</Text>
           <Pressable onPress={() => setAyuda(false)} hitSlop={12} accessibilityRole="button" accessibilityLabel="Cerrar ayuda">
             <Ionicons name="close" size={20} color={C.suave} />
           </Pressable>
@@ -94,34 +95,15 @@ export default function Resultados({ tengo = [], maxFaltan = 4, basicos = true, 
           if (!lista.length) return null;
           const primerGrupo = GRUPOS.findIndex((x) => recetas.some((r) => x.f(r.faltan_n))) === gi;
           const seccion = (
-            <Seccion titulo={g.titulo} color={g.color} derecha={<Text style={s.sub}>{lista.length}</Text>}>
+            <Seccion titulo={g.titulo} derecha={<Text style={s.sub}>{lista.length}</Text>}>
               {lista.map((r, ri) => {
+                const nota = Number(r.nota_promedio) > 0 ? ` · ${Number(r.nota_promedio).toFixed(1).replace('.', ',')} estrellas` : '';
                 const tarjeta = (
-                <Tarjeta key={r.receta_id} onPress={() => nav.abrir('receta', { id: r.receta_id, tengo, basicos })} style={r.foto_url ? { paddingTop: 0, overflow: 'hidden' } : null}>
-                  {r.foto_url ? <Image source={{ uri: r.foto_url }} style={{ height: 150, marginHorizontal: -14, backgroundColor: C.superficie }} /> : null}
-                  <Text style={{ fontSize: 18, fontWeight: '800', color: C.texto }}>{r.titulo}</Text>
-                  <View style={[s.fila, { flexWrap: 'wrap', gap: 12 }]}>
-                    {Number(r.nota_promedio) > 0 ? (
-                      <View style={s.fila}>
-                        <Estrellas valor={Number(r.nota_promedio)} tam={13} />
-                        <Text style={s.sub}>{Number(r.nota_promedio).toFixed(1)}</Text>
-                      </View>
-                    ) : null}
-                    <View style={[s.fila, { gap: 4 }]}>
-                      <Ionicons name="time-outline" size={14} color={C.suave} />
-                      <Text style={s.sub}>{r.minutos} min</Text>
-                    </View>
-                    <Text style={s.sub}>{r.dificultad}</Text>
-                    <Text style={s.sub}>por {r.autor}</Text>
-                  </View>
-                  {r.faltan_n > 0 ? (
-                    <Text style={{ fontSize: 13, fontWeight: '800', color: C.ambarOscuro }}>
-                      Te falta: {r.faltantes.join(', ').toLowerCase()}
-                    </Text>
-                  ) : (
-                    <Text style={{ fontSize: 13, fontWeight: '800', color: C.verde }}>Tienes todo</Text>
-                  )}
-                </Tarjeta>
+                  <TarjetaReceta key={r.receta_id} titulo={r.titulo} foto={r.foto_url}
+                    meta={`${r.minutos} min · ${r.dificultad}${nota} · por ${r.autor}`}
+                    estado={r.faltan_n > 0 ? 'falta' : 'ya'}
+                    detalle={r.faltan_n > 0 ? `Te falta: ${r.faltantes.join(', ').toLowerCase()}` : 'Tienes todo'}
+                    onPress={() => nav.abrir('receta', { id: r.receta_id, tengo, basicos })} />
                 );
                 // la primera receta de la lista es la que el tutorial señala
                 return primerGrupo && ri === 0 ? <Foco key={r.receta_id} id="receta_0">{tarjeta}</Foco> : tarjeta;

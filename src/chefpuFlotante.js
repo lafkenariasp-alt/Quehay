@@ -10,7 +10,7 @@ import { useMovimientoReducido } from './tutorial';
 import { registrar } from './analitica';
 import { efecto, vibrar } from './sonido';
 
-const TAM = 64;
+const TAM = 72;
 const CLAVE_POS = 'chefpu_pos_v1';
 const CLAVE_DICHOS = 'chefpu_dichos_v1';
 const ENFRIAR_MS = 8000;   // modo Normal: mínimo entre mensajes automáticos
@@ -131,11 +131,11 @@ export function ChefpuFlotante({ voz, visible, onQueCocino, onConsejo, onAmigos 
   if (oculto) {
     return (
       <Pressable onPress={mostrar} accessibilityRole="button" accessibilityLabel="Mostrar a Chefpu"
-        style={{ position: 'absolute', top: yActual.current + 4, [lado === 'izq' ? 'left' : 'right']: 0, width: 30, height: 56, zIndex: 900,
-          backgroundColor: C.tomate, alignItems: 'center', justifyContent: 'center',
+        style={{ position: 'absolute', top: yActual.current + 4, [lado === 'izq' ? 'left' : 'right']: 0, width: 22, height: 64, zIndex: 900,
+          backgroundColor: C.dorado, alignItems: 'center', justifyContent: 'center',
           borderTopLeftRadius: lado === 'der' ? 14 : 0, borderBottomLeftRadius: lado === 'der' ? 14 : 0,
           borderTopRightRadius: lado === 'izq' ? 14 : 0, borderBottomRightRadius: lado === 'izq' ? 14 : 0 }}>
-        <Ionicons name={lado === 'der' ? 'chevron-back' : 'chevron-forward'} size={20} color={C.blanco} />
+        <Ionicons name={lado === 'der' ? 'chevron-back' : 'chevron-forward'} size={18} color={C.texto} />
       </Pressable>
     );
   }
@@ -146,35 +146,36 @@ export function ChefpuFlotante({ voz, visible, onQueCocino, onConsejo, onAmigos 
 
   return (
     <>
-      {menu ? <Pressable onPress={() => setMenu(false)} accessible={false} style={{ position: 'absolute', left: 0, top: 0, width: W, height: H, zIndex: 890 }} /> : null}
+      {menu ? <Pressable onPress={() => setMenu(false)} accessible={false} style={{ position: 'absolute', left: 0, top: 0, width: W, height: H, zIndex: 890, backgroundColor: 'rgba(26,18,13,0.35)' }} /> : null}
 
       {menu ? (
-        <View style={[anclaje, { zIndex: 910, backgroundColor: C.blanco, borderRadius: 18, padding: 10, gap: 6, borderWidth: 1, borderColor: C.linea,
-          shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 12, shadowOffset: { width: 0, height: 4 } }]} accessibilityViewIsModal>
+        <View style={[anclaje, { width: 260, zIndex: 910, backgroundColor: C.fondo, borderRadius: 22, padding: 14, gap: 8,
+          shadowColor: '#000', shadowOpacity: 0.25, shadowRadius: 16, shadowOffset: { width: 0, height: 8 } }]} accessibilityViewIsModal>
           <Pressable onPress={() => { setMenu(false); onQueCocino(); }} accessibilityRole="button"
-            style={({ pressed }) => ({ minHeight: 52, borderRadius: 14, backgroundColor: C.tomate, opacity: pressed ? 0.85 : 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 })}>
-            <Ionicons name="restaurant" size={18} color={C.blanco} />
-            <Text style={{ color: C.blanco, fontSize: 16, fontWeight: '800' }}>¿Qué cocino?</Text>
+            style={({ pressed }) => ({ minHeight: 56, borderRadius: 18, backgroundColor: C.tomate, opacity: pressed ? 0.85 : 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 })}>
+            <Ionicons name="search" size={20} color={C.blanco} />
+            <Text style={{ color: C.blanco, fontSize: 17, fontWeight: '800' }}>¿Qué cocino?</Text>
           </Pressable>
           {[['people-outline', 'Amigos', () => { setMenu(false); onAmigos(); }],
             ['bulb-outline', 'Consejo de esta pantalla', () => { setMenu(false); onConsejo(); }],
             ['eye-off-outline', 'Ocultar a Chefpu', ocultar]].map(([icono, texto, fn]) => (
             <Pressable key={texto} onPress={fn} accessibilityRole="button"
-              style={({ pressed }) => ({ minHeight: 44, borderRadius: 12, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: pressed ? C.superficie : 'transparent' })}>
-              <Ionicons name={icono} size={18} color={C.texto} />
+              style={({ pressed }) => ({ minHeight: 48, borderRadius: 14, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1.5, borderColor: C.linea, backgroundColor: pressed ? C.superficie : C.blanco })}>
+              <Ionicons name={icono} size={20} color={C.suave} />
               <Text style={{ fontSize: 15, fontWeight: '700', color: C.texto }}>{texto}</Text>
             </Pressable>
           ))}
         </View>
       ) : m ? (
         <Pressable onPress={m.acciones ? undefined : voz.callar} accessibilityLiveRegion="polite" accessibilityLabel={`Chefpu dice: ${m.texto}`}
-          style={[anclaje, { zIndex: 910, backgroundColor: C.blanco, borderRadius: 18, padding: 14, gap: 10, borderWidth: 2, borderColor: C.dorado }]}>
+          style={[anclaje, { zIndex: 910, backgroundColor: C.blanco, borderRadius: 20, padding: 14, gap: 10, borderWidth: 1.5, borderColor: C.linea,
+            shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 10, shadowOffset: { width: 0, height: 8 } }]}>
           <Text style={{ fontSize: 15, fontWeight: '700', color: C.texto, lineHeight: 21 }}>{m.texto}</Text>
           {m.acciones ? (
             <View style={{ flexDirection: 'row', gap: 8 }}>
               {m.acciones.map((a, i) => (
                 <Pressable key={a.texto} onPress={() => { voz.callar(); a.fn(); }} accessibilityRole="button"
-                  style={{ flex: 1, minHeight: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: i === 0 ? C.tomate : C.superficie }}>
+                  style={{ flex: 1, minHeight: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: i === 0 ? C.tomate : C.blanco, borderWidth: i === 0 ? 0 : 1.5, borderColor: C.linea }}>
                   <Text style={{ fontSize: 14, fontWeight: '800', color: i === 0 ? C.blanco : C.texto }}>{a.texto}</Text>
                 </Pressable>
               ))}
@@ -186,8 +187,8 @@ export function ChefpuFlotante({ voz, visible, onQueCocino, onConsejo, onAmigos 
       <Animated.View {...arrastre.panHandlers} style={{ position: 'absolute', left: pos.x, top: pos.y, width: TAM, height: TAM, zIndex: 920, transform: [{ scale: rebote }] }}
         accessible accessibilityRole="button" accessibilityLabel="Chefpu" accessibilityHint="Toca para ver opciones. Arrastra para moverlo."
         accessibilityActions={[{ name: 'activate' }]} onAccessibilityAction={() => setMenu((x) => !x)}>
-        <Foco id="chefpu_flotante" style={{ width: TAM, height: TAM, borderRadius: TAM / 2, backgroundColor: C.blanco, borderWidth: 2, borderColor: C.dorado, overflow: 'hidden',
-          alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 8, shadowOffset: { width: 0, height: 3 } }}>
+        <Foco id="chefpu_flotante" style={{ width: TAM, height: TAM, borderRadius: TAM / 2, backgroundColor: C.blanco, borderWidth: 2, borderColor: C.linea, overflow: 'hidden',
+          alignItems: 'center', justifyContent: 'center', shadowColor: '#2A211C', shadowOpacity: 0.22, shadowRadius: 8, shadowOffset: { width: 0, height: 6 } }}>
           <Mascota tam={TAM - 6} expresion={m?.cara || null} />
         </Foco>
       </Animated.View>
