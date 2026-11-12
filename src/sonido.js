@@ -33,7 +33,7 @@ const fuente = (n) => (ARCHIVOS[n] ? { uri: ARCHIVOS[n] } : { uri: `${BASE}/${n}
 const diag = { libreria: Audio ? 'expo-audio' : AV ? 'expo-av' : 'ninguna', vibracion: Haptics ? 'expo-haptics' : 'básica', archivos: FS ? 'sí' : 'no', error: null };
 export const diagnosticoSonido = () => {
   const cargados = Object.values(players).filter((p) => p && p.isLoaded).length;
-  return { ...diag, cargados, descargados: Object.keys(ARCHIVOS).length, total: SONIDOS.length, prefs: { ...prefs } };
+  return { ...diag, sonando: diag.sonando || 0, cargados, descargados: Object.keys(ARCHIVOS).length, total: SONIDOS.length, prefs: { ...prefs } };
 };
 const VOLUMEN = { tap: 0.5, quitar: 0.5, chefpu: 0.6, blip: 0.5, paso: 0.5, xp: 0.8, logro: 0.8, nivel: 0.9, fanfarria: 0.9, error: 0.6 };
 const CLAVE = 'ajustes_sonido_v1';
@@ -75,6 +75,7 @@ export async function prepararSonidos() {
   // primero el archivo en el teléfono; si no se pudo, desde internet
   await Promise.all(SONIDOS.map(async (n) => { const f = await archivoLocal(n); if (f) ARCHIVOS[n] = f; }));
   if (Audio?.createAudioPlayer) SONIDOS.forEach(crearPlayer);
+  diag.preparado = true;
 }
 
 // Si un sonido aún no termina de descargarse, suena apenas esté listo (máx. 2 s; después ya no tiene sentido)
@@ -95,6 +96,7 @@ export function sonar(nombre) {
   const ahora = Date.now(), pr = PRIORIDAD[nombre] || 1;
   if (ahora - ultimo.t < 600 && pr < ultimo.prioridad) return;
   ultimo = { t: ahora, prioridad: pr };
+  diag.sonando = (diag.sonando || 0) + 1;
   try {
     if (Audio?.createAudioPlayer) {
       const p = players[nombre] || crearPlayer(nombre);
@@ -115,12 +117,13 @@ export function sonar(nombre) {
 // tipo: seleccion (toques), suave, medio, exito, aviso, error
 export function vibrar(tipo = 'suave') {
   if (!prefs.vibracion) return;
+  diag.vibraciones = (diag.vibraciones || 0) + 1;
   try {
     if (Haptics) {
       if (tipo === 'seleccion') return void Haptics.selectionAsync().catch(() => {});
       if (tipo === 'exito' || tipo === 'aviso' || tipo === 'error') {
         const t = { exito: 'Success', aviso: 'Warning', error: 'Error' }[tipo];
-        return void Haptics.notificationAsync(Haptics.NotificationFeedbackType[t]).catch(() => {});
+        return void Haptics.notificationAsync(Haptics.NotificationFeedbackType[t]).catch((e) => { diag.error = `vibrar: ${e?.message || e}`; });
       }
       const f = { suave: 'Light', medio: 'Medium', fuerte: 'Heavy' }[tipo] || 'Light';
       return void Haptics.impactAsync(Haptics.ImpactFeedbackStyle[f]).catch(() => {});

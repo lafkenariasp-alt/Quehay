@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, Alert, Pressable } from 'react-native';
+import { View, Text, Alert, Pressable, Vibration } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../supabase';
 import { useApp } from '../contexto';
@@ -17,18 +17,20 @@ function AjustesSonido() {
       <Text style={[s.etiqueta, { fontSize: 16 }]}>Sonido y vibración</Text>
       <Interruptor icono="volume-high-outline" texto="Sonidos" valor={a.sonido} onCambiar={(v) => a.cambiar('sonido', v)} />
       <Interruptor icono="phone-portrait-outline" texto="Vibración" valor={a.vibracion} onCambiar={(v) => a.cambiar('vibracion', v)} />
-      <Boton tipo="neutro" icono="musical-notes-outline" titulo="Probar sonido" onPress={() => {
+      <Boton tipo="neutro" icono="musical-notes-outline" titulo="Probar sonido y vibración" onPress={() => {
         efecto('xp');
+        setTimeout(() => Vibration.vibrate(400), 1200); // vibración básica del teléfono, sin librerías
         setTimeout(() => {
           const d = diagnosticoSonido();
-          Alert.alert('Prueba de sonido', [
-            `¿Sonó? Debió sonar una moneda.`,
-            `Librería: ${d.libreria} · vibración: ${d.vibracion}`,
-            `Archivos en el teléfono: ${d.descargados} de ${d.total} (descarga: ${d.archivos}) · listos para sonar: ${d.cargados}`,
-            `Sonido ${d.prefs.sonido ? 'activado' : 'apagado'} · en silencio: ${d.prefs.enSilencio ? 'sí' : 'no'}`,
+          Alert.alert('Prueba', [
+            'Debió sonar una moneda con una vibración corta y, después, una vibración larga.',
+            `Sonido: ${d.libreria} · vibración: ${d.vibracion}`,
+            `Archivos en el teléfono: ${d.descargados} de ${d.total} (descarga: ${d.archivos}) · listos: ${d.cargados}`,
+            `Preparado: ${d.preparado ? 'sí' : 'no'} · intentos de sonar: ${d.sonando} · de vibrar: ${d.vibraciones || 0}`,
+            `Ajustes: sonido ${d.prefs.sonido ? 'sí' : 'no'} · vibración ${d.prefs.vibracion ? 'sí' : 'no'} · en silencio ${d.prefs.enSilencio ? 'sí' : 'no'}`,
             d.error ? `Error: ${d.error}` : 'Sin errores',
           ].join('\n'));
-        }, 900);
+        }, 2000);
       }} />
       {a.sonido ? <Interruptor icono="notifications-off-outline" texto="Sonar con el iPhone en silencio" sub="Si está apagado, el interruptor de silencio calla la app" valor={!!a.enSilencio} onCambiar={(v) => a.cambiar('enSilencio', v)} /> : null}
     </Tarjeta>
