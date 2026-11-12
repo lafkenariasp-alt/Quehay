@@ -15,39 +15,69 @@ const BASE = 'https://raw.githubusercontent.com/lafkenariasp-alt/Quehay/main/ass
 const SONIDOS = ['tap', 'quitar', 'chefpu', 'blip', 'paso', 'xp', 'logro', 'nivel', 'fanfarria', 'error'];
 const VOLUMEN = { tap: 0.5, quitar: 0.5, chefpu: 0.6, blip: 0.5, paso: 0.5, xp: 0.8, logro: 0.8, nivel: 0.9, fanfarria: 0.9, error: 0.6 };
 const CLAVE = 'ajustes_sonido_v1';
+// Prioridad: un sonido más importante no se tapa con uno menor que llegue justo después
+const PRIORIDAD = { tap: 1, quitar: 1, paso: 1, chefpu: 2, blip: 2, error: 3, xp: 4, logro: 5, nivel: 6, fanfarria: 6 };
 
-let prefs = { sonido: true, vibracion: true };
+let prefs = { sonido: true, vibracion: true, enSilencio: false };
 const oyentes = new Set();
 const players = {};
 let preparado = false;
+let ultimo = { t: 0, prioridad: 0 };
+
+async function modoAudio() {
+  try {
+    if (Audio?.setAudioModeAsync) {
+      // enSilencio: suena aunque el iPhone tenga el interruptor de silencio; sin cortar la música
+      await Audio.setAudioModeAsync({ playsInSilentMode: !!prefs.enSilencio, interruptionMode: 'mixWithOthers', interruptionModeAndroid: 'duckOthers', shouldPlayInBackground: false });
+    } else if (AV?.Audio?.setAudioModeAsync) {
+      await AV.Audio.setAudioModeAsync({ playsInSilentModeIOS: !!prefs.enSilencio, staysActiveInBackground: false });
+    }
+  } catch (e) { /* sin modo de audio */ }
+}
+
+function crearPlayer(n) {
+  try {
+    const p = Audio.createAudioPlayer({ uri: `${BASE}/${n}.wav` });
+    p.volume = VOLUMEN[n];
+    players[n] = p;
+    return p;
+  } catch (e) { return null; }
+}
 
 export async function prepararSonidos() {
   if (preparado) return;
   preparado = true;
   try { const v = await AsyncStorage.getItem(CLAVE); if (v) prefs = { ...prefs, ...JSON.parse(v) }; } catch (e) { /* valores por defecto */ }
   oyentes.forEach((f) => f(prefs));
+  await modoAudio();
+  if (Audio?.createAudioPlayer) SONIDOS.forEach(crearPlayer); // se descargan al abrir para que suenen al instante
+}
+
+// Si un sonido aún no termina de descargarse, suena apenas esté listo (máx. 2 s; después ya no tiene sentido)
+function cuandoCargue(p) {
+  const desde = Date.now();
+  let sub = null;
   try {
-    if (Audio?.setAudioModeAsync) {
-      // respeta el modo silencio del iPhone y no corta la música que esté sonando
-      await Audio.setAudioModeAsync({ playsInSilentMode: false, interruptionMode: 'mixWithOthers', interruptionModeAndroid: 'duckOthers' });
-    } else if (AV?.Audio?.setAudioModeAsync) {
-      await AV.Audio.setAudioModeAsync({ playsInSilentModeIOS: false, staysActiveInBackground: false });
-    }
-  } catch (e) { /* sin modo de audio */ }
-  if (Audio?.createAudioPlayer) {
-    SONIDOS.forEach((n) => {
-      try { const p = Audio.createAudioPlayer({ uri: `${BASE}/${n}.wav` }); p.volume = VOLUMEN[n]; players[n] = p; } catch (e) { /* sin este sonido */ }
+    sub = p.addListener('playbackStatusUpdate', (s) => {
+      if (s?.isLoaded) { sub?.remove(); if (Date.now() - desde < 2000) { try { p.play(); } catch (e) { /* silencio */ } } }
     });
-  }
+  } catch (e) { /* sin aviso de carga */ }
+  setTimeout(() => sub?.remove(), 2500);
 }
 
 export function sonar(nombre) {
   if (!prefs.sonido) return;
+  // nunca dos a la vez: uno menor justo después de uno mayor no suena
+  const ahora = Date.now(), pr = PRIORIDAD[nombre] || 1;
+  if (ahora - ultimo.t < 600 && pr < ultimo.prioridad) return;
+  ultimo = { t: ahora, prioridad: pr };
   try {
-    const p = players[nombre];
-    if (p) {
-      p.seekTo(0);
-      p.play();
+    if (Audio?.createAudioPlayer) {
+      const p = players[nombre] || crearPlayer(nombre);
+      if (!p) return;
+      if (p.isLoaded === false) { cuandoCargue(p); return; }
+      const r = p.seekTo(0);
+      if (r && r.then) r.then(() => p.play(), () => p.play()); else p.play();
       return;
     }
     if (AV?.Audio?.Sound) {
@@ -85,7 +115,8 @@ const MOMENTOS = {
   tutorial: ['blip', 'seleccion'],
   paso: ['paso', 'seleccion'],
   me_gusta: ['tap', 'medio'],
-  seguir: ['xp', 'suave'],
+  seguir: ['tap', 'suave'],
+  listas: ['logro', 'exito'],
   xp: ['xp', 'exito'],
   logro: ['logro', 'exito'],
   nivel: ['nivel', 'exito'],
@@ -106,7 +137,8 @@ export function useAjustesSonido() {
     prefs = { ...prefs, [clave]: valor };
     AsyncStorage.setItem(CLAVE, JSON.stringify(prefs)).catch(() => {});
     oyentes.forEach((f) => f(prefs));
-    if (valor) efecto(clave === 'sonido' ? 'boton' : 'xp');
+    if (clave === 'enSilencio') modoAudio().then(() => { if (valor) efecto('xp'); });
+    else if (valor) efecto(clave === 'sonido' ? 'xp' : 'boton');
   };
   return { ...p, cambiar, disponible: !!(Audio || AV), vibraDisponible: !!Haptics };
 }

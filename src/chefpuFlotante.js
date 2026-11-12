@@ -46,7 +46,7 @@ export function useChefpuVoz({ silencio }) {
       AsyncStorage.setItem(CLAVE_DICHOS, JSON.stringify(dichos.current)).catch(() => {});
     }
     ultimo.current = Date.now();
-    efecto(cara === 'celebrando' ? 'xp' : 'chefpu');
+    efecto('chefpu');
     setMensaje({ texto, cara, acciones });
   }, []);
 

@@ -6,6 +6,7 @@ import { useApp } from '../contexto';
 import { C, CATEGORIAS_RECETA } from '../theme';
 import { Pantalla, Encabezado, Seccion, Chip, Boton, Tarjeta, Interruptor, s } from '../ui';
 import SelectorIngredientes from '../SelectorIngredientes';
+import { efecto } from '../sonido';
 import { guardarIngredientesInvitado, leerIngredientesInvitado } from '../analitica';
 
 export default function Buscar({ activa }) {
@@ -46,7 +47,7 @@ export default function Buscar({ activa }) {
     setElegidos([...mapa.values()]);
   }
 
-  const quitar = (id) => setElegidos((l) => l.filter((e) => e.id !== id));
+  const quitar = (id) => { efecto('desmarcar'); setElegidos((l) => l.filter((e) => e.id !== id)); };
 
   return (
     <View style={{ flex: 1 }}>

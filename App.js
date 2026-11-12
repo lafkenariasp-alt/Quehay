@@ -141,6 +141,26 @@ function Contenido() {
     nivelAnterior.current = n;
   }, [perfil?.nivel]);
 
+  // Logro nuevo: sonido de logro y Chefpu lo anuncia (se revisa cada vez que cambia el XP)
+  const logrosVistos = useRef({ uid: null, codigos: null });
+  useEffect(() => {
+    const id = perfil?.id;
+    if (!id) return;
+    supabase.from('logros_usuario').select('codigo, logros(nombre)').eq('usuario_id', id).then(({ data, error }) => {
+      if (error || !data) return;
+      const antes = logrosVistos.current;
+      const ahora = new Set(data.map((d) => d.codigo));
+      logrosVistos.current = { uid: id, codigos: ahora };
+      if (antes.uid !== id || !antes.codigos) return; // primera lectura de esta cuenta: solo recordar
+      const nuevo = data.find((d) => !antes.codigos.has(d.codigo));
+      if (!nuevo) return;
+      setTimeout(() => {
+        efecto('logro');
+        voz.decir(`logro_${nuevo.codigo}`, `¡Nuevo logro: ${nuevo.logros?.nombre || 'desbloqueado'}! Míralo en tu perfil.`, 'celebrando', { forzar: true });
+      }, 2200); // después del sonido de XP o de nivel
+    });
+  }, [perfil?.id, perfil?.xp]);
+
   useEffect(() => {
     const mostrar = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow', (e) => { setTeclado(true); setAltoTeclado(e.endCoordinates?.height || 0); });
     const ocultar = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide', () => setTeclado(false));

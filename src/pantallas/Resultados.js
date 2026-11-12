@@ -8,6 +8,7 @@ import { Foco } from '../foco';
 import { Pantalla, Encabezado, Seccion, TarjetaReceta, Vacio, Cargando, ErrorCarga, s } from '../ui';
 import { Mascota } from '../mascota';
 import { registrar } from '../analitica';
+import { efecto } from '../sonido';
 
 const GRUPOS = [
   { titulo: 'Puedes cocinarla ya', color: C.verde, f: (n) => n === 0 },
@@ -47,6 +48,7 @@ export default function Resultados({ tengo = [], maxFaltan = 4, basicos = true, 
       setRecetas(lista);
       // Chefpu comenta lo que encontró
       const listas = lista.filter((r) => r.faltan_n === 0).length;
+      if (listas) efecto('listas');
       if (listas) chefpu?.decir('resultados_listas', `¡Tienes todo para ${listas} ${listas === 1 ? 'receta' : 'recetas'}! Parte por la de arriba.`, 'celebrando');
       else if (lista.some((r) => r.faltan_n === 1)) chefpu?.decir('resultados_falta1', 'Te falta solo 1 cosa para algunas. ¿La pides o la cambias?', 'pensando');
       else if (!lista.length) chefpu?.decir('resultados_nada', 'No encontré nada con eso… prueba agregando otro ingrediente.', 'triste');

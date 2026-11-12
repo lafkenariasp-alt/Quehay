@@ -271,7 +271,7 @@ export default function Receta({ id, tengo = null, basicos = true }) {
             setModoCocina(false);
             // En el tutorial, terminar entrega el regalo y no pide cuenta (beta)
             if (tutorial?.activo && tutorial.linea?.esperar?.evento === 'termine') { tutorial.evento('termine'); return; }
-            efecto('logro');
+            efecto('xp');
             loCocine();
           }} />
         ) : null}

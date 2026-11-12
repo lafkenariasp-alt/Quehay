@@ -17,6 +17,7 @@ function AjustesSonido() {
       <Text style={[s.etiqueta, { fontSize: 16 }]}>Sonido y vibración</Text>
       <Interruptor icono="volume-high-outline" texto="Sonidos" valor={a.sonido} onCambiar={(v) => a.cambiar('sonido', v)} />
       <Interruptor icono="phone-portrait-outline" texto="Vibración" valor={a.vibracion} onCambiar={(v) => a.cambiar('vibracion', v)} />
+      {a.sonido ? <Interruptor icono="notifications-off-outline" texto="Sonar con el iPhone en silencio" sub="Si está apagado, el interruptor de silencio calla la app" valor={!!a.enSilencio} onCambiar={(v) => a.cambiar('enSilencio', v)} /> : null}
     </Tarjeta>
   );
 }
