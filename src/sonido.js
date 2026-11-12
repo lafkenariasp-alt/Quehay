@@ -33,7 +33,7 @@ const fuente = (n) => (ARCHIVOS[n] ? { uri: ARCHIVOS[n] } : { uri: `${BASE}/${n}
 const diag = { libreria: Audio ? 'expo-audio' : AV ? 'expo-av' : 'ninguna', vibracion: Haptics ? 'expo-haptics' : 'básica', archivos: FS ? 'sí' : 'no', error: null };
 export const diagnosticoSonido = () => {
   const cargados = Object.values(players).filter((p) => p && p.isLoaded).length;
-  return { ...diag, sonando: diag.sonando || 0, cargados, descargados: Object.keys(ARCHIVOS).length, total: SONIDOS.length, prefs: { ...prefs } };
+  return { ...diag, forma: diag.forma || (forma === 'normal' ? 'normal' : 'ninguna'), sonando: diag.sonando || 0, cargados, descargados: Object.keys(ARCHIVOS).length, total: SONIDOS.length, prefs: { ...prefs } };
 };
 const VOLUMEN = { tap: 0.5, quitar: 0.5, chefpu: 0.6, blip: 0.5, paso: 0.5, xp: 0.8, logro: 0.8, nivel: 0.9, fanfarria: 0.9, error: 0.6 };
 const CLAVE = 'ajustes_sonido_v1';
@@ -57,13 +57,34 @@ async function modoAudio() {
   } catch (e) { diag.error = `modo audio: ${e?.message || e}`; }
 }
 
+// Expo Go puede traer una versión más nueva del reproductor que la de Snack (pide 5 datos y Snack manda 3).
+// Si pasa eso, se crea directo con la forma nueva; la que funcione queda recordada.
+let forma = null;
+const FORMAS = [
+  (Nativo, src) => new Nativo(src, 500, false, 0, false),
+  (Nativo, src) => new Nativo(src, 500, false, false, false),
+  (Nativo, src) => new Nativo(src, 500, false, 0, null),
+  (Nativo, src) => new Nativo(src, 500, false, null, null),
+];
 function crearPlayer(n) {
-  try {
-    const p = Audio.createAudioPlayer(fuente(n));
-    p.volume = VOLUMEN[n];
-    players[n] = p;
-    return p;
-  } catch (e) { diag.error = `crear ${n}: ${e?.message || e}`; return null; }
+  const src = fuente(n);
+  let p = null;
+  if (forma === null) {
+    try { p = Audio.createAudioPlayer(src); forma = 'normal'; } catch (e) { diag.error = `crear ${n}: ${e?.message || e}`; }
+  } else if (forma === 'normal') {
+    try { p = Audio.createAudioPlayer(src); } catch (e) { diag.error = `crear ${n}: ${e?.message || e}`; }
+  }
+  const Nativo = Audio?.AudioModule?.AudioPlayer;
+  if (!p && Nativo) {
+    const lista = typeof forma === 'number' ? [forma] : FORMAS.map((_, i) => i);
+    for (const i of lista) {
+      try { p = FORMAS[i](Nativo, src); forma = i; diag.forma = `directa ${i + 1}`; diag.error = null; break; } catch (e) { diag.error = `crear ${n} (forma ${i + 1}): ${e?.message || e}`; }
+    }
+  }
+  if (!p) return null;
+  try { p.volume = VOLUMEN[n]; } catch (e) { /* volumen por defecto */ }
+  players[n] = p;
+  return p;
 }
 
 export async function prepararSonidos() {

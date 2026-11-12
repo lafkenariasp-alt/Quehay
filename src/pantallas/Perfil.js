@@ -24,7 +24,7 @@ function AjustesSonido() {
           const d = diagnosticoSonido();
           Alert.alert('Prueba', [
             'Debió sonar una moneda con una vibración corta y, después, una vibración larga.',
-            `Sonido: ${d.libreria} · vibración: ${d.vibracion}`,
+            `Sonido: ${d.libreria} (${d.forma}) · vibración: ${d.vibracion}`,
             `Archivos en el teléfono: ${d.descargados} de ${d.total} (descarga: ${d.archivos}) · listos: ${d.cargados}`,
             `Preparado: ${d.preparado ? 'sí' : 'no'} · intentos de sonar: ${d.sonando} · de vibrar: ${d.vibraciones || 0}`,
             `Ajustes: sonido ${d.prefs.sonido ? 'sí' : 'no'} · vibración ${d.prefs.vibracion ? 'sí' : 'no'} · en silencio ${d.prefs.enSilencio ? 'sí' : 'no'}`,
