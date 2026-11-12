@@ -19,6 +19,7 @@ App de recetas: cocina con lo que tienes en la nevera, comparte recetas y sube d
 | `seed/02_recetas_demo.sql` | 12 recetas de prueba (ejecutar después de crear tu cuenta) |
 | `migrations/009_sin_limite_admin.sql` | El límite de 3 cuentas por día no aplica a teléfonos que entraron con una cuenta admin, oficial o quehay |
 | `migrations/010_lista_compras.sql` | Lista de compras en la Nevera (tabla `compras`) y `comprado()`, que la pasa a la nevera |
+| `migrations/011_credito_fotos.sql` | Columna `foto_credito` en recetas: enlace al autor y licencia de fotos libres |
 | `migrations/008_regalo_y_cuentas.sql` | El regalo se gana terminando el tutorial; máx. 3 cuentas por día por teléfono; eliminar cuenta; «Lo cociné» sin foto (comentario sin XP) |
 | `migrations/007_tutorial_por_cuenta.sql` | El tutorial se guarda en la cuenta: cada cuenta nueva lo hace la primera vez, en cualquier teléfono |
 | `migrations/006_amigos.sql` | Sugerencias de amigos (te sigue, amigos en común, misma ciudad, mismos gustos) |
@@ -26,6 +27,7 @@ App de recetas: cocina con lo que tienes en la nevera, comparte recetas y sube d
 | `migrations/004_estabilidad.sql` | Roles, topes de XP, foto única al cocinar, logros automáticos, reportes, propuestas de ingredientes, eventos para métricas, paquete de bienvenida |
 | `seed/03_mas_ingredientes.sql` | ~180 ingredientes más (se puede ejecutar de nuevo sin duplicar) |
 | `seed/04_recetas_chilenas.sql` | 52 recetas chilenas de todos los días, publicadas por la cuenta oficial `quehay` (no duplica) |
+| `seed/05_fotos_libres.sql` | Fotos con licencia libre (Wikimedia Commons) para 9 recetas de `quehay`; no reemplaza fotos existentes. Requiere la 011 |
 | `cuentas/configurar_cuentas.sql` | Cuenta oficial, tu cuenta admin y cuentas de prueba (por nick) |
 | `cuentas/cambiar_clave.sql` | Restablecer la contraseña de alguien que la olvidó |
 | `tests/` | Pruebas locales (no se suben a Supabase) |

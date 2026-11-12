@@ -514,12 +514,13 @@ export function Cargando() {
 // Tarjeta de receta del lienzo: foto a la izquierda, datos y estado a la derecha.
 // estado: 'ya' (verde, tienes todo) | 'falta' (ámbar) | null
 export function TarjetaReceta({ titulo, foto, meta, estado = null, detalle, abajo, onPress }) {
+  const [rota, setRota] = React.useState(false); // si la foto no carga, se muestra el ícono
   const borde = estado === 'ya' ? C.verde : estado === 'falta' ? C.ambar : C.linea;
   return (
     <Presionable onPress={onPress} accessibilityRole="button" accessibilityLabel={[titulo, meta, detalle].filter(Boolean).join(', ')}
       style={[s.tarjetaReceta, { borderColor: borde, borderWidth: estado ? 2 : 1.5 }]}>
-      {foto ? (
-        <Image source={{ uri: foto }} style={s.tarjetaRecetaFoto} />
+      {foto && !rota ? (
+        <Image source={{ uri: foto }} onError={() => setRota(true)} style={s.tarjetaRecetaFoto} />
       ) : (
         <View style={[s.tarjetaRecetaFoto, { alignItems: 'center', justifyContent: 'center' }]}>
           <Ionicons name="restaurant-outline" size={26} color="#B9A68E" />

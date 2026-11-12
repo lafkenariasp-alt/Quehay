@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { View, Text, Alert, Pressable, Image, Modal, TextInput, Switch, ScrollView, Animated, Easing, PanResponder, Share, Vibration } from 'react-native';
+import { View, Text, Alert, Pressable, Image, Modal, TextInput, Switch, ScrollView, Animated, Easing, PanResponder, Share, Vibration, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useKeepAwake } from 'expo-keep-awake';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -82,6 +82,7 @@ export default function Receta({ id, tengo = null, basicos = true }) {
   const [guardada, setGuardada] = useState(false);
   const [porciones, setPorciones] = useState(null);
   const [visor, setVisor] = useState(null); // índice de la foto abierta a pantalla completa
+  const [fotoRota, setFotoRota] = useState(false); // si la foto no carga, se muestra el recuadro sin foto
 
   const cargar = useCallback(async () => {
     setError(false);
@@ -142,7 +143,7 @@ export default function Receta({ id, tengo = null, basicos = true }) {
   const factor = porc / base;
   // Fotos para ver a pantalla completa: la de la receta y las de "Así me quedó"
   const fotos = [
-    ...(r.foto_url ? [{ url: r.foto_url, texto: r.titulo }] : []),
+    ...(r.foto_url && !fotoRota ? [{ url: r.foto_url, texto: r.titulo }] : []),
     ...versiones.filter((v) => v.foto_url).map((v) => ({ url: v.foto_url, id: v.id, texto: [v.perfiles?.nombre, v.nota].filter(Boolean).join(': ') })),
   ];
 
@@ -154,7 +155,7 @@ export default function Receta({ id, tengo = null, basicos = true }) {
     setSubiendoFoto(true);
     try {
       const url = await subirFoto(uid, foto, `receta-${r.id}`);
-      const { error: e } = await supabase.from('recetas').update({ foto_url: url }).eq('id', r.id);
+      const { error: e } = await supabase.from('recetas').update({ foto_url: url, ...('foto_credito' in r ? { foto_credito: null } : {}) }).eq('id', r.id);
       if (e) throw e;
       efecto('xp');
       avisar({ texto: 'Foto de la receta actualizada', duracion: 2500 });
@@ -294,9 +295,9 @@ export default function Receta({ id, tengo = null, basicos = true }) {
         ) : null}
 
         <FotoElastica>
-          <DobleToque onDoble={meGustaDoble} onSimple={r.foto_url ? () => setVisor(0) : esMia ? cambiarFoto : undefined}>
-            {r.foto_url ? (
-              <Image source={{ uri: r.foto_url }} style={{ aspectRatio: 16 / 10, backgroundColor: C.superficie }} accessibilityLabel={`Foto de ${r.titulo}. Toca para verla grande`} />
+          <DobleToque onDoble={meGustaDoble} onSimple={r.foto_url && !fotoRota ? () => setVisor(0) : esMia ? cambiarFoto : undefined}>
+            {r.foto_url && !fotoRota ? (
+              <Image source={{ uri: r.foto_url }} onError={() => setFotoRota(true)} style={{ aspectRatio: 16 / 10, backgroundColor: C.superficie }} accessibilityLabel={`Foto de ${r.titulo}. Toca para verla grande`} />
             ) : (
               <View style={{ height: 200, backgroundColor: C.superficie, alignItems: 'center', justifyContent: 'center', gap: 6 }}>
                 <Ionicons name={esMia ? 'camera-outline' : 'restaurant-outline'} size={48} color={esMia ? C.tomate : '#B9A68E'} />
@@ -305,6 +306,11 @@ export default function Receta({ id, tengo = null, basicos = true }) {
             )}
           </DobleToque>
         </FotoElastica>
+        {r.foto_credito && !fotoRota ? (
+          <Pressable onPress={() => Linking.openURL(r.foto_credito)} accessibilityRole="link" hitSlop={8} style={{ marginTop: -8, alignSelf: 'flex-end' }}>
+            <Text style={{ fontSize: 12, color: C.suave }}>Foto: Wikimedia Commons · ver autor y licencia ↗</Text>
+          </Pressable>
+        ) : null}
         {esMia ? (
           <Boton tipo="neutro" icono="camera-outline" cargando={subiendoFoto}
             titulo={r.foto_url ? 'Cambiar foto de la receta' : 'Agregar foto de la receta'} onPress={cambiarFoto} />
