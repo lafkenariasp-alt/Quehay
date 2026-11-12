@@ -183,7 +183,7 @@ language sql immutable as $$
     when nivel >= 20 then 'Chef de partida'
     when nivel >= 10 then 'Cocinero de barrio'
     when nivel >= 5  then 'Chefcito'
-    else 'Pinche de cocina' end
+    else 'Aprendiz de cocina' end
 $$;
 
 -- Otorga XP (con tope diario por tipo para evitar trampas)

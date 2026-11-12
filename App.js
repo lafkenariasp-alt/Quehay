@@ -1,8 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, Pressable, Keyboard, Platform, Animated, Easing, PanResponder, Dimensions, BackHandler, AccessibilityInfo } from 'react-native';
+import { View, Text, Pressable, Keyboard, Platform } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { NavigationContainer, DefaultTheme, createNavigationContainerRef, StackActions, useIsFocused } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from './src/supabase';
 import { AppCtx } from './src/contexto';
@@ -37,51 +39,32 @@ function TutorialRepetido() {
 const PANTALLAS = { tutorial: TutorialRepetido, resultados: Resultados, receta: Receta, usuarios: Usuarios, perfilPublico: PerfilPublico, acceso: Acceso };
 const CLAVE_BIENVENIDA = 'bienvenida_v1';
 
-// Navegación propia, sin librerías: las pantallas entran desde la derecha (como en iOS)
-// y se vuelve deslizando desde el borde izquierdo o con el botón Volver.
-function PantallaApilada({ entrada, esTope, registrarSalida, alSalir }) {
-  const insets = useSafeAreaInsets();
-  const W = Dimensions.get('window').width;
-  const x = useRef(new Animated.Value(W)).current;
-  const Comp = PANTALLAS[entrada.pantalla];
+// Navegación nativa de iOS: transición de empuje y volver deslizando desde el borde izquierdo
+const Pila = createNativeStackNavigator();
+const navRef = createNavigationContainerRef();
 
-  useEffect(() => {
-    AccessibilityInfo.isReduceMotionEnabled().then((reducir) => {
-      Animated.timing(x, { toValue: 0, duration: reducir ? 0 : 300, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start();
-    }).catch(() => x.setValue(0));
-    registrarSalida(entrada.key, () => {
-      Animated.timing(x, { toValue: W, duration: 240, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start(() => alSalir(entrada.key));
-    });
-    return () => registrarSalida(entrada.key, null);
-  }, []);
-
-  // Borde izquierdo: arrastrar hacia la derecha para volver
-  const gesto = useRef(PanResponder.create({
-    onMoveShouldSetPanResponder: (e, g) => g.dx > 6 && Math.abs(g.dx) > Math.abs(g.dy),
-    onPanResponderMove: (e, g) => x.setValue(Math.max(0, g.dx)),
-    onPanResponderRelease: (e, g) => {
-      if (g.dx > W * 0.33 || g.vx > 0.6) {
-        Animated.timing(x, { toValue: W, duration: 200, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start(() => alSalir(entrada.key));
-      } else {
-        Animated.spring(x, { toValue: 0, friction: 9, useNativeDriver: true }).start();
-      }
-    },
-    onPanResponderTerminate: () => Animated.spring(x, { toValue: 0, friction: 9, useNativeDriver: true }).start(),
-  })).current;
-
-  return (
-    <Animated.View style={{ position: 'absolute', left: 0, top: 0, right: 0, bottom: 0, paddingTop: insets.top, backgroundColor: C.fondo, transform: [{ translateX: x }],
-      shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 10, shadowOffset: { width: -2, height: 0 } }}
-      importantForAccessibility={esTope ? 'auto' : 'no-hide-descendants'} accessibilityElementsHidden={!esTope}>
-      {Comp ? <Comp {...(entrada.params || {})} /> : null}
-      {esTope ? <View {...gesto.panHandlers} style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 24 }} /> : null}
-    </Animated.View>
-  );
+function alInicio() {
+  if (navRef.isReady() && navRef.canGoBack()) navRef.dispatch(StackActions.popToTop());
 }
 
+// Cada pantalla recibe sus parámetros como props y respeta el notch
+function conBordes(Comp) {
+  return function PantallaApilada({ route }) {
+    const insets = useSafeAreaInsets();
+    return (
+      <View style={{ flex: 1, paddingTop: insets.top, backgroundColor: C.fondo }}>
+        <Comp {...(route.params || {})} />
+      </View>
+    );
+  };
+}
+const TEMA = { ...DefaultTheme, colors: { ...DefaultTheme.colors, primary: C.tomate, background: C.fondo, card: C.fondo, text: C.texto, border: C.linea, notification: C.tomate } };
+const APILADAS = Object.fromEntries(Object.entries(PANTALLAS).map(([k, Comp]) => [k, conBordes(Comp)]));
+
 // Pestañas: quedan montadas para no perder lo escrito; la barra se esconde con el teclado
-function Inicio({ pestana, visitadas, uid, teclado, irA, enfocada }) {
+function Inicio({ pestana, visitadas, uid, teclado, irA }) {
   const insets = useSafeAreaInsets();
+  const enfocada = useIsFocused();
   return (
     <View style={{ flex: 1, paddingTop: insets.top, backgroundColor: C.fondo }}>
       <View style={{ flex: 1 }}>
@@ -123,10 +106,7 @@ function Contenido() {
   const [bienvenidaVista, setBienvenidaVista] = useState(null); // null = leyendo
   const [pestana, setPestana] = useState('buscar');
   const tutorial = useTutorialEstado();
-  const [pila, setPila] = useState([]); // pantallas abiertas encima de las pestañas
-  const pilaRef = useRef([]);
-  pilaRef.current = pila;
-  const salidas = useRef({});
+  const pendiente = useRef(null); // pantalla a abrir apenas la navegación esté lista
   const [visitadas, setVisitadas] = useState({ buscar: true }); // pestañas que quedan vivas (no pierden lo escrito)
   const [teclado, setTeclado] = useState(false);
   const [altoTeclado, setAltoTeclado] = useState(0); // con el teclado abierto escondemos las pestañas
@@ -157,9 +137,9 @@ function Contenido() {
           await borrarIngredientesInvitado();
         }
         registrar('sesion_iniciada', { traspaso: ingredientes.length }, nueva.user.id);
-        setPila([]); setPestana('nevera'); setVisitadas({ nevera: true });
+        alInicio(); setPestana('nevera'); setVisitadas({ nevera: true });
       }
-      if (evento === 'SIGNED_OUT') { setPila([]); setPestana('buscar'); setVisitadas({ buscar: true }); }
+      if (evento === 'SIGNED_OUT') { alInicio(); setPestana('buscar'); setVisitadas({ buscar: true }); }
     });
     return () => sub.subscription.unsubscribe();
   }, []);
@@ -173,25 +153,13 @@ function Contenido() {
   useEffect(() => { recargarPerfil(); }, [recargarPerfil]);
 
   const nav = useMemo(() => ({
-    abrir: (pantalla, params = {}) => setPila((p) => [...p, { pantalla, params, key: `${pantalla}-${Date.now()}-${Math.random()}` }]),
-    volver: () => {
-      const tope = pilaRef.current[pilaRef.current.length - 1];
-      if (!tope) return;
-      const salir = salidas.current[tope.key];
-      if (salir) salir(); else setPila((p) => p.slice(0, -1));
+    abrir: (pantalla, params = {}) => {
+      if (navRef.isReady()) navRef.dispatch(StackActions.push(pantalla, params));
+      else pendiente.current = { pantalla, params };
     },
-    irA: (id) => { setPila([]); setPestana(id); setVisitadas((v) => ({ ...v, [id]: true })); },
+    volver: () => { if (navRef.isReady() && navRef.canGoBack()) navRef.goBack(); },
+    irA: (id) => { alInicio(); setPestana(id); setVisitadas((v) => ({ ...v, [id]: true })); },
   }), []);
-
-  // Android: el botón atrás cierra la pantalla de arriba
-  useEffect(() => {
-    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
-      if (!pilaRef.current.length) return false;
-      nav.volver();
-      return true;
-    });
-    return () => sub.remove();
-  }, [nav]);
 
   // Para invitados: abre el registro explicando qué gana con la cuenta
   const pedirCuenta = useCallback((motivo) => {
@@ -242,8 +210,8 @@ function Contenido() {
   }, [uidActual, nav, voz.decir]);
 
   const consejo = useCallback(() => {
-    const ruta = pilaRef.current[pilaRef.current.length - 1]?.pantalla;
-    const donde = ruta || pestana;
+    const ruta = navRef.isReady() ? navRef.getCurrentRoute()?.name : null;
+    const donde = !ruta || ruta === 'inicio' ? pestana : ruta;
     const CONSEJOS = {
       nevera: 'Anota lo que compras y te digo qué cocinar. Mantén presionado un alimento para quitarlo.',
       buscar: 'Elige lo que tienes y toca Ver recetas. Con 3 o más ingredientes salen muchas más.',
@@ -279,14 +247,20 @@ function Contenido() {
 
   return (
     <AppCtx.Provider value={ctx}>
-      <View style={{ flex: 1, backgroundColor: C.fondo }}>
-        <Inicio pestana={pestana} visitadas={visitadas} uid={uid} teclado={teclado} irA={nav.irA} enfocada={!pila.length} />
-        {pila.map((e, i) => (
-          <PantallaApilada key={e.key} entrada={e} esTope={i === pila.length - 1}
-            registrarSalida={(k, fn) => { if (fn) salidas.current[k] = fn; else delete salidas.current[k]; }}
-            alSalir={(k) => setPila((p) => p.filter((x) => x.key !== k))} />
-        ))}
-      </View>
+      <NavigationContainer ref={navRef}
+        theme={TEMA}
+        onReady={() => {
+          if (pendiente.current) { const d = pendiente.current; pendiente.current = null; navRef.dispatch(StackActions.push(d.pantalla, d.params)); }
+        }}>
+        <Pila.Navigator screenOptions={{ headerShown: false, contentStyle: { backgroundColor: C.fondo }, gestureEnabled: true }}>
+          <Pila.Screen name="inicio">
+            {() => <Inicio pestana={pestana} visitadas={visitadas} uid={uid} teclado={teclado} irA={nav.irA} />}
+          </Pila.Screen>
+          {Object.entries(APILADAS).map(([nombre, Comp]) => (
+            <Pila.Screen key={nombre} name={nombre} component={Comp} />
+          ))}
+        </Pila.Navigator>
+      </NavigationContainer>
       <ChefpuFlotante voz={voz} visible={verFlotante} onQueCocino={queCocino} onConsejo={consejo} />
       <TutorialCapa />
       <RegaloTutorial />
