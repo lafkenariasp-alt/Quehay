@@ -1,3 +1,4 @@
+/* global window, URLSearchParams */
 import './src/web';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, Pressable, Keyboard, Platform, Animated, BackHandler } from 'react-native';
@@ -11,6 +12,7 @@ import { supabase } from './src/supabase';
 import { AppCtx } from './src/contexto';
 import { C } from './src/theme';
 import { Cargando, PestanaCtx, subirArriba, AvisoHost } from './src/ui';
+import Errores from './src/errores';
 import { registrar, leerIngredientesInvitado, borrarIngredientesInvitado } from './src/analitica';
 import Bienvenida from './src/pantallas/Bienvenida';
 import { useTutorialEstado, RegaloTutorial, TutorialCapa } from './src/tutorial';
@@ -424,6 +426,11 @@ function Contenido() {
         theme={TEMA}
         onReady={() => {
           if (pendiente.current) { const d = pendiente.current; pendiente.current = null; navRef.dispatch(StackActions.push(d.pantalla, d.params)); }
+          // Web: un enlace con ?receta=ID abre esa receta (sirve para compartir recetas y para las pruebas automáticas)
+          if (Platform.OS === 'web' && typeof window !== 'undefined') {
+            const id = Number(new URLSearchParams(window.location.search).get('receta'));
+            if (id) setTimeout(() => navRef.dispatch(StackActions.push('receta', { id })), 300);
+          }
         }}>
         <Pila.Navigator screenOptions={{ headerShown: false, contentStyle: { backgroundColor: C.fondo }, gestureEnabled: !tutorial.activo }}>
           <Pila.Screen name="inicio">
@@ -455,7 +462,9 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <StatusBar style="dark" />
-      <Contenido />
+      <Errores>
+        <Contenido />
+      </Errores>
     </SafeAreaProvider>
   );
 }

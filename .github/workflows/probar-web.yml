@@ -1,0 +1,35 @@
+# Prueba la versión web en un navegador automático (iPhone simulado) y guarda capturas.
+name: Probar web
+
+on:
+  workflow_dispatch:
+
+jobs:
+  probar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Instalar dependencias (SDK 54, igual que Snack)
+        run: |
+          npm pkg set dependencies.expo="~54.0.0"
+          npm install --legacy-peer-deps --no-audit --no-fund
+          npx expo install --fix -- --legacy-peer-deps
+          npx expo install react-dom react-native-web @expo/metro-runtime -- --legacy-peer-deps
+      - name: Armar la versión web
+        run: npx expo export --platform web --output-dir dist
+      - name: Abrir en un navegador
+        run: |
+          mkdir -p srv capturas && cp -r dist srv/Quehay
+          npx --yes http-server srv -p 8080 -s &
+          npm install --no-save --legacy-peer-deps playwright
+          npx playwright install --with-deps chromium
+          sleep 2
+          node pruebas/web.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: capturas
+          path: capturas
