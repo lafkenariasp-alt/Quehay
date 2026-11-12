@@ -15,6 +15,7 @@ import Bienvenida from './src/pantallas/Bienvenida';
 import { useTutorialEstado, RegaloTutorial, TutorialCapa } from './src/tutorial';
 import { ChefpuFlotante, useChefpuVoz } from './src/chefpuFlotante';
 import { Foco } from './src/foco';
+import { prepararSonidos, efecto } from './src/sonido';
 import Acceso from './src/pantallas/Acceso';
 import Nevera from './src/pantallas/Nevera';
 import Buscar from './src/pantallas/Buscar';
@@ -111,6 +112,19 @@ function Contenido() {
   const [teclado, setTeclado] = useState(false);
   const [altoTeclado, setAltoTeclado] = useState(0); // con el teclado abierto escondemos las pestañas
   const voz = useChefpuVoz({ silencio: teclado || tutorial.activo });
+  useEffect(() => { prepararSonidos(); }, []);
+
+  // Subir de nivel: fanfarria, vibración y Chefpu celebra
+  const nivelAnterior = useRef(null);
+  useEffect(() => {
+    const n = perfil?.nivel;
+    if (!n) return;
+    if (nivelAnterior.current && n > nivelAnterior.current) {
+      efecto('nivel');
+      setTimeout(() => voz.decir(`nivel_${n}`, `¡Subiste a nivel ${n}! Ahora eres ${perfil.titulo}.`, 'celebrando', { forzar: true }), 900);
+    }
+    nivelAnterior.current = n;
+  }, [perfil?.nivel]);
 
   useEffect(() => {
     const mostrar = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow', (e) => { setTeclado(true); setAltoTeclado(e.endCoordinates?.height || 0); });

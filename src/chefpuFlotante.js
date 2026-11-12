@@ -1,9 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text, Pressable, Animated, Easing, PanResponder, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-// Vibración opcional al arrastrar
-let Haptics = null;
-try { Haptics = require('expo-haptics'); } catch (e) { Haptics = null; }
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { C } from './theme';
@@ -11,6 +8,7 @@ import { Mascota } from './chefpu';
 import { Foco } from './foco';
 import { useMovimientoReducido } from './tutorial';
 import { registrar } from './analitica';
+import { efecto, vibrar } from './sonido';
 
 const TAM = 64;
 const CLAVE_POS = 'chefpu_pos_v1';
@@ -48,6 +46,7 @@ export function useChefpuVoz({ silencio }) {
       AsyncStorage.setItem(CLAVE_DICHOS, JSON.stringify(dichos.current)).catch(() => {});
     }
     ultimo.current = Date.now();
+    efecto(cara === 'celebrando' ? 'xp' : 'chefpu');
     setMensaje({ texto, cara, acciones });
   }, []);
 
@@ -109,13 +108,13 @@ export function ChefpuFlotante({ voz, visible, onQueCocino, onConsejo, onAmigos 
       if (!inicio.current.movio && Math.abs(g.dx) + Math.abs(g.dy) > 6) {
         inicio.current.movio = true;
         setMenu(false); voz.callar();
-        Haptics?.selectionAsync?.().catch(() => {});
+        vibrar('seleccion');
       }
       pos.setValue({ x: g.dx, y: g.dy });
     },
     onPanResponderRelease: (e, g) => {
       pos.flattenOffset();
-      if (!inicio.current.movio) { setMenu((m) => !m); voz.callar(); return; }
+      if (!inicio.current.movio) { efecto('boton'); setMenu((m) => !m); voz.callar(); return; }
       const xFinal = pos.x._value, yFinal = Math.min(Math.max(pos.y._value, minY), maxY);
       const nuevo = xFinal + TAM / 2 < W / 2 ? 'izq' : 'der';
       setLado(nuevo); yActual.current = yFinal;

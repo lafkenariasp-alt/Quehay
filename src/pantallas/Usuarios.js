@@ -6,6 +6,7 @@ import { useApp } from '../contexto';
 import { C } from '../theme';
 import { Pantalla, Encabezado, Avatar, Vacio, Cargando, Chip, Boton, s } from '../ui';
 import { registrar } from '../analitica';
+import { efecto } from '../sonido';
 
 const CAMPOS = 'id, nombre, usuario, avatar_url, nivel, titulo, ciudad';
 const PESTANAS = [
@@ -66,6 +67,7 @@ export default function Usuarios({ pestana: inicial = 'sugerencias' }) {
   async function alternar(p) {
     if (!uid) { pedirCuenta('Crea tu cuenta para seguir a otros cocineros'); return; }
     const loSigo = sigo.has(p.id);
+    if (!loSigo) efecto('seguir');
     setSigo((x) => { const n = new Set(x); if (loSigo) n.delete(p.id); else n.add(p.id); return n; });
     setPerfiles((x) => ({ ...x, [p.id]: p }));
     const { error } = loSigo

@@ -13,6 +13,7 @@ import { Mascota } from './chefpu';
 import { Foco, focos } from './foco';
 import { GUION, LINEA_REGALO, CAPITULOS } from './guion';
 import { registrar } from './analitica';
+import { efecto } from './sonido';
 
 // ---------- Estado del tutorial (guardado en el teléfono) ----------
 const CLAVE = 'tutorial_v2';
@@ -131,9 +132,10 @@ export function TutorialCapa({ capa = 'raiz' }) {
     return () => clearTimeout(t);
   }, [mia, indice]);
 
-  // Texto que se escribe solo (1 segundo máximo)
+  // Texto que se escribe solo (1 segundo máximo), con el "blip" de Chefpu
   useEffect(() => {
     if (!mia) return undefined;
+    efecto(linea.cara === 'celebrando' ? 'logro' : 'tutorial');
     const total = linea.texto.length;
     aparece.setValue(reducido ? 1 : 0);
     if (!reducido) Animated.timing(aparece, { toValue: 1, duration: 250, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start();
@@ -240,6 +242,7 @@ export function RegaloTutorial() {
 
   useEffect(() => {
     if (!visible) return;
+    efecto('regalo');
     AccessibilityInfo.isReduceMotionEnabled().then((reducir) => {
       escala.setValue(reducir ? 1 : 0.94);
       opacidad.setValue(0);

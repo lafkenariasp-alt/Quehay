@@ -6,6 +6,7 @@ import { useApp } from '../contexto';
 import { C } from '../theme';
 import { Pantalla, Encabezado, Seccion, Boton, Tarjeta, Cargando, ErrorCarga, Avatar, Estrellas, s } from '../ui';
 import { reportar } from '../reportar';
+import { efecto } from '../sonido';
 
 // Perfil de otro cocinero
 export default function PerfilPublico({ id }) {
@@ -42,6 +43,7 @@ export default function PerfilPublico({ id }) {
 
   async function alternar() {
     if (!uid) { pedirCuenta('Crea tu cuenta para seguir a otros cocineros'); return; }
+    if (!loSigo) efecto('seguir');
     const { error } = loSigo
       ? await supabase.from('seguidores').delete().eq('seguidor_id', uid).eq('seguido_id', id)
       : await supabase.from('seguidores').insert({ seguidor_id: uid, seguido_id: id });

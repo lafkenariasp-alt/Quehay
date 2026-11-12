@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, Alert, Image, Pressable } from 'react-native';
+import { View, Text, Alert, Image, Pressable, Switch } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../supabase';
 import { useApp } from '../contexto';
@@ -7,6 +7,27 @@ import { C, RAREZA, xpParaNivel } from '../theme';
 import { Pantalla, Seccion, Boton, Tarjeta, Cargando, Chip, Estrellas, Avatar, s } from '../ui';
 import { desdeCamara, desdeGaleria, subirFoto } from '../fotos';
 import { Mascota, PideCuenta } from '../mascota';
+import { useAjustesSonido } from '../sonido';
+
+// Sonidos y vibración se pueden apagar; en iPhone el modo silencio también los apaga
+function AjustesSonido() {
+  const a = useAjustesSonido();
+  const fila = (clave, icono, texto, valor) => (
+    <View style={[s.fila, { justifyContent: 'space-between', minHeight: 44 }]}>
+      <View style={[s.fila, { gap: 10 }]}>
+        <Ionicons name={icono} size={20} color={C.texto} />
+        <Text style={{ fontSize: 15, fontWeight: '700', color: C.texto }}>{texto}</Text>
+      </View>
+      <Switch value={valor} onValueChange={(v) => a.cambiar(clave, v)} trackColor={{ true: C.verde, false: '#CBBBA5' }} accessibilityLabel={texto} />
+    </View>
+  );
+  return (
+    <View style={{ gap: 2, padding: 14, borderRadius: 18, backgroundColor: C.blanco, borderWidth: 1, borderColor: C.linea }}>
+      {fila('sonido', 'volume-high-outline', 'Sonidos', a.sonido)}
+      {fila('vibracion', 'phone-portrait-outline', 'Vibración', a.vibracion)}
+    </View>
+  );
+}
 
 export default function Perfil({ activa }) {
   const { uid, invitado, perfil, recargarPerfil, nav, pedirCuenta, tutorial, chefpu } = useApp();
@@ -48,6 +69,9 @@ export default function Perfil({ activa }) {
         <PideCuenta titulo="Tu perfil de cocinero" texto="Sube de nivel, desbloquea logros y clases, y muestra tus recetas." onCrear={() => pedirCuenta('Crea tu cuenta y abre tu regalo de bienvenida')} />
         <View style={{ paddingHorizontal: 24, paddingBottom: 16 }}>
           <Boton tipo="neutro" icono="school-outline" titulo="Repetir tutorial con Chefpu" onPress={repetirTutorial} />
+      <AjustesSonido />
+          <View style={{ height: 10 }} />
+          <AjustesSonido />
         </View>
       </View>
     );

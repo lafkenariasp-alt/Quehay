@@ -9,6 +9,7 @@ import { registrar, guardarIngredientesInvitado } from '../analitica';
 import { useApp } from '../contexto';
 import { Foco } from '../foco';
 import SelectorIngredientes from '../SelectorIngredientes';
+import { efecto } from '../sonido';
 
 // Lo más común en una cocina chilena: se toca y listo
 const TIPICOS = ['Huevos', 'Arroz', 'Pollo', 'Cebolla', 'Papas', 'Tomate', 'Ajo', 'Fideos', 'Leche', 'Queso', 'Zanahoria', 'Pan'];
@@ -30,7 +31,7 @@ export default function Bienvenida({ onTerminar, repetir = false }) {
 
   const ids = new Set(elegidos.map((e) => e.id));
   const alternar = (ing) => {
-    if (!ids.has(ing.id)) tutorial.evento('casilla');
+    if (!ids.has(ing.id)) { tutorial.evento('casilla'); efecto('marcar'); } else efecto('desmarcar');
     setElegidos((l) => (l.some((e) => e.id === ing.id) ? l.filter((e) => e.id !== ing.id) : [...l, { id: ing.id, nombre: ing.nombre }]));
   };
 

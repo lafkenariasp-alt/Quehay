@@ -1,6 +1,7 @@
 import { Alert } from 'react-native';
 import { supabase } from './supabase';
 import { registrar } from './analitica';
+import { efecto } from './sonido';
 
 const MOTIVOS = ['Spam o publicidad', 'Contenido inadecuado u ofensivo', 'La foto no es real o no es comida', 'Otro'];
 
@@ -15,6 +16,7 @@ export function reportar({ uid, tipo, objetoId, pedirCuenta }) {
         const { error } = await supabase.from('reportes').insert({ usuario_id: uid, tipo, objeto_id: String(objetoId), motivo });
         if (error && error.code !== '23505') { Alert.alert('No se pudo enviar', error.message); return; }
         registrar('reporte', { tipo, motivo }, uid);
+        efecto('boton');
         Alert.alert('Gracias por avisar', error ? 'Ya habías reportado esto. Lo estamos revisando.' : 'Lo revisaremos. Si varias personas lo reportan, se oculta mientras tanto.');
       },
     })),

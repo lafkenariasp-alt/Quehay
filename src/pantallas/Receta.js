@@ -12,6 +12,7 @@ import { reportar } from '../reportar';
 import { registrar } from '../analitica';
 import { TutorialCapa } from '../tutorial';
 import { Foco } from '../foco';
+import { efecto } from '../sonido';
 
 const sinDatos = Promise.resolve({ data: null });
 
@@ -84,6 +85,7 @@ export default function Receta({ id, tengo = null, basicos = true }) {
   async function puntuar(n) {
     if (invitado) { pedirCuenta('Crea tu cuenta para calificar recetas'); return; }
     setMiNota(n);
+    efecto('marcar');
     const { error: e } = await supabase.from('notas').upsert({ usuario_id: uid, receta_id: id, estrellas: n });
     if (e) Alert.alert('Error', e.message); else cargar();
   }
@@ -92,6 +94,7 @@ export default function Receta({ id, tengo = null, basicos = true }) {
     if (invitado) { pedirCuenta('Crea tu cuenta para guardar las recetas que te gustan'); return; }
     const nuevo = !meGusta;
     setMeGusta(nuevo);
+    if (nuevo) efecto('me_gusta');
     const q = nuevo
       ? supabase.from('likes').insert({ usuario_id: uid, receta_id: id })
       : supabase.from('likes').delete().eq('usuario_id', uid).eq('receta_id', id);
@@ -259,6 +262,7 @@ export default function Receta({ id, tengo = null, basicos = true }) {
             setModoCocina(false);
             // En el tutorial, terminar entrega el regalo y no pide cuenta (beta)
             if (tutorial?.activo && tutorial.linea?.esperar?.evento === 'termine') { tutorial.evento('termine'); return; }
+            efecto('logro');
             loCocine();
           }} />
         ) : null}
@@ -308,11 +312,11 @@ function ModoCocina({ receta, onCerrar, onTerminar }) {
       </Foco>
       <Text style={[s.sub, { textAlign: 'center' }]}>La pantalla se queda encendida mientras cocinas</Text>
       <View style={{ flexDirection: 'row', gap: 10 }}>
-        <Boton tipo="neutro" titulo="Anterior" icono="chevron-back" deshabilitado={paso === 0} onPress={() => setPaso(paso - 1)} style={{ flex: 1 }} />
+        <Boton tipo="neutro" titulo="Anterior" icono="chevron-back" deshabilitado={paso === 0} onPress={() => { efecto('paso'); setPaso(paso - 1); }} style={{ flex: 1 }} />
         {ultimo ? (
           <Foco id="termine" style={{ flex: 1 }}><Boton titulo="¡Terminé!" icono="checkmark" onPress={onTerminar} /></Foco>
         ) : (
-          <Foco id="siguiente" style={{ flex: 1 }}><Boton titulo="Siguiente" icono="chevron-forward" onPress={() => setPaso(paso + 1)} /></Foco>
+          <Foco id="siguiente" style={{ flex: 1 }}><Boton titulo="Siguiente" icono="chevron-forward" onPress={() => { efecto('paso'); setPaso(paso + 1); }} /></Foco>
         )}
       </View>
     </View>
@@ -356,6 +360,7 @@ function VentanaCocine({ visible, receta, usados, esMia, onCerrar, onListo }) {
       registrar('lo_cocine', { receta: receta.id, primera: !count }, uid);
       const xp = esMia ? 'En tus propias recetas no se gana XP, pero cuenta para tus rachas y logros.'
         : count ? 'Ya la habías cocinado: cuenta para tus rachas y logros.' : '¡Ganaste 20 XP y el creador ganó 30!';
+      efecto('xp');
       Alert.alert('¡Buen provecho!', [xp, descontar && usados.length ? `Quitamos ${usados.length} ${usados.length === 1 ? 'ingrediente' : 'ingredientes'} de tu nevera.` : ''].filter(Boolean).join('\n'));
       onListo();
     } catch (e) {

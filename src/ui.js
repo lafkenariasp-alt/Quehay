@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { C } from './theme';
 import { Mascota } from './chefpu';
 import { ScrollCtx } from './foco';
+import { efecto } from './sonido';
 
 export function Pantalla({ children, scroll = true, pie = null }) {
   const ref = React.useRef(null);
@@ -205,6 +206,7 @@ export function Vacio({ icono = 'restaurant-outline', texto }) {
 
 // Cuando algo no carga: mensaje claro y botón para reintentar
 export function ErrorCarga({ mensaje, onReintentar, onVolver }) {
+  React.useEffect(() => { efecto('error'); }, []);
   return (
     <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, padding: 24, backgroundColor: C.fondo }}>
       <Mascota tam={120} expresion="triste" />

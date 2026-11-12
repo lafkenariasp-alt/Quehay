@@ -28,6 +28,7 @@
     "@react-navigation/native-stack": "*",
     "react-native-screens": "*",
     "expo-blur": "*",
-    "expo-haptics": "*"
+    "expo-haptics": "*",
+    "expo-audio": "*"
   }
 }

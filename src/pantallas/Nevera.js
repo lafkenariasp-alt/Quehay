@@ -7,6 +7,7 @@ import { C, CATEGORIAS_ING } from '../theme';
 import { Boton, Casilla, Encabezado, Grilla, Seccion, Vacio, Tarjeta, ErrorCarga, s } from '../ui';
 import { PideCuenta } from '../mascota';
 import SelectorIngredientes from '../SelectorIngredientes';
+import { efecto } from '../sonido';
 
 export default function Nevera({ activa }) {
   const { uid, invitado, perfil, recargarPerfil, nav, pedirCuenta, chefpu } = useApp();
@@ -48,6 +49,7 @@ export default function Nevera({ activa }) {
 
   async function quitarRapido(ing) {
     setItems((l) => l.filter((i) => i.ingrediente_id !== ing.id));
+    efecto('desmarcar');
     await supabase.from('nevera').delete().eq('usuario_id', uid).eq('ingrediente_id', ing.id);
   }
 

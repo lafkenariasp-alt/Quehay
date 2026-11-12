@@ -7,6 +7,7 @@ import { C } from '../theme';
 import { Pantalla, Encabezado, Boton, s } from '../ui';
 import { Mascota, Globo, PaqueteBienvenida } from '../mascota';
 import { registrar } from '../analitica';
+import { efecto } from '../sonido';
 
 // Cuentas con nick: Supabase pide un correo, así que el nick se convierte en un correo interno
 // (nick@usuarios.quehay.app). No se envía ningún correo: "Confirm email" debe estar apagado.
@@ -77,6 +78,7 @@ export default function Acceso({ motivo }) {
         });
         if (error) throw error;
         registrar('registro', { motivo: motivo || null }, data.user?.id || null);
+        efecto('regalo');
         if (!data.session) {
           Alert.alert('Cuenta creada', 'Ahora toca "Entrar" con tu nick y contraseña.');
           setModo('entrar');
@@ -87,6 +89,7 @@ export default function Acceso({ motivo }) {
       }
       await guardarRecordado(recordar ? { nick: texto, clave } : null);
     } catch (e) {
+      efecto('error');
       Alert.alert('No se pudo', traducir(e.message));
     } finally {
       setCargando(false);

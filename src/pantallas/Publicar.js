@@ -8,6 +8,7 @@ import { Pantalla, Encabezado, Seccion, Chip, Boton, Tarjeta, s } from '../ui';
 import SelectorIngredientes from '../SelectorIngredientes';
 import { PideCuenta } from '../mascota';
 import { elegirFoto, subirFoto } from '../fotos';
+import { efecto } from '../sonido';
 
 const VACIO = { foto: null, titulo: '', descripcion: '', minutos: '', porciones: '2', dificultad: 'Fácil', categorias: [], ingredientes: [], pasos: [''] };
 
@@ -62,6 +63,7 @@ export default function Publicar() {
 
     setF(VACIO);
     recargarPerfil();
+    efecto('xp');
     Alert.alert('¡Receta publicada!', 'Ganas 50 XP por receta (hasta 3 recetas con XP al día).');
     nav.abrir('receta', { id: data.id });
   }

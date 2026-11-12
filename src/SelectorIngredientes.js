@@ -5,6 +5,7 @@ import { supabase } from './supabase';
 import { C, CATEGORIAS_ING } from './theme';
 import { s, Chip } from './ui';
 import { useApp } from './contexto';
+import { efecto } from './sonido';
 
 // Ventana para agregar ingredientes del catálogo.
 // - Tocar un resultado lo agrega al tiro (y limpia el buscador para el siguiente).
@@ -45,7 +46,8 @@ export default function SelectorIngredientes({ visible, titulo = 'Agregar ingred
   }, [q, categoria, visible]);
 
   function agregar(ing) {
-    if (idsYa.has(ing.id)) { onQuitar && onQuitar(ing); return; }
+    if (idsYa.has(ing.id)) { efecto('desmarcar'); onQuitar && onQuitar(ing); return; }
+    efecto('marcar');
     onAgregar(ing);
     // limpia solo el término actual, deja los anteriores separados por coma
     const partes = q.split(',');
@@ -98,7 +100,7 @@ export default function SelectorIngredientes({ visible, titulo = 'Agregar ingred
             <Text style={s.sub}>{ya.length} agregados · toca uno para quitarlo</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
               {[...ya].reverse().map((i) => (
-                <Pressable key={i.id} onPress={() => onQuitar && onQuitar(i)} accessibilityRole="button" accessibilityLabel={onQuitar ? `Quitar ${i.nombre}` : i.nombre} hitSlop={{ top: 4, bottom: 4 }}
+                <Pressable key={i.id} onPress={() => { if (onQuitar) { efecto('desmarcar'); onQuitar(i); } }} accessibilityRole="button" accessibilityLabel={onQuitar ? `Quitar ${i.nombre}` : i.nombre} hitSlop={{ top: 4, bottom: 4 }}
                   style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 12, minHeight: 36, borderRadius: 999, backgroundColor: C.verdeTinte, borderWidth: 1, borderColor: C.verde }}>
                   <Text style={{ fontSize: 13, fontWeight: '800', color: C.verdeOscuro }}>{i.nombre}</Text>
                   {onQuitar ? <Ionicons name="close" size={14} color={C.verdeOscuro} /> : null}
