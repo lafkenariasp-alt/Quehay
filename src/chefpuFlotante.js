@@ -56,7 +56,7 @@ export function useChefpuVoz({ silencio }) {
 }
 
 // Chefpu flotante: se arrastra, se pega al borde, se oculta y abre su menú al tocarlo.
-export function ChefpuFlotante({ voz, visible, onQueCocino, onConsejo }) {
+export function ChefpuFlotante({ voz, visible, onQueCocino, onConsejo, onAmigos }) {
   const insets = useSafeAreaInsets();
   const reducido = useMovimientoReducido();
   const { width: W, height: H } = Dimensions.get('window');
@@ -157,7 +157,8 @@ export function ChefpuFlotante({ voz, visible, onQueCocino, onConsejo }) {
             <Ionicons name="restaurant" size={18} color={C.blanco} />
             <Text style={{ color: C.blanco, fontSize: 16, fontWeight: '800' }}>¿Qué cocino?</Text>
           </Pressable>
-          {[['bulb-outline', 'Consejo de esta pantalla', () => { setMenu(false); onConsejo(); }],
+          {[['people-outline', 'Amigos', () => { setMenu(false); onAmigos(); }],
+            ['bulb-outline', 'Consejo de esta pantalla', () => { setMenu(false); onConsejo(); }],
             ['eye-off-outline', 'Ocultar a Chefpu', ocultar]].map(([icono, texto, fn]) => (
             <Pressable key={texto} onPress={fn} accessibilityRole="button"
               style={({ pressed }) => ({ minHeight: 44, borderRadius: 12, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: pressed ? C.superficie : 'transparent' })}>

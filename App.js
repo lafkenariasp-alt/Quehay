@@ -36,7 +36,7 @@ function TutorialRepetido() {
   const { nav } = React.useContext(AppCtx);
   return <Bienvenida repetir onTerminar={(d) => { nav.volver(); if (d) setTimeout(() => nav.abrir(d.pantalla, d.params), 0); }} />;
 }
-const PANTALLAS = { tutorial: TutorialRepetido, resultados: Resultados, receta: Receta, usuarios: Usuarios, perfilPublico: PerfilPublico, acceso: Acceso };
+const PANTALLAS = { amigos: Usuarios, tutorial: TutorialRepetido, resultados: Resultados, receta: Receta, usuarios: Usuarios, perfilPublico: PerfilPublico, acceso: Acceso };
 const CLAVE_BIENVENIDA = 'bienvenida_v1';
 
 // Navegación nativa de iOS: transición de empuje y volver deslizando desde el borde izquierdo
@@ -220,12 +220,29 @@ function Contenido() {
       resultados: 'Verde es lo que tienes, ámbar lo que te falta. Arriba están las que puedes cocinar ya.',
       receta: 'Toca Paso a paso para cocinar conmigo. Si la cocinas, sube tu foto en Lo cociné.',
       usuarios: 'Busca a tus amigos por su nick y síguelos para ver sus recetas.',
+      amigos: 'Mira las sugerencias: te muestro gente de tu ciudad y con tus mismos gustos.',
       perfilPublico: 'Si te gustan sus recetas, síguelo. Si ves algo raro, repórtalo con la banderita.',
       acceso: 'Con una cuenta guardo tu nevera, tus recetas y tu XP.',
       tutorial: 'Toca lo que tengas y vemos qué cocinar.',
     };
     voz.decir('consejo', CONSEJOS[donde] || '¡Estoy aquí para ayudarte a cocinar!', 'feliz', { forzar: true });
   }, [pestana, voz.decir]);
+
+  // Chefpu sugiere a alguien cercano (una vez por sesión, respetando sus límites)
+  const sugerido = useRef(false);
+  useEffect(() => {
+    if (!enApp || !uidActual || tutorial.activo || sugerido.current) return undefined;
+    const t = setTimeout(async () => {
+      sugerido.current = true;
+      const { data } = await supabase.rpc('sugerir_amigos', { p_limite: 3 });
+      const p = (data || []).find((x) => Number(x.puntaje) >= 4);
+      if (!p) return;
+      voz.decir('sugerir_amigos', `${p.nombre}: ${p.motivo.charAt(0).toLowerCase()}${p.motivo.slice(1)}. ¿Lo conoces?`, 'feliz', {
+        acciones: [{ texto: 'Ver amigos', fn: () => nav.abrir('amigos') }, { texto: 'Ahora no', fn: () => {} }],
+      });
+    }, 25000);
+    return () => clearTimeout(t);
+  }, [enApp, uidActual, tutorial.activo]);
 
   if (sesion === undefined || bienvenidaVista === null || !tutorial.estado) return <Cargando />;
 
@@ -261,7 +278,7 @@ function Contenido() {
           ))}
         </Pila.Navigator>
       </NavigationContainer>
-      <ChefpuFlotante voz={voz} visible={verFlotante} onQueCocino={queCocino} onConsejo={consejo} />
+      <ChefpuFlotante voz={voz} visible={verFlotante} onQueCocino={queCocino} onConsejo={consejo} onAmigos={() => nav.abrir('amigos')} />
       <TutorialCapa />
       <RegaloTutorial />
       {teclado ? (

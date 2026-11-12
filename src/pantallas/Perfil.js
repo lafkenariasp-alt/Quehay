@@ -114,7 +114,15 @@ export default function Perfil({ activa }) {
               <Text style={{ fontSize: 12, fontWeight: '800', color: C.dorado }}>Fundador</Text>
             </View>
           ) : null}
-          <Text style={s.sub}>{conteo.seguidores} seguidores · {conteo.siguiendo} siguiendo</Text>
+          <View style={[s.fila, { gap: 4 }]}>
+            <Pressable onPress={() => nav.abrir('amigos', { pestana: 'seguidores' })} accessibilityRole="button" hitSlop={8} style={{ minHeight: 32, justifyContent: 'center' }}>
+              <Text style={s.sub}><Text style={{ fontWeight: '800', color: C.texto }}>{conteo.seguidores}</Text> seguidores</Text>
+            </Pressable>
+            <Text style={s.sub}>·</Text>
+            <Pressable onPress={() => nav.abrir('amigos', { pestana: 'siguiendo' })} accessibilityRole="button" hitSlop={8} style={{ minHeight: 32, justifyContent: 'center' }}>
+              <Text style={s.sub}><Text style={{ fontWeight: '800', color: C.texto }}>{conteo.siguiendo}</Text> siguiendo</Text>
+            </Pressable>
+          </View>
         </View>
       </View>
 
@@ -126,7 +134,7 @@ export default function Perfil({ activa }) {
         </View>
       </Tarjeta>
 
-      <Boton tipo="secundario" icono="people-outline" titulo="Buscar cocineros y amigos" onPress={() => nav.abrir('usuarios')} />
+      <Boton tipo="secundario" icono="people-outline" titulo="Amigos" onPress={() => nav.abrir('amigos')} />
       <Boton tipo="neutro" icono="school-outline" titulo="Repetir tutorial con Chefpu" onPress={repetirTutorial} />
 
       <Tarjeta>
