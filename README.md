@@ -23,6 +23,7 @@ App de recetas: cocina con lo que tienes en la nevera, comparte recetas y sube d
 | `migrations/005_titulos.sql` | Primer título: Aprendiz de cocina |
 | `migrations/004_estabilidad.sql` | Roles, topes de XP, foto única al cocinar, logros automáticos, reportes, propuestas de ingredientes, eventos para métricas, paquete de bienvenida |
 | `seed/03_mas_ingredientes.sql` | ~180 ingredientes más (se puede ejecutar de nuevo sin duplicar) |
+| `seed/04_recetas_chilenas.sql` | 52 recetas chilenas de todos los días, publicadas por la cuenta oficial `quehay` (no duplica) |
 | `cuentas/configurar_cuentas.sql` | Cuenta oficial, tu cuenta admin y cuentas de prueba (por nick) |
 | `cuentas/cambiar_clave.sql` | Restablecer la contraseña de alguien que la olvidó |
 | `tests/` | Pruebas locales (no se suben a Supabase) |
