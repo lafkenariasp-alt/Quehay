@@ -27,7 +27,7 @@ export const GUION = [
   { cap: 3, foco: 'paso_a_paso', cara: 'celebrando', texto: 'Ahora lo bueno: toca Paso a paso y cocinamos juntos.', esperar: { evento: 'paso_a_paso' } },
   // Capítulo 4 · Manos a la obra
   { cap: 4, capa: 'cocina', foco: 'texto_paso', cara: 'feliz', texto: 'Un paso a la vez, en letra grande. La pantalla no se apaga.' },
-  { cap: 4, capa: 'cocina', foco: 'siguiente', cara: 'feliz', texto: 'Toca Siguiente para avanzar. Puedes cocinar de verdad o solo mirar.', esperar: { evento: 'ultimo_paso' } },
+  { cap: 4, capa: 'cocina', foco: 'texto_paso', cara: 'feliz', texto: 'Como en las historias: toca a la derecha para avanzar o desliza. Llega al último paso.', esperar: { evento: 'ultimo_paso' } },
   { cap: 4, capa: 'cocina', foco: 'termine', cara: 'celebrando', texto: '¡Lo lograste! Toca ¡Terminé!', esperar: { evento: 'termine' } },
   // Epílogo · La recompensa
   { cap: 5, capa: 'regalo', foco: 'regalo', cara: 'celebrando', texto: '¡Gracias por ayudarme! Toma: insignia de bienvenida, 30 XP y Fundador.', esperar: { evento: 'regalo_cerrado' } },

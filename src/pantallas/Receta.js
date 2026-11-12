@@ -1,5 +1,5 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, Alert, Pressable, Image, Modal, TextInput, Switch, ScrollView } from 'react-native';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { View, Text, Alert, Pressable, Image, Modal, TextInput, Switch, ScrollView, Animated, Easing, PanResponder } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useKeepAwake } from 'expo-keep-awake';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -295,33 +295,86 @@ function ModoCocina({ receta, onCerrar, onTerminar }) {
   const insets = useSafeAreaInsets();
   const { tutorial } = useApp();
   const [paso, setPaso] = useState(0);
+  const [ancho, setAncho] = useState(1);
+  const [ayuda, setAyuda] = useState(true); // pista de cómo avanzar: se esconde al primer avance
   const total = receta.pasos.length;
   const ultimo = paso === total - 1;
+  const deslizar = useRef(new Animated.Value(0)).current;
   // tutorial: llegar al último paso desbloquea «¡Terminé!»
   useEffect(() => { if (ultimo) tutorial?.evento('ultimo_paso'); }, [ultimo, tutorial?.indice]);
+
+  // Como las historias de Instagram: tocar a la derecha avanza, a la izquierda vuelve; también se puede deslizar
+  const ir = useCallback((d) => {
+    setPaso((p) => {
+      const n = Math.min(Math.max(p + d, 0), total - 1);
+      if (n !== p) {
+        efecto('paso');
+        deslizar.setValue(d * 24);
+        Animated.timing(deslizar, { toValue: 0, duration: 180, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start();
+      }
+      return n;
+    });
+    setAyuda(false);
+  }, [total]);
+  const gesto = useRef(PanResponder.create({
+    // se captura antes que el scroll vertical, solo si el gesto es claramente horizontal
+    onMoveShouldSetPanResponderCapture: (e, g) => Math.abs(g.dx) > 14 && Math.abs(g.dx) > Math.abs(g.dy) * 1.5,
+    onPanResponderRelease: (e, g) => { if (g.dx < -40) ir(1); else if (g.dx > 40) ir(-1); },
+  })).current;
+  const tocar = (e) => ir(e.nativeEvent.locationX < ancho * 0.3 ? -1 : 1);
+
   return (
     <View style={{ flex: 1 }}>
-    <View style={{ flex: 1, backgroundColor: C.fondo, paddingTop: insets.top + 12, paddingBottom: insets.bottom + 16, paddingHorizontal: 24, gap: 14 }}>
-      <Pressable onPress={onCerrar} accessibilityRole="button" accessibilityLabel="Salir del modo cocina" style={[s.fila, { gap: 6, minHeight: 44, alignSelf: 'flex-start' }]}>
-        <Ionicons name="close" size={22} color={C.suave} />
-        <Text style={{ fontSize: 15, fontWeight: '700', color: C.suave }}>{receta.titulo}</Text>
-      </Pressable>
-      <Text style={{ fontSize: 15, fontWeight: '800', color: C.tomate }}>Paso {paso + 1} de {total}</Text>
-      <View style={{ height: 8, borderRadius: 4, backgroundColor: C.linea, overflow: 'hidden' }}>
-        <View style={{ width: `${Math.round(((paso + 1) / total) * 100)}%`, height: '100%', backgroundColor: C.tomate }} />
+    <View style={{ flex: 1, backgroundColor: C.fondo, paddingTop: insets.top + 8, paddingBottom: insets.bottom + 12, paddingHorizontal: 20, gap: 12 }}>
+      {/* Barras de avance por paso, como en las historias */}
+      <View style={{ flexDirection: 'row', gap: 4 }} accessible accessibilityLabel={`Paso ${paso + 1} de ${total}`}>
+        {receta.pasos.map((_, i) => (
+          <View key={i} style={{ flex: 1, height: 4, borderRadius: 2, backgroundColor: i <= paso ? C.tomate : C.linea }} />
+        ))}
       </View>
+      <View style={s.filaEntre}>
+        <Pressable onPress={onCerrar} accessibilityRole="button" accessibilityLabel="Salir del modo cocina" style={[s.fila, { gap: 6, minHeight: 44, flexShrink: 1 }]}>
+          <Ionicons name="close" size={24} color={C.texto} />
+          <Text numberOfLines={1} style={{ fontSize: 15, fontWeight: '700', color: C.suave, flexShrink: 1 }}>{receta.titulo}</Text>
+        </Pressable>
+        <Text style={{ fontSize: 15, fontWeight: '800', color: C.tomate }}>Paso {paso + 1} de {total}</Text>
+      </View>
+
       <Foco id="texto_paso" style={{ flex: 1 }}>
-        <ScrollView keyboardShouldPersistTaps="handled" style={{ flex: 1 }}>
-          <Text style={{ fontSize: 30, lineHeight: 39, fontWeight: '700', color: C.texto, letterSpacing: -0.3 }}>{receta.pasos[paso]}</Text>
-        </ScrollView>
+        <View style={{ flex: 1 }} {...gesto.panHandlers} onLayout={(e) => setAncho(e.nativeEvent.layout.width)}>
+          <ScrollView keyboardShouldPersistTaps="handled" style={{ flex: 1 }} contentContainerStyle={{ flexGrow: 1 }}>
+            <Pressable onPress={tocar} accessible={false} style={{ flexGrow: 1, justifyContent: 'center', paddingVertical: 16 }}>
+              <Animated.Text style={{ fontSize: 30, lineHeight: 39, fontWeight: '700', color: C.texto, letterSpacing: -0.3, transform: [{ translateX: deslizar }] }}>
+                {receta.pasos[paso]}
+              </Animated.Text>
+            </Pressable>
+          </ScrollView>
+        </View>
       </Foco>
-      <Text style={[s.sub, { textAlign: 'center' }]}>La pantalla se queda encendida mientras cocinas</Text>
-      <View style={{ flexDirection: 'row', gap: 10 }}>
-        <Boton tipo="neutro" titulo="Anterior" icono="chevron-back" deshabilitado={paso === 0} onPress={() => { efecto('paso'); setPaso(paso - 1); }} style={{ flex: 1 }} />
+
+      {ayuda && total > 1 ? (
+        <Text style={[s.sub, { textAlign: 'center', fontSize: 13 }]}>Toca a la derecha para avanzar y a la izquierda para volver, o desliza</Text>
+      ) : (
+        <Text style={[s.sub, { textAlign: 'center', fontSize: 13 }]}>La pantalla se queda encendida mientras cocinas</Text>
+      )}
+
+      {/* Botones chicos (también sirven con VoiceOver); el grande es solo para terminar */}
+      <View style={[s.filaEntre, { minHeight: 52 }]}>
+        <Pressable onPress={() => ir(-1)} disabled={paso === 0} accessibilityRole="button" accessibilityLabel="Paso anterior"
+          style={[s.fila, { gap: 4, minHeight: 44, paddingHorizontal: 12, borderRadius: 999, backgroundColor: C.superficie, opacity: paso === 0 ? 0.4 : 1 }]}>
+          <Ionicons name="chevron-back" size={18} color={C.texto} />
+          <Text style={{ fontSize: 14, fontWeight: '800', color: C.texto }}>Anterior</Text>
+        </Pressable>
         {ultimo ? (
-          <Foco id="termine" style={{ flex: 1 }}><Boton tipo="verde" titulo="¡Terminé!" icono="checkmark" onPress={onTerminar} /></Foco>
+          <Foco id="termine"><Boton tipo="verde" titulo="¡Terminé!" icono="checkmark" onPress={onTerminar} style={{ paddingHorizontal: 28 }} /></Foco>
         ) : (
-          <Foco id="siguiente" style={{ flex: 1 }}><Boton titulo="Siguiente" icono="chevron-forward" onPress={() => { efecto('paso'); setPaso(paso + 1); }} /></Foco>
+          <Foco id="siguiente">
+            <Pressable onPress={() => ir(1)} accessibilityRole="button" accessibilityLabel="Paso siguiente"
+              style={[s.fila, { gap: 4, minHeight: 44, paddingHorizontal: 14, borderRadius: 999, backgroundColor: C.tomateTinte }]}>
+              <Text style={{ fontSize: 14, fontWeight: '800', color: C.tomateOscuro }}>Siguiente</Text>
+              <Ionicons name="chevron-forward" size={18} color={C.tomateOscuro} />
+            </Pressable>
+          </Foco>
         )}
       </View>
     </View>

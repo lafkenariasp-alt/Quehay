@@ -195,9 +195,11 @@ export function TutorialCapa({ capa = 'raiz' }) {
   const m = 8; // aire alrededor del foco
   const hueco = rect ? { x: Math.max(0, rect.x - m), y: Math.max(0, rect.y - m), w: Math.min(W, rect.w + 2 * m), h: rect.h + 2 * m } : null;
   const arriba = hueco ? hueco.y + hueco.h / 2 > H * 0.5 : false; // Chefpu va arriba del foco si este está abajo
-  const posNarrador = hueco
-    ? (arriba ? { bottom: H - hueco.y + 12 } : { top: hueco.y + hueco.h + 12 })
-    : { bottom: insets.bottom + 40 };
+  // Si el foco ocupa casi toda la pantalla (p. ej. el texto del paso), Chefpu va abajo, encima del foco
+  const sinEspacio = hueco && hueco.y < 240 && H - (hueco.y + hueco.h) < 240;
+  const posNarrador = !hueco || sinEspacio
+    ? { bottom: insets.bottom + 24 }
+    : (arriba ? { bottom: H - hueco.y + 12 } : { top: hueco.y + hueco.h + 12 });
 
   return (
     <View style={{ position: 'absolute', left: 0, top: 0, width: W, height: H, zIndex: 1000, elevation: 1000 }} pointerEvents="box-none">
