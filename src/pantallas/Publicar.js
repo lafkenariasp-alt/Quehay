@@ -75,7 +75,7 @@ export default function Publicar() {
       <Pantalla pie={<Boton titulo="Publicar receta" icono="cloud-upload-outline" cargando={guardando} onPress={publicar} />}>
         <Encabezado titulo="Publicar receta" sub="Comparte lo que sabes cocinar · +50 XP" />
 
-        <Pressable onPress={async () => { const foto = await elegirFoto(); if (foto) cambiar('foto', foto); }}
+        <Pressable onPress={async () => { const foto = await elegirFoto(); if (foto) cambiar('foto', foto); }} accessibilityRole="button" accessibilityLabel={f.foto ? 'Cambiar foto de la receta' : 'Agregar foto de la receta'}
           style={{ width: '100%', aspectRatio: 4 / 3, borderRadius: 18, borderWidth: 2, borderStyle: f.foto ? 'solid' : 'dashed', borderColor: f.foto ? C.verde : '#CBBBA5', backgroundColor: C.blanco, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' }}>
           {f.foto ? (
             <Image source={{ uri: f.foto.uri }} style={{ width: '100%', height: '100%' }} />
@@ -127,7 +127,7 @@ export default function Publicar() {
             <Tarjeta key={i.id} style={{ gap: 8 }}>
               <View style={s.filaEntre}>
                 <Text style={s.etiqueta}>{i.nombre}</Text>
-                <Pressable onPress={() => cambiar('ingredientes', f.ingredientes.filter((x) => x.id !== i.id))} hitSlop={10} accessibilityLabel={`Quitar ${i.nombre}`}>
+                <Pressable onPress={() => cambiar('ingredientes', f.ingredientes.filter((x) => x.id !== i.id))} hitSlop={12} accessibilityRole="button" accessibilityLabel={`Quitar ${i.nombre}`}>
                   <Ionicons name="trash-outline" size={20} color={C.suave} />
                 </Pressable>
               </View>

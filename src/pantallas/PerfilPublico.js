@@ -52,7 +52,7 @@ export default function PerfilPublico({ id }) {
   return (
     <Pantalla>
       <Encabezado onVolver={nav.volver} titulo={p.nombre} sub={`@${p.usuario}`} derecha={id !== uid ? (
-        <Pressable onPress={() => reportar({ uid, tipo: 'perfil', objetoId: id, pedirCuenta })} hitSlop={10} accessibilityLabel="Reportar perfil">
+        <Pressable onPress={() => reportar({ uid, tipo: 'perfil', objetoId: id, pedirCuenta })} hitSlop={12} accessibilityRole="button" accessibilityLabel="Reportar perfil">
           <Ionicons name="flag-outline" size={22} color={C.suave} />
         </Pressable>
       ) : null} />

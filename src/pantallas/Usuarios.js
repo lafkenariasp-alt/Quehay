@@ -57,15 +57,15 @@ export default function Usuarios() {
     const loSigo = idsSigo.has(p.id);
     const amigos = loSigo && meSiguen.has(p.id);
     return (
-      <Pressable key={p.id} onPress={() => nav.abrir('perfilPublico', { id: p.id })}
+      <Pressable key={p.id} onPress={() => nav.abrir('perfilPublico', { id: p.id })} accessibilityRole="button" accessibilityHint="Abre su perfil"
         style={[s.fila, { gap: 12, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: C.linea }]}>
         <Avatar url={p.avatar_url} nombre={p.nombre} tam={48} />
         <View style={{ flex: 1 }}>
           <Text style={s.etiqueta}>{p.nombre}</Text>
           <Text style={s.sub}>Nivel {p.nivel} · {p.titulo}{amigos ? ' · Amigos' : meSiguen.has(p.id) ? ' · Te sigue' : ''}</Text>
         </View>
-        <Pressable onPress={() => alternar(p)} hitSlop={6}
-          style={{ minHeight: 40, paddingHorizontal: 14, borderRadius: 12, justifyContent: 'center', borderWidth: 1, borderColor: C.tomate, backgroundColor: loSigo ? C.blanco : C.tomate }}>
+        <Pressable onPress={() => alternar(p)} hitSlop={6} accessibilityRole="button" accessibilityLabel={loSigo ? `Dejar de seguir a ${p.nombre}` : `Seguir a ${p.nombre}`}
+          style={{ minHeight: 44, paddingHorizontal: 14, borderRadius: 12, justifyContent: 'center', borderWidth: 1, borderColor: C.tomate, backgroundColor: loSigo ? C.blanco : C.tomate }}>
           <Text style={{ fontSize: 13, fontWeight: '800', color: loSigo ? C.tomate : C.blanco }}>{loSigo ? 'Siguiendo' : 'Seguir'}</Text>
         </Pressable>
       </Pressable>
@@ -82,7 +82,7 @@ export default function Usuarios() {
         <TextInput value={q} onChangeText={setQ} placeholder="Nombre o usuario" placeholderTextColor={C.suave}
           autoCorrect={false} autoCapitalize="none" returnKeyType="search" style={{ flex: 1, fontSize: 15, color: C.texto }} />
         {q ? (
-          <Pressable onPress={() => setQ('')} hitSlop={8} accessibilityLabel="Borrar búsqueda">
+          <Pressable onPress={() => setQ('')} hitSlop={12} accessibilityRole="button" accessibilityLabel="Borrar búsqueda">
             <Ionicons name="close-circle" size={18} color={C.suave} />
           </Pressable>
         ) : null}

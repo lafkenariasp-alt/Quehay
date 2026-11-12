@@ -13,12 +13,13 @@ export const C = {
   verde: '#15803D',       // lo tienes / puedes cocinarla ya
   verdeOscuro: '#14532D',
   verdeTinte: '#E6F4EA',
-  ambar: '#D97706',       // te falta
+  ambar: '#C26A05',       // te falta (borde visible 3:1 sobre crema)
   ambarOscuro: '#92400E',
   ambarTexto: '#B45309',
   ambarTinte: '#FEF3E2',
   dorado: '#F59E0B',      // XP, niveles, recompensas
   doradoTinte: '#FEF3C7',
+  estrella: '#D97706',    // estrellas: dorado más oscuro para que se vean sobre blanco (3:1)
   gris: '#78716C',
   grisTinte: '#E7E3DC',
 };

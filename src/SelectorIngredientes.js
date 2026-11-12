@@ -86,7 +86,7 @@ export default function SelectorIngredientes({ visible, titulo = 'Agregar ingred
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1, backgroundColor: C.fondo, padding: 20, gap: 12 }}>
         <View style={s.filaEntre}>
           <Text style={s.seccion}>{titulo}</Text>
-          <Pressable onPress={cerrar} hitSlop={10}
+          <Pressable onPress={cerrar} hitSlop={10} accessibilityRole="button"
             style={{ flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: 40, paddingHorizontal: 16, borderRadius: 999, backgroundColor: C.tomate }}>
             <Ionicons name="checkmark" size={18} color={C.blanco} />
             <Text style={{ color: C.blanco, fontWeight: '800', fontSize: 15 }}>Listo{ya.length ? ` (${ya.length})` : ''}</Text>
@@ -98,7 +98,7 @@ export default function SelectorIngredientes({ visible, titulo = 'Agregar ingred
             <Text style={s.sub}>{ya.length} agregados · toca uno para quitarlo</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
               {[...ya].reverse().map((i) => (
-                <Pressable key={i.id} onPress={() => onQuitar && onQuitar(i)}
+                <Pressable key={i.id} onPress={() => onQuitar && onQuitar(i)} accessibilityRole="button" accessibilityLabel={onQuitar ? `Quitar ${i.nombre}` : i.nombre} hitSlop={{ top: 4, bottom: 4 }}
                   style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 12, minHeight: 36, borderRadius: 999, backgroundColor: C.verdeTinte, borderWidth: 1, borderColor: C.verde }}>
                   <Text style={{ fontSize: 13, fontWeight: '800', color: C.verdeOscuro }}>{i.nombre}</Text>
                   {onQuitar ? <Ionicons name="close" size={14} color={C.verdeOscuro} /> : null}
@@ -124,7 +124,7 @@ export default function SelectorIngredientes({ visible, titulo = 'Agregar ingred
             style={{ flex: 1, fontSize: 15, color: C.texto }}
           />
           {q ? (
-            <Pressable onPress={() => setQ('')} hitSlop={8} accessibilityLabel="Borrar búsqueda">
+            <Pressable onPress={() => setQ('')} hitSlop={12} accessibilityRole="button" accessibilityLabel="Borrar búsqueda">
               <Ionicons name="close-circle" size={18} color={C.suave} />
             </Pressable>
           ) : null}
@@ -149,7 +149,7 @@ export default function SelectorIngredientes({ visible, titulo = 'Agregar ingred
             q.split(',').pop().trim().length >= 2 ? (
               <View style={{ alignItems: 'center', gap: 10, marginTop: 24 }}>
                 <Text style={s.sub}>No encontramos "{q.split(',').pop().trim()}" en el catálogo</Text>
-                <Pressable onPress={proponer} style={{ minHeight: 44, paddingHorizontal: 16, borderRadius: 12, borderWidth: 1, borderColor: C.tomate, justifyContent: 'center' }}>
+                <Pressable onPress={proponer} accessibilityRole="button" style={{ minHeight: 44, paddingHorizontal: 16, borderRadius: 12, borderWidth: 1, borderColor: C.tomate, justifyContent: 'center' }}>
                   <Text style={{ fontWeight: '800', color: C.tomate }}>Proponer "{q.split(',').pop().trim()}"</Text>
                 </Pressable>
               </View>
@@ -160,7 +160,7 @@ export default function SelectorIngredientes({ visible, titulo = 'Agregar ingred
           renderItem={({ item }) => {
             const marcado = idsYa.has(item.id);
             return (
-              <Pressable onPress={() => agregar(item)} style={[s.fila, { paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: C.linea }]}>
+              <Pressable onPress={() => agregar(item)} accessibilityRole="button" accessibilityLabel={`Agregar ${item.nombre}`} style={[s.fila, { paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: C.linea }]}>
                 <Ionicons name={marcado ? 'checkmark-circle' : 'add-circle-outline'} size={26} color={marcado ? C.verde : C.tomate} />
                 <View style={{ flex: 1 }}>
                   <Text style={{ fontSize: 16, fontWeight: '700', color: C.texto }}>{item.nombre}</Text>

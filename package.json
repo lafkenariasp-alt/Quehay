@@ -23,6 +23,9 @@
     "react": "*",
     "react-native": "*",
     "react-native-safe-area-context": "*",
-    "react-native-url-polyfill": "^2.0.0"
+    "react-native-url-polyfill": "^2.0.0",
+    "@react-navigation/native": "*",
+    "@react-navigation/native-stack": "*",
+    "react-native-screens": "*"
   }
 }

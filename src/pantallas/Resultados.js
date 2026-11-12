@@ -67,7 +67,7 @@ export default function Resultados({ tengo = [], maxFaltan = 4, basicos = true, 
             <Text style={s.etiqueta}><Text style={{ color: C.verde }}>Verde</Text> = lo tienes · <Text style={{ color: C.ambarTexto }}>Ámbar</Text> = te falta</Text>
             <Text style={s.sub}>Toca una receta para ver cómo se hace.</Text>
           </View>
-          <Pressable onPress={() => setAyuda(false)} hitSlop={10} accessibilityLabel="Cerrar ayuda">
+          <Pressable onPress={() => setAyuda(false)} hitSlop={12} accessibilityRole="button" accessibilityLabel="Cerrar ayuda">
             <Ionicons name="close" size={20} color={C.suave} />
           </Pressable>
         </View>

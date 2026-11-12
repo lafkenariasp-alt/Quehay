@@ -126,7 +126,7 @@ export default function Acceso({ motivo }) {
             textContentType={modo === 'registro' ? 'newPassword' : 'password'}
             autoComplete={modo === 'registro' ? 'new-password' : 'current-password'}
             passwordRules={`minlength: ${MIN_CLAVE};`} value={clave} onChangeText={setClave} onSubmitEditing={enviar} />
-          <Pressable onPress={() => setVerClave(!verClave)} style={{ minHeight: 44, minWidth: 56, alignItems: 'center', justifyContent: 'center' }}>
+          <Pressable onPress={() => setVerClave(!verClave)} accessibilityRole="button" accessibilityLabel={verClave ? 'Ocultar contraseña' : 'Ver contraseña'} style={{ minHeight: 44, minWidth: 56, alignItems: 'center', justifyContent: 'center' }}>
             <Text style={{ fontSize: 14, fontWeight: '700', color: C.suave }}>{verClave ? 'Ocultar' : 'Ver'}</Text>
           </Pressable>
         </View>
@@ -137,13 +137,13 @@ export default function Acceso({ motivo }) {
         </View>
         <Boton titulo={modo === 'registro' ? 'Crear cuenta y abrir regalo' : 'Entrar'} icono={modo === 'registro' ? 'gift-outline' : 'log-in-outline'} onPress={enviar} cargando={cargando} />
         {modo === 'entrar' ? (
-          <Pressable onPress={recuperar} style={{ minHeight: 44, alignItems: 'center', justifyContent: 'center' }}>
+          <Pressable onPress={recuperar} accessibilityRole="button" style={{ minHeight: 44, alignItems: 'center', justifyContent: 'center' }}>
             <Text style={{ fontSize: 14, fontWeight: '700', color: C.suave }}>Olvidé mi contraseña</Text>
           </Pressable>
         ) : null}
         <Boton tipo="neutro" titulo={modo === 'registro' ? 'Ya tengo cuenta' : 'Crear una cuenta nueva'}
           onPress={() => setModo(modo === 'registro' ? 'entrar' : 'registro')} />
-        <Pressable onPress={nav.volver} style={{ minHeight: 44, alignItems: 'center', justifyContent: 'center' }}>
+        <Pressable onPress={nav.volver} accessibilityRole="button" style={{ minHeight: 44, alignItems: 'center', justifyContent: 'center' }}>
           <Text style={{ fontSize: 14, fontWeight: '700', color: C.suave }}>Ahora no, sigo mirando recetas</Text>
         </Pressable>
       </View>

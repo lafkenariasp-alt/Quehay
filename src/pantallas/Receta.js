@@ -117,11 +117,11 @@ export default function Receta({ id, tengo = null, basicos = true }) {
           derecha={
             <View style={[s.fila, { gap: 14 }]}>
               {!esMia ? (
-                <Pressable onPress={() => reportar({ uid, tipo: 'receta', objetoId: r.id, pedirCuenta })} hitSlop={10} accessibilityLabel="Reportar receta">
+                <Pressable onPress={() => reportar({ uid, tipo: 'receta', objetoId: r.id, pedirCuenta })} hitSlop={12} accessibilityRole="button" accessibilityLabel="Reportar receta">
                   <Ionicons name="flag-outline" size={22} color={C.suave} />
                 </Pressable>
               ) : null}
-              <Pressable onPress={alternarLike} hitSlop={10} accessibilityLabel={meGusta ? 'Quitar me gusta' : 'Me gusta'}>
+              <Pressable onPress={alternarLike} hitSlop={12} accessibilityRole="button" accessibilityState={{ selected: !!meGusta }} accessibilityLabel={meGusta ? 'Quitar me gusta' : 'Me gusta'}>
                 <Ionicons name={meGusta ? 'heart' : 'heart-outline'} size={28} color={C.tomate} />
               </Pressable>
             </View>
@@ -209,7 +209,7 @@ export default function Receta({ id, tengo = null, basicos = true }) {
                   <View style={s.filaEntre}>
                     <Text style={s.etiqueta}>{v.perfiles?.nombre}{v.usuario_id === uid ? ' (tú)' : ''}</Text>
                     {v.usuario_id !== uid ? (
-                      <Pressable onPress={() => reportar({ uid, tipo: 'asi_me_quedo', objetoId: v.id, pedirCuenta })} hitSlop={10} accessibilityLabel="Reportar esta foto">
+                      <Pressable onPress={() => reportar({ uid, tipo: 'asi_me_quedo', objetoId: v.id, pedirCuenta })} hitSlop={14} accessibilityRole="button" accessibilityLabel="Reportar esta foto">
                         <Ionicons name="flag-outline" size={18} color={C.suave} />
                       </Pressable>
                     ) : null}
@@ -226,7 +226,7 @@ export default function Receta({ id, tengo = null, basicos = true }) {
                 <View style={[s.fila, { marginLeft: 20 }]}>
                   <TextInput style={[s.input, { flex: 1 }]} placeholder="Responde como creador (+10 XP)" placeholderTextColor={C.suave}
                     value={respuestas[v.id] || ''} onChangeText={(t) => setRespuestas((x) => ({ ...x, [v.id]: t }))} maxLength={500} />
-                  <Pressable onPress={() => responder(v.id)} hitSlop={8} accessibilityLabel="Enviar respuesta"
+                  <Pressable onPress={() => responder(v.id)} hitSlop={12} accessibilityRole="button" accessibilityLabel="Enviar respuesta"
                     style={{ width: 48, height: 48, borderRadius: 14, backgroundColor: C.tomate, alignItems: 'center', justifyContent: 'center' }}>
                     <Ionicons name="send" size={18} color={C.blanco} />
                   </Pressable>
@@ -266,7 +266,7 @@ function ModoCocina({ receta, onCerrar, onTerminar }) {
     <View style={{ flex: 1, backgroundColor: C.fondo, paddingTop: insets.top + 12, paddingBottom: insets.bottom + 16, paddingHorizontal: 20, gap: 16 }}>
       <View style={s.filaEntre}>
         <Text style={s.sub}>{receta.titulo}</Text>
-        <Pressable onPress={onCerrar} hitSlop={10} accessibilityLabel="Salir del modo cocina">
+        <Pressable onPress={onCerrar} hitSlop={12} accessibilityRole="button" accessibilityLabel="Salir del modo cocina">
           <Ionicons name="close" size={28} color={C.texto} />
         </Pressable>
       </View>
@@ -341,13 +341,13 @@ function VentanaCocine({ visible, receta, usados, esMia, onCerrar, onListo }) {
       <ScrollView style={{ flex: 1, backgroundColor: C.fondo }} contentContainerStyle={{ padding: 20, gap: 18 }} keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive" automaticallyAdjustKeyboardInsets>
         <View style={s.filaEntre}>
           <Text style={s.seccion}>¿Cómo te quedó?</Text>
-          <Pressable onPress={onCerrar} hitSlop={10} accessibilityLabel="Cerrar">
+          <Pressable onPress={onCerrar} hitSlop={12} accessibilityRole="button" accessibilityLabel="Cerrar">
             <Ionicons name="close" size={26} color={C.texto} />
           </Pressable>
         </View>
         <Text style={s.sub}>{receta.titulo} · la foto se toma con la cámara en este momento</Text>
 
-        <Pressable onPress={tomar}
+        <Pressable onPress={tomar} accessibilityRole="button" accessibilityLabel={foto ? 'Tomar otra foto del plato' : 'Tomar foto del plato con la cámara'}
           style={{ width: '100%', aspectRatio: 4 / 3, borderRadius: 18, borderWidth: 2, borderStyle: foto ? 'solid' : 'dashed', borderColor: foto ? C.verde : '#CBBBA5', backgroundColor: C.blanco, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' }}>
           {foto ? (
             <Image source={{ uri: foto.uri }} style={{ width: '100%', height: '100%' }} />

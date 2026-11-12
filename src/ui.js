@@ -27,7 +27,7 @@ export function Encabezado({ titulo, sub, onVolver, derecha }) {
   return (
     <View style={s.encabezado}>
       {onVolver ? (
-        <Pressable onPress={onVolver} hitSlop={10} style={s.volver} accessibilityLabel="Volver">
+        <Pressable onPress={onVolver} hitSlop={10} style={s.volver} accessibilityRole="button" accessibilityLabel="Volver">
           <Ionicons name="chevron-back" size={26} color={C.texto} />
         </Pressable>
       ) : null}
@@ -62,6 +62,9 @@ export function Boton({ titulo, onPress, tipo = 'principal', icono, cargando, de
     <Pressable
       onPress={onPress}
       disabled={deshabilitado || cargando}
+      accessibilityRole="button"
+      accessibilityLabel={titulo}
+      accessibilityState={{ disabled: !!(deshabilitado || cargando), busy: !!cargando }}
       style={({ pressed }) => [
         s.boton,
         { backgroundColor: estilos.bg, borderColor: estilos.borde, opacity: deshabilitado ? 0.5 : pressed ? 0.85 : 1 },
@@ -84,6 +87,10 @@ export function Chip({ texto, activo, onPress, icono }) {
   return (
     <Pressable
       onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={texto}
+      accessibilityState={{ selected: !!activo }}
+      hitSlop={{ top: 4, bottom: 4 }}
       style={[s.chip, activo && { backgroundColor: C.tomateTinte, borderColor: C.tomate }]}
     >
       {icono ? <Ionicons name={icono} size={14} color={activo ? C.tomateOscuro : C.texto} /> : null}
@@ -101,18 +108,25 @@ export function Casilla({ nombre, estado = 'tengo', detalle, onPress, onLongPres
     vacia: { bg: C.blanco, borde: '#CBBBA5', fg: C.suave, estilo: 'dashed' },
     vacia_nombre: { bg: C.blanco, borde: C.linea, fg: C.texto, estilo: 'solid' }, // opción sin elegir
   }[estado];
+  const dice = { tengo: 'lo tienes', falta: 'te falta', vence: 'por vencer', vacia: '', vacia_nombre: 'no lo tienes' }[estado];
+  const etiqueta = estado === 'vacia' ? 'Agregar ingrediente' : [nombre, dice, detalle].filter(Boolean).join(', ');
   return (
     <Pressable
       onPress={onPress}
       onLongPress={onLongPress}
-      style={[s.casilla, { width: ancho, backgroundColor: e.bg, borderColor: e.borde, borderStyle: e.estilo }]}
+      disabled={!onPress && !onLongPress}
+      accessibilityRole={onPress || onLongPress ? 'button' : 'text'}
+      accessibilityLabel={etiqueta}
+      accessibilityState={estado === 'vacia_nombre' || (estado === 'tengo' && onPress) ? { selected: estado === 'tengo' } : undefined}
+      accessibilityHint={onLongPress ? 'Mantén presionado para más opciones' : undefined}
+      style={({ pressed }) => [s.casilla, { width: ancho, backgroundColor: e.bg, borderColor: e.borde, borderStyle: e.estilo, opacity: pressed ? 0.8 : 1 }]}
     >
       {estado === 'vacia' ? (
         <Ionicons name="add" size={22} color={e.fg} />
       ) : (
         <>
-          <Text style={[s.casillaTexto, { color: e.fg }]} numberOfLines={2}>{nombre}</Text>
-          {detalle ? <Text style={[s.casillaDetalle, { color: e.fg }]} numberOfLines={1}>{detalle}</Text> : null}
+          <Text style={[s.casillaTexto, { color: e.fg }]} numberOfLines={3} maxFontSizeMultiplier={1.6}>{nombre}</Text>
+          {detalle ? <Text style={[s.casillaDetalle, { color: e.fg }]} numberOfLines={1} maxFontSizeMultiplier={1.4}>{detalle}</Text> : null}
         </>
       )}
     </Pressable>
@@ -124,16 +138,34 @@ export function Grilla({ children }) {
 }
 
 export function Tarjeta({ children, style, onPress }) {
-  const Comp = onPress ? Pressable : View;
-  return <Comp onPress={onPress} style={[s.tarjeta, style]}>{children}</Comp>;
+  if (!onPress) return <View style={[s.tarjeta, style]}>{children}</View>;
+  return (
+    <Pressable onPress={onPress} accessibilityRole="button"
+      style={({ pressed }) => [s.tarjeta, style, pressed && { opacity: 0.9 }]}>
+      {children}
+    </Pressable>
+  );
 }
 
 export function Estrellas({ valor = 0, tam = 14, onCambiar }) {
+  const n = Math.round(valor);
+  // Solo lectura: VoiceOver lee "Nota 4 de 5" una vez, no cinco íconos
+  if (!onCambiar) {
+    return (
+      <View style={{ flexDirection: 'row', gap: 2 }} accessible accessibilityLabel={`Nota ${n} de 5`}>
+        {[1, 2, 3, 4, 5].map((k) => (
+          <Ionicons key={k} name={k <= n ? 'star' : 'star-outline'} size={tam} color={C.estrella} />
+        ))}
+      </View>
+    );
+  }
   return (
-    <View style={{ flexDirection: 'row', gap: 2 }}>
-      {[1, 2, 3, 4, 5].map((n) => (
-        <Pressable key={n} disabled={!onCambiar} onPress={() => onCambiar && onCambiar(n)} hitSlop={4}>
-          <Ionicons name={n <= Math.round(valor) ? 'star' : 'star-outline'} size={tam} color={C.dorado} />
+    <View style={{ flexDirection: 'row', gap: 4 }} accessibilityRole="radiogroup" accessibilityLabel="Tu nota">
+      {[1, 2, 3, 4, 5].map((k) => (
+        <Pressable key={k} onPress={() => onCambiar(k)} hitSlop={6}
+          accessibilityRole="radio" accessibilityLabel={`${k} ${k === 1 ? 'estrella' : 'estrellas'}`} accessibilityState={{ checked: k === n }}
+          style={{ minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' }}>
+          <Ionicons name={k <= n ? 'star' : 'star-outline'} size={Math.max(tam, 28)} color={C.estrella} />
         </Pressable>
       ))}
     </View>
@@ -186,7 +218,7 @@ export const s = StyleSheet.create({
   contenido: { padding: 20, gap: 20, paddingBottom: 32 },
   pie: { padding: 16, paddingHorizontal: 20, borderTopWidth: 1, borderTopColor: C.linea, backgroundColor: C.fondo },
   encabezado: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  volver: { width: 36, height: 44, justifyContent: 'center', marginLeft: -8 },
+  volver: { width: 44, height: 44, justifyContent: 'center', marginLeft: -8 },
   titulo: { fontSize: 26, fontWeight: '700', color: C.texto },
   sub: { fontSize: 13, fontWeight: '600', color: C.suave },
   seccion: { fontSize: 19, fontWeight: '700' },
@@ -197,9 +229,9 @@ export const s = StyleSheet.create({
   chip: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 38, paddingHorizontal: 14, borderRadius: 999, borderWidth: 1, borderColor: C.linea, backgroundColor: C.blanco },
   chipTexto: { fontSize: 13, fontWeight: '700', color: C.texto },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  casilla: { height: 68, borderRadius: 12, borderWidth: 2, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4, gap: 2 },
-  casillaTexto: { fontSize: 12, fontWeight: '800', textAlign: 'center' },
-  casillaDetalle: { fontSize: 11, fontWeight: '600' },
+  casilla: { minHeight: 68, paddingVertical: 6, borderRadius: 12, borderWidth: 2, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4, gap: 2 },
+  casillaTexto: { fontSize: 13, fontWeight: '800', textAlign: 'center' },
+  casillaDetalle: { fontSize: 12, fontWeight: '600' },
   grilla: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   tarjeta: { backgroundColor: C.blanco, borderRadius: 18, borderWidth: 1, borderColor: C.linea, padding: 14, gap: 10 },
   input: { minHeight: 48, borderRadius: 14, borderWidth: 1, borderColor: C.linea, backgroundColor: C.blanco, paddingHorizontal: 14, fontSize: 15, color: C.texto },

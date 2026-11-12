@@ -35,3 +35,8 @@
 4. [P2] adapt: ancho máximo y grilla para iPad.
 5. [P2] typeset: casillas que crecen con la letra del sistema.
 6. polish final.
+
+## Arreglado (P1)
+- Navegación nativa (React Navigation native-stack): transición de empuje de iOS y volver deslizando desde el borde; botón atrás de Android.
+- VoiceOver: casillas dicen "Huevos, lo tienes / te falta"; botones con rol y etiqueta; estrellas como grupo de opciones ("4 estrellas") y nota de solo lectura ("Nota 4 de 5"); pestañas con rol tab.
+- De paso (P2): casillas crecen con la letra del sistema (sin alto fijo, texto 13 pt), estrellas y borde "falta" con contraste 3:1, áreas de toque de 44 pt en reportar, seguir, borrar búsqueda, volver y chips.

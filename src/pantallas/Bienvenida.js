@@ -44,7 +44,7 @@ export default function Bienvenida({ onTerminar }) {
         </View>
         <View style={{ gap: 10 }}>
           <Boton titulo="Empezar" icono="arrow-forward" onPress={() => setPaso(1)} />
-          <Pressable onPress={() => onTerminar({ pantalla: 'acceso', params: {} })} style={{ minHeight: 44, alignItems: 'center', justifyContent: 'center' }}>
+          <Pressable onPress={() => onTerminar({ pantalla: 'acceso', params: {} })} accessibilityRole="button" style={{ minHeight: 44, alignItems: 'center', justifyContent: 'center' }}>
             <Text style={{ fontSize: 15, fontWeight: '800', color: C.tomate }}>Ya tengo cuenta</Text>
           </Pressable>
         </View>
@@ -68,7 +68,7 @@ export default function Bienvenida({ onTerminar }) {
         {elegidos.filter((e) => !TIPICOS.includes(e.nombre)).length ? (
           <View style={s.chips}>
             {elegidos.filter((e) => !TIPICOS.includes(e.nombre)).map((e) => (
-              <Pressable key={e.id} onPress={() => alternar(e)} style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 12, minHeight: 36, borderRadius: 999, backgroundColor: C.verdeTinte, borderWidth: 1, borderColor: C.verde }}>
+              <Pressable key={e.id} onPress={() => alternar(e)} accessibilityRole="button" accessibilityLabel={`Quitar ${e.nombre}`} style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 12, minHeight: 44, borderRadius: 999, backgroundColor: C.verdeTinte, borderWidth: 1, borderColor: C.verde }}>
                 <Text style={{ fontSize: 13, fontWeight: '800', color: C.verdeOscuro }}>{e.nombre}</Text>
                 <Ionicons name="close" size={14} color={C.verdeOscuro} />
               </Pressable>

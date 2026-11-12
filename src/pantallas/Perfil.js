@@ -81,7 +81,7 @@ export default function Perfil({ activa }) {
   return (
     <Pantalla>
       <View style={[s.fila, { gap: 16 }]}>
-        <Pressable onPress={cambiarFoto} accessibilityLabel="Cambiar foto de perfil">
+        <Pressable onPress={cambiarFoto} accessibilityRole="button" accessibilityLabel="Cambiar foto de perfil">
           <Avatar url={perfil.avatar_url} nombre={perfil.nombre} tam={84} borde={C.dorado} />
           <View style={{ position: 'absolute', left: -4, bottom: -4, width: 30, height: 30, borderRadius: 15, backgroundColor: C.tomate, borderWidth: 3, borderColor: C.fondo, alignItems: 'center', justifyContent: 'center' }}>
             <Ionicons name="camera" size={14} color={C.blanco} />
