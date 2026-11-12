@@ -6,7 +6,7 @@ import { useApp } from '../contexto';
 import { C } from '../theme';
 import { Pantalla, Encabezado, Boton, s } from '../ui';
 import { Mascota, Globo, PaqueteBienvenida } from '../mascota';
-import { registrar } from '../analitica';
+import { registrar, idDispositivo } from '../analitica';
 import { efecto } from '../sonido';
 
 // Cuentas con nick: Supabase pide un correo, así que el nick se convierte en un correo interno
@@ -35,7 +35,8 @@ async function guardarRecordado(datos) {
 // motivo: lo que intentaba hacer ("Tu plato y tus 20 XP están listos: guárdalos")
 // puerta: pantalla de entrada tras cerrar sesión (sin volver ni modo invitado)
 export default function Acceso({ motivo, puerta = false }) {
-  const { nav } = useApp();
+  const { nav, tutorial } = useApp();
+  const regaloListo = !!tutorial?.estado?.completado; // terminó el tutorial como invitado: la cuenta reclama el regalo
   const [modo, setModo] = useState(motivo ? 'registro' : 'entrar'); // entrar | registro
   const [nick, setNick] = useState('');
   const [clave, setClave] = useState('');
@@ -69,6 +70,9 @@ export default function Acceso({ motivo, puerta = false }) {
     try {
       if (modo === 'registro') {
         const n = limpiarNick(texto);
+        const disp = await idDispositivo();
+        const { data: puede } = await supabase.rpc('puede_registrar', { p_dispositivo: disp });
+        if (puede === false) { Alert.alert('Límite de cuentas', 'Desde este teléfono ya se crearon 3 cuentas hoy. Prueba mañana o entra con una que ya tengas.'); return; }
         const { data: libre, error: e1 } = await supabase.rpc('usuario_disponible', { p_usuario: n });
         if (e1) throw e1;
         if (!libre) { Alert.alert('Ese nick ya existe', 'Prueba con otro, por ejemplo agregando un número.'); return; }
@@ -79,7 +83,6 @@ export default function Acceso({ motivo, puerta = false }) {
         });
         if (error) throw error;
         registrar('registro', { motivo: motivo || null }, data.user?.id || null);
-        efecto('regalo');
         if (!data.session) {
           Alert.alert('Cuenta creada', 'Ahora toca "Entrar" con tu nick y contraseña.');
           setModo('entrar');
@@ -108,10 +111,12 @@ export default function Acceso({ motivo, puerta = false }) {
       {modo === 'registro' ? (
         <>
           <View style={[s.fila, { gap: 12, alignItems: 'flex-end' }]}>
-            <Mascota tam={80} accesorio="delantal_bienvenida" />
-            <Globo texto={motivo || '¡Te tengo un regalo! Crea tu cuenta para abrirlo.'} style={{ flex: 1 }} />
+            <Mascota tam={80} accesorio={regaloListo ? 'delantal_bienvenida' : null} />
+            <Globo texto={motivo || (regaloListo ? '¡Tu regalo te espera! Crea tu cuenta para reclamarlo.' : 'Crea tu cuenta para guardar tu nevera, tus recetas y tu XP.')} style={{ flex: 1 }} />
           </View>
-          <PaqueteBienvenida />
+          {regaloListo ? <PaqueteBienvenida /> : (
+            <Text style={{ fontSize: 14, color: C.suave }}>Termina el tutorial con Chefpu y gana una insignia, 30 XP y el título Fundador.</Text>
+          )}
         </>
       ) : (
         <View style={[s.fila, { gap: 12, alignItems: 'flex-end' }]}>
@@ -139,7 +144,7 @@ export default function Acceso({ motivo, puerta = false }) {
           <Switch value={recordar} onValueChange={(v) => { setRecordar(v); if (!v) guardarRecordado(null); }}
             trackColor={{ true: C.verde, false: '#CBBBA5' }} />
         </View>
-        <Boton titulo={modo === 'registro' ? 'Crear cuenta y abrir regalo' : 'Entrar'} icono={modo === 'registro' ? 'gift-outline' : 'log-in-outline'} onPress={enviar} cargando={cargando} />
+        <Boton titulo={modo === 'registro' ? (regaloListo ? 'Crear cuenta y reclamar regalo' : 'Crear cuenta') : 'Entrar'} icono={modo === 'registro' ? 'gift-outline' : 'log-in-outline'} onPress={enviar} cargando={cargando} />
         {modo === 'entrar' ? (
           <Pressable onPress={recuperar} accessibilityRole="button" style={{ minHeight: 44, alignItems: 'center', justifyContent: 'center' }}>
             <Text style={{ fontSize: 14, fontWeight: '700', color: C.suave }}>Olvidé mi contraseña</Text>

@@ -19,14 +19,13 @@ export function Globo({ texto, style }) {
 // Lo que gana quien crea su cuenta
 export function PaqueteBienvenida() {
   const items = [
-    ['shirt-outline', 'Delantal exclusivo para tu mascota'],
-    ['flash-outline', '+30 XP de regalo para empezar'],
-    ['file-tray-stacked-outline', 'Tus ingredientes guardados en tu nevera'],
-    ['ribbon-outline', 'Título Fundador si estás entre los primeros 1.000'],
+    ['ribbon-outline', 'Insignia de bienvenida para Chefpu'],
+    ['flash-outline', '+30 XP para empezar'],
+    ['star-outline', 'Título Fundador si estás entre los primeros 1.000'],
   ];
   return (
     <View style={{ gap: 10, padding: 16, borderRadius: 18, backgroundColor: C.doradoTinte }}>
-      <Text style={{ fontSize: 12, fontWeight: '800', color: C.ambarOscuro, letterSpacing: 0.5 }}>TU PAQUETE DE BIENVENIDA</Text>
+      <Text style={{ fontSize: 12, fontWeight: '800', color: C.ambarOscuro, letterSpacing: 0.5 }}>REGALO AL TERMINAR EL TUTORIAL CON CHEFPU</Text>
       {items.map(([icono, texto]) => (
         <View key={texto} style={s.fila}>
           <Ionicons name={icono} size={20} color={C.ambarOscuro} />

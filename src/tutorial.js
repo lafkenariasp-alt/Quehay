@@ -246,7 +246,7 @@ export function TutorialCapa({ capa = 'raiz' }) {
 
 // ---------- Celebración final con el regalo ----------
 export function RegaloTutorial() {
-  const { tutorial, invitado, nav } = useApp();
+  const { tutorial, invitado, nav, pedirCuenta } = useApp();
   // al cerrar, volvemos a las pestañas para que Chefpu presente su lugar y la nevera
   const cerrar = () => { tutorial.evento('regalo_cerrado'); nav.irA(invitado ? 'buscar' : 'nevera'); };
   const pendiente = !!tutorial?.estado?.regaloPendiente;
@@ -295,8 +295,15 @@ export function RegaloTutorial() {
                 </View>
               ))}
             </View>
-            <Text style={[s.sub, { textAlign: 'center' }]}>{invitado ? 'Queda guardado en este teléfono. Si algún día creas tu cuenta, se suma a tu perfil.' : 'Ya está en tu perfil.'}</Text>
-            <Boton titulo="¡A cocinar!" icono="restaurant-outline" onPress={cerrar} style={{ alignSelf: 'stretch' }} />
+            <Text style={[s.sub, { textAlign: 'center' }]}>{invitado ? 'Crea tu cuenta para reclamarlo. Queda guardado en este teléfono hasta que lo hagas.' : 'Ya está en tu perfil.'}</Text>
+            {invitado ? (
+              <>
+                <Boton titulo="Crear cuenta y reclamar" icono="gift-outline" onPress={() => { cerrar(); setTimeout(() => pedirCuenta('¡Tu regalo te espera! Crea tu cuenta para reclamarlo.'), 300); }} style={{ alignSelf: 'stretch' }} />
+                <Boton tipo="neutro" titulo="Después" onPress={cerrar} style={{ alignSelf: 'stretch' }} />
+              </>
+            ) : (
+              <Boton titulo="¡A cocinar!" icono="restaurant-outline" onPress={cerrar} style={{ alignSelf: 'stretch' }} />
+            )}
           </Foco>
         </Animated.View>
         <TutorialCapa capa="regalo" />

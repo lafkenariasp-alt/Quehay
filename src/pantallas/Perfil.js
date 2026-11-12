@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, Alert, Pressable, Vibration } from 'react-native';
+import { View, Text, Alert, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../supabase';
 import { useApp } from '../contexto';
@@ -7,7 +7,7 @@ import { C, RAREZA, xpParaNivel } from '../theme';
 import { Pantalla, Seccion, Boton, Tarjeta, TarjetaReceta, Pastilla, Interruptor, Cargando, Chip, Avatar, s } from '../ui';
 import { desdeCamara, desdeGaleria, subirFoto } from '../fotos';
 import { Mascota, PideCuenta } from '../mascota';
-import { useAjustesSonido, diagnosticoSonido, efecto } from '../sonido';
+import { useAjustesSonido } from '../sonido';
 
 // Sonidos y vibración se pueden apagar; en iPhone el modo silencio también los apaga
 function AjustesSonido() {
@@ -17,21 +17,6 @@ function AjustesSonido() {
       <Text style={[s.etiqueta, { fontSize: 16 }]}>Sonido y vibración</Text>
       <Interruptor icono="volume-high-outline" texto="Sonidos" valor={a.sonido} onCambiar={(v) => a.cambiar('sonido', v)} />
       <Interruptor icono="phone-portrait-outline" texto="Vibración" valor={a.vibracion} onCambiar={(v) => a.cambiar('vibracion', v)} />
-      <Boton tipo="neutro" icono="musical-notes-outline" titulo="Probar sonido y vibración" onPress={() => {
-        efecto('xp');
-        setTimeout(() => Vibration.vibrate(400), 1200); // vibración básica del teléfono, sin librerías
-        setTimeout(() => {
-          const d = diagnosticoSonido();
-          Alert.alert('Prueba', [
-            'Debió sonar una moneda con una vibración corta y, después, una vibración larga.',
-            `Sonido: ${d.libreria} (${d.forma}) · vibración: ${d.vibracion}`,
-            `Archivos en el teléfono: ${d.descargados} de ${d.total} (descarga: ${d.archivos}) · listos: ${d.cargados}`,
-            `Preparado: ${d.preparado ? 'sí' : 'no'} · intentos de sonar: ${d.sonando} · de vibrar: ${d.vibraciones || 0}`,
-            `Ajustes: sonido ${d.prefs.sonido ? 'sí' : 'no'} · vibración ${d.prefs.vibracion ? 'sí' : 'no'} · en silencio ${d.prefs.enSilencio ? 'sí' : 'no'}`,
-            d.error ? `Error: ${d.error}` : 'Sin errores',
-          ].join('\n'));
-        }, 2000);
-      }} />
       {a.sonido ? <Interruptor icono="notifications-off-outline" texto="Sonar con el iPhone en silencio" sub="Si está apagado, el interruptor de silencio calla la app" valor={!!a.enSilencio} onCambiar={(v) => a.cambiar('enSilencio', v)} /> : null}
     </Tarjeta>
   );
@@ -124,6 +109,21 @@ export default function Perfil({ activa }) {
   const fechaCorta = (iso) => new Date(iso).toLocaleDateString('es-CL', { day: 'numeric', month: 'short', year: 'numeric' });
 
   const falta = sig - perfil.xp;
+  // Lo exigen las tiendas: borra la cuenta y todo lo suyo (perfil, recetas, nevera, notas)
+  function eliminarCuenta() {
+    Alert.alert('¿Eliminar tu cuenta?', 'Se borran tu perfil, tus recetas, tu nevera, tu XP y tus logros. No se puede deshacer.', [
+      { text: 'Cancelar', style: 'cancel' },
+      { text: 'Continuar', style: 'destructive', onPress: () => Alert.alert('¿Seguro?', `Se eliminará @${perfil.usuario} para siempre.`, [
+        { text: 'No, volver', style: 'cancel' },
+        { text: 'Eliminar para siempre', style: 'destructive', onPress: async () => {
+          const { error } = await supabase.rpc('eliminar_mi_cuenta');
+          if (error) { Alert.alert('No se pudo eliminar', error.message); return; }
+          await supabase.auth.signOut({ scope: 'local' });
+          Alert.alert('Cuenta eliminada', 'Tu cuenta y todo lo tuyo se borró.');
+        } },
+      ]) },
+    ]);
+  }
   const lugar = [`@${perfil.usuario}`, perfil.ciudad].filter(Boolean).join(' · ');
   const stats = [
     [conteo.seguidores, 'Seguidores', () => nav.abrir('amigos', { pestana: 'seguidores' })],
@@ -177,10 +177,9 @@ export default function Perfil({ activa }) {
             {TRAJES.map((nombre, i) => (
               <View key={nombre} style={[s.fila, { gap: 6 }]}>
                 <Ionicons name={i === 0 ? 'checkmark-circle' : 'lock-closed'} size={15} color={i === 0 ? C.verde : C.suave} />
-                <Text style={{ fontSize: 13, fontWeight: i === 0 ? '800' : '700', color: i === 0 ? C.texto : C.suave }}>{nombre}{i === 0 ? ' (puesto)' : ''}</Text>
+                <Text style={{ fontSize: 13, fontWeight: i === 0 ? '800' : '700', color: i === 0 ? C.texto : C.suave }}>{nombre}{i === 0 ? ' (puesto)' : ' · Próximamente'}</Text>
               </View>
             ))}
-            <Text style={{ fontSize: 12, color: C.suave }}>Gana trajes nuevos al subir de nivel.</Text>
           </View>
         </View>
       </Tarjeta>
@@ -229,6 +228,9 @@ export default function Perfil({ activa }) {
         { text: 'Cancelar', style: 'cancel' },
         { text: 'Cerrar sesión', style: 'destructive', onPress: () => supabase.auth.signOut() },
       ])} />
+      <Pressable onPress={eliminarCuenta} accessibilityRole="button" style={{ minHeight: 44, alignItems: 'center', justifyContent: 'center' }}>
+        <Text style={{ fontSize: 14, fontWeight: '700', color: C.tomateOscuro }}>Eliminar mi cuenta</Text>
+      </Pressable>
     </Pantalla>
   );
 }

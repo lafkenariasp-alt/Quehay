@@ -60,7 +60,7 @@ export function ChefpuFlotante({ voz, visible, onQueCocino, onConsejo, onAmigos 
   const reducido = useMovimientoReducido();
   const { width: W, height: H } = Dimensions.get('window');
   const minY = insets.top + 8;
-  const maxY = H - insets.bottom - TAM - 104; // nunca sobre la barra de pestañas ni los botones de abajo
+  const maxY = H - insets.bottom - TAM - 190; // se aparta solo: nunca sobre la barra de pestañas ni los botones fijos de abajo (Ver recetas, Qué cocino)
   const xDe = (lado) => (lado === 'izq' ? 10 : W - TAM - 10);
 
   const [lado, setLado] = useState('der');
@@ -79,7 +79,7 @@ export function ChefpuFlotante({ voz, visible, onQueCocino, onConsejo, onAmigos 
         setLado(p.lado); setOculto(!!p.oculto); yActual.current = y;
         pos.setValue({ x: xDe(p.lado), y });
       } else {
-        pos.setValue({ x: xDe('der'), y: maxY - 40 }); yActual.current = maxY - 40;
+        pos.setValue({ x: xDe('der'), y: maxY }); yActual.current = maxY;
       }
       setListo(true);
     }).catch(() => setListo(true));

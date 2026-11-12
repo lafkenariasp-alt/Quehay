@@ -226,13 +226,13 @@ export default function Receta({ id, tengo = null, basicos = true }) {
           )}
         </Tarjeta>
 
-        <Seccion titulo="Así me quedó" derecha={<Text style={s.sub}>{r.num_cocinadas} veces cocinada</Text>}>
+        <Seccion titulo="Así me quedó" derecha={<Text style={s.sub}>{r.num_cocinadas} {r.num_cocinadas === 1 ? 'vez cocinada' : 'veces cocinada'}</Text>}>
           {versiones.length === 0 ? (
             <Text style={s.sub}>Nadie ha subido su versión todavía. Cocínala, toca "Lo cociné" y sé el primero.</Text>
           ) : versiones.map((v) => (
             <Tarjeta key={v.id}>
               <View style={{ flexDirection: 'row', gap: 12 }}>
-                <Image source={{ uri: v.foto_url }} style={{ width: 88, height: 88, borderRadius: 12, backgroundColor: C.superficie }} />
+                {v.foto_url ? <Image source={{ uri: v.foto_url }} style={{ width: 88, height: 88, borderRadius: 12, backgroundColor: C.superficie }} /> : null}
                 <View style={{ flex: 1, gap: 2 }}>
                   <View style={s.filaEntre}>
                     <Text style={s.etiqueta}>{v.perfiles?.nombre}{v.usuario_id === uid ? ' (tú)' : ''}</Text>
@@ -345,15 +345,17 @@ function VentanaCocine({ visible, receta, usados, esMia, onCerrar, onListo }) {
     if (f) setFoto(f);
   }
 
+  const comentario = nota.trim();
   async function guardar() {
-    if (!foto) return;
+    if (!foto && !comentario) return;
     setGuardando(true);
     try {
-      // ¿ya la había cocinado? (el XP es solo la primera vez)
-      const { count } = await supabase.from('asi_me_quedo').select('id', { count: 'exact', head: true }).eq('receta_id', receta.id).eq('usuario_id', uid);
-      const url = await subirFoto(uid, foto, `plato-${receta.id}`);
+      // ¿ya la había cocinado con foto? (el XP es solo la primera vez)
+      const { count } = await supabase.from('asi_me_quedo').select('id', { count: 'exact', head: true })
+        .eq('receta_id', receta.id).eq('usuario_id', uid).not('foto_url', 'is', null);
+      const url = foto ? await subirFoto(uid, foto, `plato-${receta.id}`) : null;
       const { error } = await supabase.from('asi_me_quedo').insert({
-        receta_id: receta.id, usuario_id: uid, foto_url: url, foto_hash: foto.hash, nota: nota.trim() || null,
+        receta_id: receta.id, usuario_id: uid, foto_url: url, foto_hash: foto ? foto.hash : null, nota: comentario || null,
       });
       if (error) {
         if (error.code === '23505') throw new Error('Esa foto ya se usó antes. Toma una foto nueva de tu plato.');
@@ -362,11 +364,13 @@ function VentanaCocine({ visible, receta, usados, esMia, onCerrar, onListo }) {
       if (descontar && usados.length) {
         await supabase.from('nevera').delete().eq('usuario_id', uid).in('ingrediente_id', usados);
       }
-      registrar('lo_cocine', { receta: receta.id, primera: !count }, uid);
-      const xp = esMia ? 'En tus propias recetas no se gana XP, pero cuenta para tus rachas y logros.'
-        : count ? 'Ya la habías cocinado: cuenta para tus rachas y logros.' : '¡Ganaste 20 XP y el creador ganó 30!';
-      efecto('xp');
-      Alert.alert('¡Buen provecho!', [xp, descontar && usados.length ? `Quitamos ${usados.length} ${usados.length === 1 ? 'ingrediente' : 'ingredientes'} de tu nevera.` : ''].filter(Boolean).join('\n'));
+      registrar('lo_cocine', { receta: receta.id, primera: !count, foto: !!foto }, uid);
+      let xp;
+      if (!foto) xp = 'Tu comentario quedó guardado. Con foto del plato ganas XP y avanzas en tus logros.';
+      else if (esMia) xp = 'En tus propias recetas no se gana XP, pero cuenta para tus rachas y logros.';
+      else xp = count ? 'Ya la habías cocinado: cuenta para tus rachas y logros.' : '¡Ganaste 20 XP y el creador ganó 30!';
+      efecto(foto ? 'xp' : 'boton');
+      Alert.alert(foto ? '¡Buen provecho!' : '¡Gracias!', [xp, descontar && usados.length ? `Quitamos ${usados.length} ${usados.length === 1 ? 'ingrediente' : 'ingredientes'} de tu nevera.` : ''].filter(Boolean).join('\n'));
       onListo();
     } catch (e) {
       Alert.alert('No se pudo guardar', e.message);
@@ -394,13 +398,13 @@ function VentanaCocine({ visible, receta, usados, esMia, onCerrar, onListo }) {
             <View style={{ alignItems: 'center', gap: 8, padding: 16 }}>
               <Ionicons name="camera-outline" size={44} color={C.tomate} />
               <Text style={s.etiqueta}>Toma una foto de tu plato</Text>
-              <Text style={[s.sub, { textAlign: 'center' }]}>Es obligatoria: así todos saben que de verdad se cocinó</Text>
+              <Text style={[s.sub, { textAlign: 'center' }]}>Con foto ganas XP, avanzas en tus logros y apareces en «Así me quedó»</Text>
             </View>
           )}
         </Pressable>
         {foto ? <Boton tipo="neutro" titulo="Tomar otra foto" icono="camera-reverse-outline" onPress={tomar} /> : null}
 
-        <TextInput style={[s.input, { minHeight: 80, paddingTop: 12 }]} multiline placeholder="Cuéntale al creador cómo te fue (opcional)"
+        <TextInput style={[s.input, { minHeight: 80, paddingTop: 12 }]} multiline placeholder={foto ? 'Cuéntale al creador cómo te fue (opcional)' : 'Sin foto, déjale un comentario al creador'}
           placeholderTextColor={C.suave} value={nota} onChangeText={setNota} maxLength={500} />
 
         {usados.length ? (
@@ -413,7 +417,8 @@ function VentanaCocine({ visible, receta, usados, esMia, onCerrar, onListo }) {
           </Tarjeta>
         ) : null}
 
-        <Boton titulo={foto ? 'Guardar mi plato' : 'Primero toma la foto'} icono="checkmark" deshabilitado={!foto} cargando={guardando} onPress={guardar} />
+        <Boton titulo={foto ? 'Guardar mi plato' : comentario ? 'Guardar comentario (sin XP)' : 'Toma una foto o escribe un comentario'}
+          icono="checkmark" deshabilitado={!foto && !comentario} cargando={guardando} onPress={guardar} />
       </ScrollView>
     </Modal>
   );

@@ -5,7 +5,7 @@ import { supabase } from './supabase';
 // Nunca bloquea la app: si falla, se ignora.
 let dispositivo = null;
 
-async function idDispositivo() {
+export async function idDispositivo() {
   if (dispositivo) return dispositivo;
   try {
     dispositivo = await AsyncStorage.getItem('dispositivo_id');

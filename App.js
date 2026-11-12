@@ -50,6 +50,8 @@ async function leerTutorialCuenta(user) {
   return data[0];
 }
 const marcarTutorialCuenta = (paso) => supabase.rpc('marcar_tutorial', { p_paso: paso }).then(() => {}, () => {});
+// El regalo de bienvenida (insignia, 30 XP, Fundador) se gana terminando el tutorial; una vez por cuenta
+const reclamarRegalo = () => supabase.rpc('reclamar_regalo_tutorial').then(({ data }) => data, () => null);
 
 // Navegación nativa de iOS: transición de empuje y volver deslizando desde el borde izquierdo
 const Pila = createNativeStackNavigator();
@@ -252,7 +254,7 @@ function Contenido() {
     const listo = () => { cuentaRevisada.current = uidActual; };
     if (tc.completado) { listo(); if (!e.ofrecido) tutorial.marcarOfrecido(); return undefined; } // ya lo hizo en otro teléfono
     if (tc.iniciado) { listo(); return undefined; } // Chefpu solo se lo ofrece
-    if (e.completado) { listo(); marcarTutorialCuenta('completado'); return undefined; } // lo terminó como invitado justo antes
+    if (e.completado) { listo(); reclamarRegalo().then((r) => { if (r === 'ok') { efecto('regalo'); recargarPerfil(); voz.decir('regalo_reclamado', '¡Tu regalo ya está en tu perfil: insignia, 30 XP y Fundador!', 'celebrando', { forzar: true }); } }); return undefined; } // lo terminó como invitado justo antes
     const t = setTimeout(() => { listo(); marcarTutorialCuenta('iniciado'); tutorial.reiniciar(); nav.abrir('tutorial'); }, 600);
     return () => clearTimeout(t);
   }, [uidActual, tutorialCuenta, tutorial.estado]);
@@ -260,7 +262,7 @@ function Contenido() {
   // Al terminarlo queda registrado en la cuenta
   useEffect(() => {
     if (uidActual && tutorial.estado?.completado && tutorialCuenta?.uid === uidActual && !tutorialCuenta.completado) {
-      marcarTutorialCuenta('completado');
+      reclamarRegalo().then(() => recargarPerfil());
       setTutorialCuenta((tc) => ({ ...tc, iniciado: true, completado: true }));
     }
   }, [uidActual, tutorial.estado?.completado, tutorialCuenta]);

@@ -55,7 +55,7 @@ export default function Bienvenida({ onTerminar, repetir = false }) {
           <Foco id="empezar"><Boton titulo="Empezar" icono="arrow-forward" onPress={() => { tutorial.evento('empezar'); setPaso(1); }} /></Foco>
           {repetir ? (
             <Pressable onPress={() => { tutorial.saltar(); nav.volver(); }} accessibilityRole="button" style={{ minHeight: 44, alignItems: 'center', justifyContent: 'center' }}>
-              <Text style={{ fontSize: 15, fontWeight: '800', color: C.suave }}>Ahora no</Text>
+              <Text style={{ fontSize: 15, fontWeight: '800', color: C.suave }}>Saltar tutorial</Text>
             </Pressable>
           ) : (
           <Pressable onPress={() => { tutorial.saltar(); onTerminar({ pantalla: 'acceso', params: {} }); }} accessibilityRole="button" style={{ minHeight: 44, alignItems: 'center', justifyContent: 'center' }}>

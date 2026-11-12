@@ -17,6 +17,7 @@ App de recetas: cocina con lo que tienes en la nevera, comparte recetas y sube d
 | `migrations/002_fotos.sql` | Carpeta pública de fotos con permisos por usuario |
 | `migrations/003_seguidores.sql` | Seguir a otros cocineros |
 | `seed/02_recetas_demo.sql` | 12 recetas de prueba (ejecutar después de crear tu cuenta) |
+| `migrations/008_regalo_y_cuentas.sql` | El regalo se gana terminando el tutorial; máx. 3 cuentas por día por teléfono; eliminar cuenta; «Lo cociné» sin foto (comentario sin XP) |
 | `migrations/007_tutorial_por_cuenta.sql` | El tutorial se guarda en la cuenta: cada cuenta nueva lo hace la primera vez, en cualquier teléfono |
 | `migrations/006_amigos.sql` | Sugerencias de amigos (te sigue, amigos en común, misma ciudad, mismos gustos) |
 | `migrations/005_titulos.sql` | Primer título: Aprendiz de cocina |
