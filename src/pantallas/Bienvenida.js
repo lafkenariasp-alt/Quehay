@@ -69,7 +69,7 @@ export default function Bienvenida({ onTerminar, repetir = false }) {
 
   return (
     <View style={{ flex: 1 }}>
-      <ScrollView contentContainerStyle={{ padding: 24, gap: 16 }}>
+      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: 24, gap: 16 }}>
         <View style={[s.fila, { gap: 12, alignItems: 'flex-end' }]}>
           <Mascota tam={72} expresion="pensando" />
           <View style={{ flex: 1, gap: 6 }}>

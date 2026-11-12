@@ -98,7 +98,7 @@ export default function SelectorIngredientes({ visible, titulo = 'Agregar ingred
         {ya.length ? (
           <View style={{ gap: 6 }}>
             <Text style={s.sub}>{ya.length} agregados · toca uno para quitarlo</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
+            <ScrollView keyboardShouldPersistTaps="handled" horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
               {[...ya].reverse().map((i) => (
                 <Pressable key={i.id} onPress={() => { if (onQuitar) { efecto('desmarcar'); onQuitar(i); } }} accessibilityRole="button" accessibilityLabel={onQuitar ? `Quitar ${i.nombre}` : i.nombre} hitSlop={{ top: 4, bottom: 4 }}
                   style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 12, minHeight: 36, borderRadius: 999, backgroundColor: C.verdeTinte, borderWidth: 1, borderColor: C.verde }}>
@@ -135,7 +135,7 @@ export default function SelectorIngredientes({ visible, titulo = 'Agregar ingred
           {aviso || 'Toca para agregar, o escribe varios con coma y presiona Intro. Intro con el campo vacío cierra.'}
         </Text>
 
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }} style={{ flexGrow: 0 }}>
+        <ScrollView keyboardShouldPersistTaps="handled" horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }} style={{ flexGrow: 0 }}>
           {CATEGORIAS_ING.filter((c) => c !== 'Bebidas').map((c) => (
             <Chip key={c} texto={c} activo={categoria === c} onPress={() => { setQ(''); setCategoria(categoria === c ? null : c); }} />
           ))}

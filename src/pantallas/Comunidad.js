@@ -125,6 +125,7 @@ export default function Comunidad({ activa }) {
       ListEmptyComponent={<Vacio texto={vista === 'siguiendo' ? 'Tus amigos aún no cocinan ni publican nada.\nMira lo de todos.' : 'Todavía no hay nada por aquí.\n¡Sé el primero en publicar!'} />}
       contentContainerStyle={[s.contenido, { gap: 18 }]}
       refreshControl={<RefreshControl refreshing={false} onRefresh={cargar} tintColor={C.tomate} />}
+      keyboardShouldPersistTaps="handled"
       initialNumToRender={6}
       windowSize={7}
       removeClippedSubviews

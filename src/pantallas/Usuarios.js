@@ -156,7 +156,7 @@ export default function Usuarios({ pestana: inicial = 'sugerencias' }) {
 
       {!buscando ? (
         <>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }} accessibilityRole="tablist">
+          <ScrollView keyboardShouldPersistTaps="handled" horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }} accessibilityRole="tablist">
             {PESTANAS.map((p) => (
               <Chip key={p.id} activo={pestana === p.id} onPress={() => setPestana(p.id)}
                 texto={p.id === 'sugerencias' || invitado ? p.texto : `${p.texto} ${conteos[p.id]}`} />

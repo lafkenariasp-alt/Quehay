@@ -311,7 +311,7 @@ function ModoCocina({ receta, onCerrar, onTerminar }) {
         <View style={{ width: `${Math.round(((paso + 1) / total) * 100)}%`, height: '100%', backgroundColor: C.tomate }} />
       </View>
       <Foco id="texto_paso" style={{ flex: 1 }}>
-        <ScrollView style={{ flex: 1 }}>
+        <ScrollView keyboardShouldPersistTaps="handled" style={{ flex: 1 }}>
           <Text style={{ fontSize: 30, lineHeight: 39, fontWeight: '700', color: C.texto, letterSpacing: -0.3 }}>{receta.pasos[paso]}</Text>
         </ScrollView>
       </Foco>

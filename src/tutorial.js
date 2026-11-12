@@ -83,10 +83,14 @@ export function useTutorialEstado(uid = null, heredar = null) {
       const n = { ...e, regaloPendiente: false };
       return e.linea === LINEA_REGALO ? avanzarDe(n) : n;
     }
-    const esp = GUION[e.linea].esperar;
+    // Si la línea actual deja pasar los toques, se salta hasta la línea que espera esta acción
+    let i = e.linea;
+    while (i < GUION.length && !GUION[i].esperar && GUION[i].pasar) i++;
+    const esp = GUION[i]?.esperar;
     if (!esp || esp.evento !== nombre) return e;
-    const cuenta = e.cuenta + 1;
-    return cuenta >= (esp.veces || 1) ? avanzarDe(e) : { ...e, cuenta };
+    const base = i === e.linea ? e : { ...e, linea: i, cuenta: 0 };
+    const cuenta = base.cuenta + 1;
+    return cuenta >= (esp.veces || 1) ? avanzarDe(base) : { ...base, cuenta };
   }), [cambiar]);
 
   const listo = cargada === clave;
@@ -181,7 +185,8 @@ export function TutorialCapa({ capa = 'raiz' }) {
   const { width: W, height: H } = Dimensions.get('window');
   const escribiendo = letras < linea.texto.length;
   const sigue = !linea.esperar;
-  const tocar = () => { if (escribiendo) setLetras(linea.texto.length); else if (sigue) tutorial.avanzar(); };
+  // un solo toque basta: si la línea no espera nada, avanza aunque el texto se esté escribiendo
+  const tocar = () => { if (sigue) tutorial.avanzar(); else if (escribiendo) setLetras(linea.texto.length); };
   const saltar = () => Alert.alert('¿Saltar el tutorial?', 'Puedes retomarlo cuando quieras desde tu perfil.', [
     { text: 'Seguir con Chefpu', style: 'cancel' },
     { text: 'Saltar', style: 'destructive', onPress: tutorial.saltar },
@@ -205,7 +210,7 @@ export function TutorialCapa({ capa = 'raiz' }) {
           {/* borde dorado que late; si la línea no pide tocarlo, tocar el foco también avanza */}
           <Animated.View pointerEvents="none" style={{ position: 'absolute', left: hueco.x, top: hueco.y, width: hueco.w, height: hueco.h, borderRadius: 16, borderWidth: 3, borderColor: C.dorado,
             opacity: pulso.interpolate({ inputRange: [0, 1], outputRange: [0.55, 1] }) }} />
-          {sigue ? <Pressable onPress={tocar} accessible={false} style={{ position: 'absolute', left: hueco.x, top: hueco.y, width: hueco.w, height: hueco.h }} /> : null}
+          {sigue && !linea.pasar ? <Pressable onPress={tocar} accessible={false} style={{ position: 'absolute', left: hueco.x, top: hueco.y, width: hueco.w, height: hueco.h }} /> : null}
         </>
       ) : (
         <Panel onPress={tocar} style={{ left: 0, top: 0, width: W, height: H }} />
