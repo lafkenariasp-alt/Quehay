@@ -43,6 +43,14 @@ const CLAVE_TUVO_CUENTA = 'tuvo_cuenta_v1'; // en este teléfono ya se entró co
 const MINUTOS_CUENTA_NUEVA = 15;
 const esCuentaNueva = (user) => !!user?.created_at && Date.now() - Date.parse(user.created_at) < MINUTOS_CUENTA_NUEVA * 60000;
 
+// El tutorial vive en la cuenta (migración 007). Sin la migración, una cuenta recién creada cuenta como nueva.
+async function leerTutorialCuenta(user) {
+  const { data, error } = await supabase.rpc('mi_tutorial');
+  if (error || !data?.length) return { iniciado: !esCuentaNueva(user), completado: false };
+  return data[0];
+}
+const marcarTutorialCuenta = (paso) => supabase.rpc('marcar_tutorial', { p_paso: paso }).then(() => {}, () => {});
+
 // Navegación nativa de iOS: transición de empuje y volver deslizando desde el borde izquierdo
 const Pila = createNativeStackNavigator();
 const navRef = createNavigationContainerRef();
@@ -111,7 +119,7 @@ function Contenido() {
   const [tuvoCuenta, setTuvoCuenta] = useState(null); // null = leyendo
   const [pestana, setPestana] = useState('buscar');
   const heredarTutorial = useRef(false);
-  const cuentaNueva = useRef(null); // uid de la cuenta recién creada: su tutorial parte solo
+  const [tutorialCuenta, setTutorialCuenta] = useState(null); // { uid, iniciado, completado } desde Supabase
   const yaCargo = useRef(false);
   const tutorial = useTutorialEstado(sesion?.user?.id || null, heredarTutorial);
   const pendiente = useRef(null); // pantalla a abrir apenas la navegación esté lista
@@ -154,7 +162,6 @@ function Contenido() {
         // La primera cuenta del teléfono se queda con el tutorial que hizo como invitado
         const tuvo = await AsyncStorage.getItem(CLAVE_TUVO_CUENTA).catch(() => null);
         heredarTutorial.current = !tuvo;
-        if (esCuentaNueva(nueva.user)) cuentaNueva.current = nueva.user.id;
         marcarCuenta();
       }
       setSesion(nueva);
@@ -207,21 +214,45 @@ function Contenido() {
 
   const uidActual = sesion?.user?.id || null;
 
-  // Cuenta recién creada: el tutorial de Chefpu parte solo (si no lo trae de invitado)
+  // Lo que la cuenta tiene guardado del tutorial (vale en cualquier teléfono)
   useEffect(() => {
-    if (!uidActual || cuentaNueva.current !== uidActual || !tutorial.estado) return undefined;
-    cuentaNueva.current = null;
-    if (tutorial.estado.iniciado) return undefined;
-    const t = setTimeout(() => { tutorial.reiniciar(); nav.abrir('tutorial'); }, 600);
+    setTutorialCuenta(null);
+    if (!uidActual) return undefined;
+    let vivo = true;
+    leerTutorialCuenta(sesion.user).then((d) => { if (vivo) setTutorialCuenta({ uid: uidActual, ...d }); });
+    return () => { vivo = false; };
+  }, [uidActual]);
+
+  // Primera vez de una cuenta: el tutorial de Chefpu parte solo
+  const cuentaRevisada = useRef(null);
+  useEffect(() => {
+    const tc = tutorialCuenta;
+    if (!uidActual || !tc || tc.uid !== uidActual || !tutorial.estado || cuentaRevisada.current === uidActual) return undefined;
+    const e = tutorial.estado;
+    const listo = () => { cuentaRevisada.current = uidActual; };
+    if (tc.completado) { listo(); if (!e.ofrecido) tutorial.marcarOfrecido(); return undefined; } // ya lo hizo en otro teléfono
+    if (tc.iniciado) { listo(); return undefined; } // Chefpu solo se lo ofrece
+    if (e.completado) { listo(); marcarTutorialCuenta('completado'); return undefined; } // lo terminó como invitado justo antes
+    const t = setTimeout(() => { listo(); marcarTutorialCuenta('iniciado'); tutorial.reiniciar(); nav.abrir('tutorial'); }, 600);
     return () => clearTimeout(t);
-  }, [uidActual, tutorial.estado]);
+  }, [uidActual, tutorialCuenta, tutorial.estado]);
+
+  // Al terminarlo queda registrado en la cuenta
+  useEffect(() => {
+    if (uidActual && tutorial.estado?.completado && tutorialCuenta?.uid === uidActual && !tutorialCuenta.completado) {
+      marcarTutorialCuenta('completado');
+      setTutorialCuenta((tc) => ({ ...tc, iniciado: true, completado: true }));
+    }
+  }, [uidActual, tutorial.estado?.completado, tutorialCuenta]);
 
   // Chefpu ofrece el tutorial a quien no lo ha visto (usuarios que ya tenían la app)
   const enApp = sesion !== undefined && bienvenidaVista !== null && !!tutorial.estado && (uidActual || bienvenidaVista);
   useEffect(() => {
     if (!enApp || tutorial.activo) return undefined;
     const e = tutorial.estado;
-    if (e.ofrecido || (e.iniciado && !e.saltado) || cuentaNueva.current === uidActual) return undefined;
+    if (e.ofrecido || (e.iniciado && !e.saltado)) return undefined;
+    // Con cuenta: esperar a saber si es su primera vez (ahí el tutorial parte solo, sin ofrecerlo)
+    if (uidActual && (tutorialCuenta?.uid !== uidActual || !tutorialCuenta.iniciado || tutorialCuenta.completado)) return undefined;
     const t = setTimeout(() => {
       tutorial.marcarOfrecido();
       voz.decir('oferta', e.saltado ? '¿Seguimos con el tutorial? Te muestro todo en 2 minutos.' : '¿Te muestro cómo funciona Qué Hay? Son 2 minutos.', 'feliz', {
@@ -230,7 +261,7 @@ function Contenido() {
       });
     }, 1500);
     return () => clearTimeout(t);
-  }, [enApp, tutorial.activo, tutorial.estado?.ofrecido]);
+  }, [enApp, tutorial.activo, tutorial.estado?.ofrecido, tutorialCuenta]);
 
   // Menú de Chefpu: la opción principal busca con lo que tienes
   const queCocino = useCallback(async () => {
