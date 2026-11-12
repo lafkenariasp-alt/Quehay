@@ -113,25 +113,25 @@ export default function Comunidad({ activa }) {
 
   const cabecera = (
     <View style={{ gap: 16, marginBottom: 4 }}>
-      <Encabezado titulo="Comunidad" sub="Lo que cocinan y publican tus amigos" />
+      <Encabezado titulo="Comunidad" sub="Lo que cocinan y publican las personas que sigues" />
       {uid ? (
         <View style={s.chips}>
           <Chip texto={`Siguiendo${sigo?.length ? ` · ${sigo.length}` : ''}`} activo={vista === 'siguiendo'} onPress={() => setVista('siguiendo')} />
           <Chip texto="Todos" activo={vista === 'todos'} onPress={() => setVista('todos')} />
-          <Chip texto="Buscar amigos" icono="person-add-outline" onPress={() => nav.abrir('amigos')} />
+          <Chip texto="Buscar cocineros" icono="person-add-outline" onPress={() => nav.abrir('amigos')} />
         </View>
       ) : null}
       {uid && sigo && !sigo.length ? (
         <View style={{ gap: 10, padding: 16, borderRadius: 18, backgroundColor: C.doradoTinte }}>
           <Text style={s.etiqueta}>Aún no sigues a nadie</Text>
-          <Text style={{ fontSize: 14, color: C.texto }}>Sigue a tus amigos y aquí verás lo que cocinan. Mientras, te muestro lo de todos.</Text>
-          <Boton titulo="Encontrar amigos" icono="people-outline" onPress={() => nav.abrir('amigos')} />
+          <Text style={{ fontSize: 14, color: C.texto }}>Sigue a otros cocineros y aquí verás lo que cocinan. Mientras, te muestro lo de todos.</Text>
+          <Boton titulo="Buscar a quién seguir" icono="people-outline" onPress={() => nav.abrir('amigos')} />
         </View>
       ) : null}
       {invitado ? (
         <View style={{ gap: 10, padding: 16, borderRadius: 18, backgroundColor: C.doradoTinte }}>
-          <Text style={{ fontSize: 14, color: C.texto }}>Crea tu cuenta para seguir a tus amigos y ver solo lo de ellos.</Text>
-          <Boton titulo="Crear mi cuenta" icono="gift-outline" onPress={() => pedirCuenta('Crea tu cuenta para seguir a tus amigos')} />
+          <Text style={{ fontSize: 14, color: C.texto }}>Crea tu cuenta para seguir a otros cocineros y ver solo lo de ellos.</Text>
+          <Boton titulo="Crear mi cuenta" icono="gift-outline" onPress={() => pedirCuenta('Crea tu cuenta para seguir a otros cocineros')} />
         </View>
       ) : null}
     </View>
@@ -148,7 +148,7 @@ export default function Comunidad({ activa }) {
       renderItem={renderItem}
       ListHeaderComponent={cabecera}
       ListEmptyComponent={vista === 'siguiendo'
-        ? <Vacio objeto="people-outline" titulo="Tus amigos aún no publican" texto="Mientras, mira lo que cocinan todos." accion={{ titulo: 'Ver lo de todos', icono: 'globe-outline', onPress: () => setVista('todos') }} />
+        ? <Vacio objeto="people-outline" titulo="A quienes sigues aún no publican" texto="Mientras, mira lo que cocinan todos." accion={{ titulo: 'Ver lo de todos', icono: 'globe-outline', onPress: () => setVista('todos') }} />
         : <Vacio objeto="camera-outline" expresion="feliz" titulo="Todavía no hay nada por aquí" texto="¡Sé el primero en compartir una receta!" accion={{ titulo: 'Publicar una receta', icono: 'add', onPress: () => nav.irA('publicar') }} />}
       contentContainerStyle={[s.contenido, { gap: 18 }]}
       refreshControl={refreshControl}

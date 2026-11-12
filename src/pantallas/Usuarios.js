@@ -12,13 +12,12 @@ import { Cascada } from '../anim';
 const CAMPOS = 'id, nombre, usuario, avatar_url, nivel, titulo, ciudad';
 const PESTANAS = [
   { id: 'sugerencias', texto: 'Sugerencias' },
-  { id: 'amigos', texto: 'Amigos' },
   { id: 'siguiendo', texto: 'Siguiendo' },
   { id: 'seguidores', texto: 'Seguidores' },
 ];
 const CIUDADES = ['Santiago', 'Calama', 'Antofagasta', 'Valparaíso', 'Viña del Mar', 'Concepción', 'La Serena', 'Temuco', 'Iquique', 'Rancagua', 'Puerto Montt', 'Arica'];
 
-// Amigos: sugerencias para conocer gente nueva, amigos (se siguen mutuamente), a quién sigues y quién te sigue.
+// Seguidores: sugerencias para conocer gente nueva, a quién sigues y quién te sigue. (Sin "amigos" por ahora: solo seguir.)
 // Más adelante aquí vivirán los clubs de cocina.
 export default function Usuarios({ pestana: inicial = 'sugerencias' }) {
   const { uid, invitado, nav, pedirCuenta, perfil, recargarPerfil } = useApp();
@@ -91,8 +90,7 @@ export default function Usuarios({ pestana: inicial = 'sugerencias' }) {
 
   const fila = (p, detalle) => {
     const loSigo = sigo.has(p.id);
-    const amigos = loSigo && meSiguen.has(p.id);
-    const extra = detalle || (amigos ? 'Amigos' : meSiguen.has(p.id) ? 'Te sigue' : null);
+    const extra = detalle || (meSiguen.has(p.id) ? 'Te sigue' : null);
     return (
       <Pressable key={p.id} onPress={() => nav.abrir('perfilPublico', { id: p.id })} accessibilityRole="button" accessibilityHint="Abre su perfil"
         style={({ pressed }) => [s.fila, { gap: 12, padding: 12, borderRadius: 18, backgroundColor: C.blanco, borderWidth: 1.5, borderColor: C.linea, opacity: pressed ? 0.9 : 1 }]}>
@@ -110,8 +108,7 @@ export default function Usuarios({ pestana: inicial = 'sugerencias' }) {
   };
 
   const buscando = q.trim().length >= 2;
-  const amigosIds = [...sigo].filter((id) => meSiguen.has(id));
-  const conteos = { amigos: amigosIds.length, siguiendo: sigo.size, seguidores: meSiguen.size };
+  const conteos = { siguiendo: sigo.size, seguidores: meSiguen.size };
 
   const ordenar = (ids) => ids.map((id) => perfiles[id]).filter(Boolean).sort((a, b) => a.nombre.localeCompare(b.nombre));
   // Lo que muestra la lista según la búsqueda o la pestaña (FlatList: carga por partes aunque sean cientos)
@@ -126,17 +123,14 @@ export default function Usuarios({ pestana: inicial = 'sugerencias' }) {
       <View style={{ gap: 12 }}>
         {[0, 1, 2, 3].map((k) => <View key={k} style={[s.fila, { gap: 12 }]}><Hueso ancho={48} alto={48} radio={24} /><View style={{ flex: 1, gap: 6 }}><Hueso ancho="55%" /><Hueso ancho="35%" alto={11} /></View><Hueso ancho={84} alto={40} radio={12} /></View>)}
       </View>
-    ) : <Vacio objeto="share-outline" expresion="feliz" titulo="Aún no hay sugerencias" texto="Invita a tus amigos a Qué Hay y síguelos aquí." accion={{ titulo: 'Invitar amigos', icono: 'share-outline', tipo: 'secundario', onPress: invitar }} />;
+    ) : <Vacio objeto="share-outline" expresion="feliz" titulo="Aún no hay sugerencias" texto="Invita a más gente a Qué Hay y síguela aquí." accion={{ titulo: 'Invitar a Qué Hay', icono: 'share-outline', tipo: 'secundario', onPress: invitar }} />;
   } else if (invitado) {
     vacio = (
             <View style={{ gap: 12, paddingVertical: 16 }}>
-              <Text style={[s.sub, { textAlign: 'center', fontSize: 15 }]}>Crea tu cuenta para seguir a tus amigos y ver quién te sigue.</Text>
-              <Boton titulo="Crear mi cuenta" icono="gift-outline" onPress={() => pedirCuenta('Crea tu cuenta para seguir a tus amigos')} />
+              <Text style={[s.sub, { textAlign: 'center', fontSize: 15 }]}>Crea tu cuenta para seguir a otros cocineros y ver quién te sigue.</Text>
+              <Boton titulo="Crear mi cuenta" icono="gift-outline" onPress={() => pedirCuenta('Crea tu cuenta para seguir a otros cocineros')} />
             </View>
     );
-  } else if (pestana === 'amigos') {
-    datos = ordenar(amigosIds).map((p) => ({ p }));
-    vacio = <Vacio objeto="heart-outline" titulo="Aún no tienes amigos aquí" texto="Cuando tú y otra persona se sigan, aparecerá en esta lista." accion={{ titulo: 'Ver sugerencias', icono: 'sparkles-outline', tipo: 'secundario', onPress: () => setPestana('sugerencias') }} />;
   } else if (pestana === 'siguiendo') {
     datos = ordenar([...sigo]).map((p) => ({ p }));
     vacio = <Vacio objeto="person-add-outline" titulo="Aún no sigues a nadie" texto="Sigue a otros cocineros para ver lo que cocinan." accion={{ titulo: 'Ver sugerencias', icono: 'sparkles-outline', tipo: 'secundario', onPress: () => setPestana('sugerencias') }} />;
@@ -151,7 +145,7 @@ export default function Usuarios({ pestana: inicial = 'sugerencias' }) {
 
   const cabecera = (
     <View style={{ gap: 16, marginBottom: 12 }}>
-      <Encabezado onVolver={nav.volver} titulo="Amigos" sub="Sigue a otros cocineros y mira lo que cocinan" />
+      <Encabezado onVolver={nav.volver} titulo="Cocineros" sub="Sigue a otros cocineros y mira lo que cocinan" />
 
       <View style={[s.input, s.fila]}>
         <Ionicons name="search" size={18} color={C.suave} />

@@ -80,8 +80,7 @@ export default function PerfilPublico({ id }) {
         <View style={{ flex: 1, gap: 4 }}>
           <Text style={{ fontSize: 26, fontWeight: '800', color: C.texto, letterSpacing: -0.5 }}>{p.nombre}</Text>
           <Text style={{ fontSize: 14, color: C.suave }}>{lugar}</Text>
-          {loSigo && meSigue ? <Pastilla texto="Son amigos" fondo={C.verdeTinte} color={C.verde} icono="checkmark" />
-            : meSigue ? <Pastilla texto="Te sigue" fondo={C.superficie} color={C.texto} /> : null}
+          {meSigue ? <Pastilla texto="Te sigue" fondo={C.superficie} color={C.texto} /> : null}
         </View>
       </View>
       <View style={{ padding: 16, borderRadius: 18, backgroundColor: C.doradoTinte, gap: 4 }}>

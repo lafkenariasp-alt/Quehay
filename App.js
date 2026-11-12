@@ -344,12 +344,12 @@ function Contenido() {
     const CONSEJOS = {
       nevera: 'Anota lo que tienes y te digo qué cocinar. Desliza un alimento a la izquierda para quitarlo. En Por comprar está tu lista del súper.',
       buscar: 'Elige lo que tienes y toca Ver recetas. Con 3 o más ingredientes salen muchas más.',
-      comunidad: 'Aquí ves lo que cocinan tus amigos. Toca una foto para ver la receta.',
+      comunidad: 'Aquí ves lo que cocinan las personas que sigues. Toca una foto para verla grande.',
       publicar: 'Sube tu receta con foto y gana 50 XP. Elige los ingredientes del catálogo.',
       perfil: 'Aquí ves tu nivel, tus logros y tus recetas. Cocina y publica para subir.',
       resultados: 'Verde es lo que tienes, ámbar lo que te falta. Arriba están las que puedes cocinar ya.',
       receta: 'Toca Paso a paso para cocinar conmigo. Si la cocinas, sube tu foto en Lo cociné.',
-      usuarios: 'Busca a tus amigos por su nick y síguelos para ver sus recetas.',
+      usuarios: 'Busca cocineros por su nick y síguelos para ver sus recetas.',
       amigos: 'Mira las sugerencias: te muestro gente de tu ciudad y con tus mismos gustos.',
       perfilPublico: 'Si te gustan sus recetas, síguelo. Si ves algo raro, repórtalo con la banderita.',
       acceso: 'Con una cuenta guardo tu nevera, tus recetas y tu XP.',
@@ -368,7 +368,7 @@ function Contenido() {
       const p = (data || []).find((x) => Number(x.puntaje) >= 4);
       if (!p) return;
       voz.decir('sugerir_amigos', `${p.nombre}: ${p.motivo.charAt(0).toLowerCase()}${p.motivo.slice(1)}. ¿Lo conoces?`, 'feliz', {
-        acciones: [{ texto: 'Ver amigos', fn: () => nav.abrir('amigos') }, { texto: 'Ahora no', fn: () => {} }],
+        acciones: [{ texto: 'Ver sugerencias', fn: () => nav.abrir('amigos') }, { texto: 'Ahora no', fn: () => {} }],
       });
     }, 25000);
     return () => clearTimeout(t);

@@ -157,7 +157,7 @@ export function ChefpuFlotante({ voz, visible, onQueCocino, onConsejo, onAmigos 
             <Ionicons name="search" size={20} color={C.blanco} />
             <Text style={{ color: C.blanco, fontSize: 17, fontWeight: '800' }}>¿Qué cocino?</Text>
           </Pressable>
-          {[['people-outline', 'Amigos', () => { setMenu(false); onAmigos(); }],
+          {[['person-add-outline', 'Buscar cocineros', () => { setMenu(false); onAmigos(); }],
             ['bulb-outline', 'Consejo de esta pantalla', () => { setMenu(false); onConsejo(); }],
             ['eye-off-outline', 'Ocultar a Chefpu', ocultar]].map(([icono, texto, fn]) => (
             <Pressable key={texto} onPress={fn} accessibilityRole="button"

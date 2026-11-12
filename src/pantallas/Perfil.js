@@ -200,7 +200,7 @@ export default function Perfil({ activa }) {
         ))}
       </View>
 
-      <Boton tipo="neutro" icono="people-outline" titulo="Amigos" onPress={() => nav.abrir('amigos')} />
+      <Boton tipo="neutro" icono="person-add-outline" titulo="Buscar cocineros" onPress={() => nav.abrir('amigos')} />
 
       <Tarjeta>
         <Text style={[s.etiqueta, { fontSize: 16 }]}>Tu mascota</Text>
