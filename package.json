@@ -30,6 +30,7 @@
     "react-native-screens": "*",
     "expo-blur": "*",
     "expo-haptics": "*",
-    "expo-audio": "*"
+    "expo-audio": "*",
+    "expo-file-system": "*"
   }
 }

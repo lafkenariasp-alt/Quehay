@@ -13,27 +13,27 @@ try { Haptics = require('expo-haptics'); } catch (e) { Haptics = null; }
 
 const BASE = 'https://raw.githubusercontent.com/lafkenariasp-alt/Quehay/main/assets/sonidos';
 const SONIDOS = ['tap', 'quitar', 'chefpu', 'blip', 'paso', 'xp', 'logro', 'nivel', 'fanfarria', 'error'];
-// Los sonidos van dentro de la app (assets): así el teléfono los guarda como archivo y suenan sin depender de internet.
-// Si alguno no está, se usa la copia de GitHub.
-const LOCAL = {};
-try { LOCAL.tap = require('../assets/sonidos/tap.wav'); } catch (e) { /* usa GitHub */ }
-try { LOCAL.quitar = require('../assets/sonidos/quitar.wav'); } catch (e) { /* usa GitHub */ }
-try { LOCAL.chefpu = require('../assets/sonidos/chefpu.wav'); } catch (e) { /* usa GitHub */ }
-try { LOCAL.blip = require('../assets/sonidos/blip.wav'); } catch (e) { /* usa GitHub */ }
-try { LOCAL.paso = require('../assets/sonidos/paso.wav'); } catch (e) { /* usa GitHub */ }
-try { LOCAL.xp = require('../assets/sonidos/xp.wav'); } catch (e) { /* usa GitHub */ }
-try { LOCAL.logro = require('../assets/sonidos/logro.wav'); } catch (e) { /* usa GitHub */ }
-try { LOCAL.nivel = require('../assets/sonidos/nivel.wav'); } catch (e) { /* usa GitHub */ }
-try { LOCAL.fanfarria = require('../assets/sonidos/fanfarria.wav'); } catch (e) { /* usa GitHub */ }
-try { LOCAL.error = require('../assets/sonidos/error.wav'); } catch (e) { /* usa GitHub */ }
-const fuente = (n) => LOCAL[n] || { uri: `${BASE}/${n}.wav` };
+// El iPhone necesita los sonidos como archivo: se descargan una vez a la memoria del teléfono y se reproducen desde ahí.
+let FS = null;
+try { FS = require('expo-file-system/legacy'); } catch (e) { try { FS = require('expo-file-system'); } catch (e2) { FS = null; } }
+const ARCHIVOS = {};
+async function archivoLocal(n) {
+  try {
+    if (!FS?.downloadAsync || !FS?.cacheDirectory) return null;
+    const destino = `${FS.cacheDirectory}quehay_sonido_${n}.wav`;
+    const info = await FS.getInfoAsync(destino);
+    if (info?.exists && info.size > 1000) return destino;
+    const r = await FS.downloadAsync(`${BASE}/${n}.wav`, destino);
+    return r?.status === 200 ? r.uri : null;
+  } catch (e) { diag.error = `descarga ${n}: ${e?.message || e}`; return null; }
+}
+const fuente = (n) => (ARCHIVOS[n] ? { uri: ARCHIVOS[n] } : { uri: `${BASE}/${n}.wav` });
 
 // Diagnóstico visible en Perfil → Sonido y vibración ("Probar sonido")
-const diag = { libreria: Audio ? 'expo-audio' : AV ? 'expo-av' : 'ninguna', vibracion: Haptics ? 'expo-haptics' : 'básica', locales: 0, error: null };
-diag.locales = Object.keys(LOCAL).length;
+const diag = { libreria: Audio ? 'expo-audio' : AV ? 'expo-av' : 'ninguna', vibracion: Haptics ? 'expo-haptics' : 'básica', archivos: FS ? 'sí' : 'no', error: null };
 export const diagnosticoSonido = () => {
   const cargados = Object.values(players).filter((p) => p && p.isLoaded).length;
-  return { ...diag, cargados, total: SONIDOS.length, prefs: { ...prefs } };
+  return { ...diag, cargados, descargados: Object.keys(ARCHIVOS).length, total: SONIDOS.length, prefs: { ...prefs } };
 };
 const VOLUMEN = { tap: 0.5, quitar: 0.5, chefpu: 0.6, blip: 0.5, paso: 0.5, xp: 0.8, logro: 0.8, nivel: 0.9, fanfarria: 0.9, error: 0.6 };
 const CLAVE = 'ajustes_sonido_v1';
@@ -72,7 +72,9 @@ export async function prepararSonidos() {
   try { const v = await AsyncStorage.getItem(CLAVE); if (v) prefs = { ...prefs, ...JSON.parse(v) }; } catch (e) { /* valores por defecto */ }
   oyentes.forEach((f) => f(prefs));
   await modoAudio();
-  if (Audio?.createAudioPlayer) SONIDOS.forEach(crearPlayer); // se descargan al abrir para que suenen al instante
+  // primero el archivo en el teléfono; si no se pudo, desde internet
+  await Promise.all(SONIDOS.map(async (n) => { const f = await archivoLocal(n); if (f) ARCHIVOS[n] = f; }));
+  if (Audio?.createAudioPlayer) SONIDOS.forEach(crearPlayer);
 }
 
 // Si un sonido aún no termina de descargarse, suena apenas esté listo (máx. 2 s; después ya no tiene sentido)

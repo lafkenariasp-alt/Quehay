@@ -24,7 +24,7 @@ function AjustesSonido() {
           Alert.alert('Prueba de sonido', [
             `¿Sonó? Debió sonar una moneda.`,
             `Librería: ${d.libreria} · vibración: ${d.vibracion}`,
-            `Sonidos listos: ${d.cargados} de ${d.total} (dentro de la app: ${d.locales})`,
+            `Archivos en el teléfono: ${d.descargados} de ${d.total} (descarga: ${d.archivos}) · listos para sonar: ${d.cargados}`,
             `Sonido ${d.prefs.sonido ? 'activado' : 'apagado'} · en silencio: ${d.prefs.enSilencio ? 'sí' : 'no'}`,
             d.error ? `Error: ${d.error}` : 'Sin errores',
           ].join('\n'));
