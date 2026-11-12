@@ -83,6 +83,7 @@ export default function Receta({ id, tengo = null, basicos = true }) {
   const [porciones, setPorciones] = useState(null);
   const [visor, setVisor] = useState(null); // índice de la foto abierta a pantalla completa
   const [fotoRota, setFotoRota] = useState(false); // si la foto no carga, se muestra el recuadro sin foto
+  const [subiendoFoto, setSubiendoFoto] = useState(false);
 
   const cargar = useCallback(async () => {
     setError(false);
@@ -148,7 +149,6 @@ export default function Receta({ id, tengo = null, basicos = true }) {
   ];
 
   // El autor puede agregar o cambiar la foto de su receta (también las de la cuenta quehay)
-  const [subiendoFoto, setSubiendoFoto] = useState(false);
   async function cambiarFoto() {
     const foto = await elegirFoto();
     if (!foto) return;
