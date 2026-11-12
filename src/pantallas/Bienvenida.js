@@ -42,7 +42,7 @@ export default function Bienvenida({ onTerminar, repetir = false }) {
       <View style={{ flex: 1, padding: 24, justifyContent: 'space-between' }}>
         <View />
         <View style={{ alignItems: 'center', gap: 22 }}>
-          <Mascota tam={150} />
+          <Mascota tam={220} />
           <Text style={{ fontSize: 40, fontWeight: '800', color: C.tomate }}>Qué Hay</Text>
           <Globo texto="¿Hambre? Dime qué tienes en la cocina y te digo qué puedes preparar ahora mismo." style={{ maxWidth: 320 }} />
         </View>
