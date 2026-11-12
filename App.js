@@ -1,6 +1,6 @@
 import './src/web';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, Pressable, Keyboard, Platform, Animated } from 'react-native';
+import { View, Text, Pressable, Keyboard, Platform, Animated, BackHandler } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -276,9 +276,14 @@ function Contenido() {
     const e = tutorial.estado;
     const listo = () => { cuentaRevisada.current = uidActual; };
     if (tc.completado) { listo(); if (!e.ofrecido) tutorial.marcarOfrecido(); return undefined; } // ya lo hizo en otro teléfono
+    // Cuenta nueva que cerró la app a mitad del tutorial: se retoma desde el principio (no se puede saltar)
+    if (e.obligatorio && !e.completado) {
+      const t = setTimeout(() => { listo(); tutorial.reiniciar(true); nav.abrir('tutorial'); }, 600);
+      return () => clearTimeout(t);
+    }
     if (tc.iniciado) { listo(); return undefined; } // Chefpu solo se lo ofrece
     if (e.completado) { listo(); reclamarRegalo().then((r) => { if (r === 'ok') { efecto('regalo'); recargarPerfil(); voz.decir('regalo_reclamado', '¡Tu regalo ya está en tu perfil: insignia, 30 XP y Fundador!', 'celebrando', { forzar: true }); } }); return undefined; } // lo terminó como invitado justo antes
-    const t = setTimeout(() => { listo(); marcarTutorialCuenta('iniciado'); tutorial.reiniciar(); nav.abrir('tutorial'); }, 600);
+    const t = setTimeout(() => { listo(); marcarTutorialCuenta('iniciado'); tutorial.reiniciar(true); nav.abrir('tutorial'); }, 600);
     return () => clearTimeout(t);
   }, [uidActual, tutorialCuenta, tutorial.estado]);
 
@@ -302,6 +307,13 @@ function Contenido() {
     }
     saltadoAntes.current = s;
   }, [tutorial.estado?.saltado]);
+
+  // Durante el tutorial no se puede salir con el gesto de volver (iPhone) ni con el botón atrás (Android)
+  useEffect(() => {
+    if (!tutorial.activo) return undefined;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => true);
+    return () => sub.remove();
+  }, [tutorial.activo]);
 
   // Chefpu ofrece el tutorial a quien no lo ha visto (usuarios que ya tenían la app)
   const enApp = sesion !== undefined && bienvenidaVista !== null && !!tutorial.estado && (uidActual || bienvenidaVista);
@@ -413,7 +425,7 @@ function Contenido() {
         onReady={() => {
           if (pendiente.current) { const d = pendiente.current; pendiente.current = null; navRef.dispatch(StackActions.push(d.pantalla, d.params)); }
         }}>
-        <Pila.Navigator screenOptions={{ headerShown: false, contentStyle: { backgroundColor: C.fondo }, gestureEnabled: true }}>
+        <Pila.Navigator screenOptions={{ headerShown: false, contentStyle: { backgroundColor: C.fondo }, gestureEnabled: !tutorial.activo }}>
           <Pila.Screen name="inicio">
             {() => <Inicio pestana={pestana} visitadas={visitadas} uid={uid} teclado={teclado} irA={nav.irA} />}
           </Pila.Screen>

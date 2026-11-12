@@ -1,3 +1,4 @@
+/* global window, navigator, document */
 import { Platform, Alert, Share, Linking } from 'react-native';
 
 // Ajustes solo para la versión web (navegador). En el teléfono este archivo no hace nada.

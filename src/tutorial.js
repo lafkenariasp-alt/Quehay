@@ -13,12 +13,13 @@ import { Mascota } from './chefpu';
 import { Foco, focos } from './foco';
 import { GUION, LINEA_REGALO, CAPITULOS } from './guion';
 import { registrar } from './analitica';
-import { efecto } from './sonido';
+import { efecto, vibrar } from './sonido';
 
 // ---------- Estado del tutorial (guardado en el teléfono, uno por cuenta) ----------
 export const CLAVE_TUTORIAL_INVITADO = 'tutorial_v2';
 export const claveTutorial = (uid) => (uid ? `tutorial_v2_${uid}` : CLAVE_TUTORIAL_INVITADO);
-const INICIAL = { iniciado: false, linea: 0, cuenta: 0, completado: false, saltado: false, regaloPendiente: false, ofrecido: false };
+// obligatorio: cuenta nueva que aún no termina el tutorial; no se puede saltar y se retoma si se cierra la app
+const INICIAL = { iniciado: false, linea: 0, cuenta: 0, completado: false, saltado: false, regaloPendiente: false, ofrecido: false, obligatorio: false };
 
 // heredar: ref que indica si una cuenta sin tutorial propio toma el que hizo como invitado
 // (solo la primera cuenta creada en el teléfono, para no regalarle el avance a otra persona)
@@ -64,9 +65,11 @@ export function useTutorialEstado(uid = null, heredar = null) {
   };
 
   const iniciar = useCallback(() => cambiar((e) => (e.iniciado && !e.saltado && e.linea < GUION.length ? e : { ...INICIAL, iniciado: true, ofrecido: true })), [cambiar]);
-  const reiniciar = useCallback(() => cambiar(() => ({ ...INICIAL, ofrecido: true })), [cambiar]);
+  // obligar: cuenta nueva (el tutorial es obligatorio hasta terminarlo)
+  const reiniciar = useCallback((obligar = false) => cambiar((e) => ({ ...INICIAL, ofrecido: true, obligatorio: obligar === true || (!!e.obligatorio && !e.completado) })), [cambiar]);
   const avanzar = useCallback(() => cambiar((e) => avanzarDe(e)), [cambiar]);
   const saltar = useCallback(() => cambiar((e) => {
+    if (e.obligatorio && !e.completado) return e; // cuenta nueva: no se puede saltar
     registrar('tutorial_saltado', { linea: e.linea });
     return { ...e, saltado: true, regaloPendiente: false };
   }), [cambiar]);
@@ -95,8 +98,9 @@ export function useTutorialEstado(uid = null, heredar = null) {
 
   const listo = cargada === clave;
   const activo = listo && !!estado && estado.iniciado && !estado.saltado && estado.linea < GUION.length;
+  const obligatorio = !!estado?.obligatorio && !estado?.completado;
   return {
-    estado: listo ? estado : null, listo, activo, linea: activo ? GUION[estado.linea] : null, indice: estado?.linea ?? 0,
+    estado: listo ? estado : null, listo, activo, obligatorio, linea: activo ? GUION[estado.linea] : null, indice: estado?.linea ?? 0,
     iniciar, reiniciar, avanzar, saltar, evento, marcarOfrecido,
   };
 }
@@ -133,6 +137,10 @@ export function TutorialCapa({ capa = 'raiz' }) {
   const [letras, setLetras] = useState(0);
   const pulso = useRef(new Animated.Value(0)).current;
   const aparece = useRef(new Animated.Value(0)).current;
+  const alerta = useRef(new Animated.Value(0)).current; // toque fuera de lugar: el foco destella y la tarjeta tiembla
+  const [ayuda, setAyuda] = useState(false); // mano que señala dónde tocar
+  const [fuera, setFuera] = useState(0); // toques fuera de lugar en esta línea
+  const [perdido, setPerdido] = useState(false); // el elemento no aparece: Chefpu ofrece seguir
 
   // Seguir la posición real del elemento (cambia con el scroll o al cargar)
   useEffect(() => focos.suscribir(() => refrescar((n) => n + 1)), []);
@@ -143,6 +151,22 @@ export function TutorialCapa({ capa = 'raiz' }) {
     const t2 = setInterval(() => focos.medir(objetivo), 500);
     return () => { clearTimeout(t1); clearInterval(t2); };
   }, [objetivo, indice]);
+
+  // Nueva línea: sin ayudas; si en 5 s no toca lo que corresponde, aparece la mano que señala
+  useEffect(() => {
+    setAyuda(false); setFuera(0); setPerdido(false);
+    if (!mia || !linea.esperar) return undefined;
+    const t = setTimeout(() => setAyuda(true), 5000);
+    return () => clearTimeout(t);
+  }, [mia, indice]);
+
+  // Si el elemento a resaltar no aparece en 4 s, no dejamos a la persona atrapada
+  const visible = mia && focos.existe(objetivo) && (!linea.foco || !!focos.rect(linea.foco));
+  useEffect(() => {
+    if (!mia || visible) { setPerdido(false); return undefined; }
+    const t = setTimeout(() => setPerdido(true), 4000);
+    return () => clearTimeout(t);
+  }, [mia, indice, visible]);
 
   // Líneas opcionales: si su elemento no está en esta pantalla, se saltan
   useEffect(() => {
@@ -178,15 +202,40 @@ export function TutorialCapa({ capa = 'raiz' }) {
     return () => a.stop();
   }, [reducido]);
 
-  if (!mia || !focos.existe(objetivo)) return null;
-  const rect = linea.foco ? focos.rect(linea.foco) : null;
-  if (linea.foco && !rect) return null;
-
   const { width: W, height: H } = Dimensions.get('window');
+  if (!mia) return null;
+  const rect = linea.foco ? focos.rect(linea.foco) : null;
+  // Mientras el elemento aparece (cambio de pantalla), la pantalla queda bloqueada: así no se puede tocar otra cosa
+  if (!focos.existe(objetivo) || (linea.foco && !rect)) {
+    return (
+      <View style={{ position: 'absolute', left: 0, top: 0, width: W, height: H, zIndex: 1000, elevation: 1000, justifyContent: 'flex-end', padding: 16, paddingBottom: insets.bottom + 24 }}>
+        {perdido ? (
+          <Pressable onPress={() => tutorial.avanzar()} accessibilityRole="button"
+            style={{ backgroundColor: C.fondo, borderRadius: 24, padding: 18, flexDirection: 'row', gap: 12, alignItems: 'center', shadowColor: '#000', shadowOpacity: 0.3, shadowRadius: 16 }}>
+            <Mascota tam={56} expresion="pensando" />
+            <View style={{ flex: 1, gap: 4 }}>
+              <Text style={{ fontSize: 16, fontWeight: '700', color: C.texto }}>Uy, me perdí un poco…</Text>
+              <Text style={{ fontSize: 12, fontWeight: '800', color: C.ambarOscuro }}>Toca aquí para seguir ▸</Text>
+            </View>
+          </Pressable>
+        ) : null}
+      </View>
+    );
+  }
+
   const escribiendo = letras < linea.texto.length;
   const sigue = !linea.esperar;
+  // Toque fuera de lugar: el foco destella, la tarjeta tiembla, vibra y aparece la mano
+  const llamar = () => {
+    setFuera((n) => n + 1);
+    setAyuda(true);
+    vibrar('aviso');
+    alerta.setValue(0);
+    Animated.timing(alerta, { toValue: 1, duration: 520, easing: Easing.linear, useNativeDriver: true }).start();
+  };
   // un solo toque basta: si la línea no espera nada, avanza aunque el texto se esté escribiendo
-  const tocar = () => { if (sigue) tutorial.avanzar(); else if (escribiendo) setLetras(linea.texto.length); };
+  const tocar = () => { if (sigue) tutorial.avanzar(); else if (escribiendo) setLetras(linea.texto.length); else llamar(); };
+  const puedeSaltar = !tutorial.obligatorio;
   const saltar = () => Alert.alert('¿Saltar el tutorial?', 'Puedes retomarlo cuando quieras desde tu perfil.', [
     { text: 'Seguir con Chefpu', style: 'cancel' },
     { text: 'Saltar', style: 'destructive', onPress: tutorial.saltar },
@@ -212,6 +261,11 @@ export function TutorialCapa({ capa = 'raiz' }) {
           {/* borde dorado que late; si la línea no pide tocarlo, tocar el foco también avanza */}
           <Animated.View pointerEvents="none" style={{ position: 'absolute', left: hueco.x, top: hueco.y, width: hueco.w, height: hueco.h, borderRadius: 16, borderWidth: 3, borderColor: C.dorado,
             opacity: pulso.interpolate({ inputRange: [0, 1], outputRange: [0.55, 1] }) }} />
+          {/* destello al tocar fuera: onda dorada que sale del foco */}
+          <Animated.View pointerEvents="none" style={{ position: 'absolute', left: hueco.x, top: hueco.y, width: hueco.w, height: hueco.h, borderRadius: 16, borderWidth: 4, borderColor: '#FCD34D',
+            opacity: alerta.interpolate({ inputRange: [0, 0.1, 1], outputRange: [0, 1, 0] }),
+            transform: [{ scaleX: alerta.interpolate({ inputRange: [0, 1], outputRange: [1, 1 + 40 / Math.max(hueco.w, 40)] }) }, { scaleY: alerta.interpolate({ inputRange: [0, 1], outputRange: [1, 1 + 40 / Math.max(hueco.h, 40)] }) }] }} />
+          {!sigue && ayuda ? <Mano hueco={hueco} H={H} W={W} reducido={reducido} /> : null}
           {sigue && !linea.pasar ? <Pressable onPress={tocar} accessible={false} style={{ position: 'absolute', left: hueco.x, top: hueco.y, width: hueco.w, height: hueco.h }} /> : null}
         </>
       ) : (
@@ -220,7 +274,10 @@ export function TutorialCapa({ capa = 'raiz' }) {
 
       {/* Chefpu narra: una tarjeta con su cara, el texto, el avance (4 puntos) y saltar */}
       <Animated.View pointerEvents="box-none" style={[{ position: 'absolute', left: 16, right: 16, opacity: aparece,
-        transform: [{ translateY: aparece.interpolate({ inputRange: [0, 1], outputRange: [8, 0] }) }] }, posNarrador]}>
+        transform: [
+          { translateY: aparece.interpolate({ inputRange: [0, 1], outputRange: [8, 0] }) },
+          { translateX: alerta.interpolate({ inputRange: [0, 0.15, 0.3, 0.45, 0.6, 0.75, 1], outputRange: [0, -10, 10, -7, 7, -3, 0] }) },
+        ] }, posNarrador]}>
         <View style={{ backgroundColor: C.fondo, borderRadius: 24, padding: 18, gap: 12,
           shadowColor: '#000', shadowOpacity: 0.3, shadowRadius: 16, shadowOffset: { width: 0, height: 12 } }}>
           <Pressable onPress={tocar} accessibilityRole="button" accessibilityLiveRegion="polite"
@@ -229,8 +286,8 @@ export function TutorialCapa({ capa = 'raiz' }) {
             <Mascota tam={hueco ? 64 : 96} expresion={linea.cara} />
             <View style={{ flex: 1, gap: 6 }}>
               <Text style={{ fontSize: 16, fontWeight: '700', color: C.texto, lineHeight: 22 }}>{linea.texto.slice(0, letras)}</Text>
-              <Text style={{ fontSize: 12, fontWeight: '800', color: C.ambarOscuro }}>
-                {escribiendo ? ' ' : sigue ? 'Toca para seguir ▸' : 'Toca lo que brilla'}
+              <Text style={{ fontSize: fuera ? 14 : 12, fontWeight: '800', color: fuera ? C.tomate : C.ambarOscuro }}>
+                {escribiendo ? ' ' : sigue ? 'Toca para seguir ▸' : fuera ? '¡Ahí no! Toca lo que brilla 👆' : 'Toca lo que brilla'}
               </Text>
             </View>
           </Pressable>
@@ -241,13 +298,42 @@ export function TutorialCapa({ capa = 'raiz' }) {
               ))}
             </View>
             <View style={{ flex: 1 }} />
-            <Pressable onPress={saltar} accessibilityRole="button" hitSlop={10} style={{ minHeight: 44, justifyContent: 'center', paddingHorizontal: 4 }}>
-              <Text style={{ color: C.suave, fontWeight: '700', fontSize: 14 }}>Saltar tutorial</Text>
-            </Pressable>
+            {puedeSaltar ? (
+              <Pressable onPress={saltar} accessibilityRole="button" hitSlop={10} style={{ minHeight: 44, justifyContent: 'center', paddingHorizontal: 4 }}>
+                <Text style={{ color: C.suave, fontWeight: '700', fontSize: 14 }}>Saltar tutorial</Text>
+              </Pressable>
+            ) : <View style={{ minHeight: 44 }} />}
           </View>
         </View>
       </Animated.View>
     </View>
+  );
+}
+
+// Mano que señala dónde tocar: rebota junto al foco (debajo si hay espacio, si no encima)
+function Mano({ hueco, H, W, reducido }) {
+  const v = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (reducido) return undefined;
+    const a = Animated.loop(Animated.sequence([
+      Animated.timing(v, { toValue: 1, duration: 450, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+      Animated.timing(v, { toValue: 0, duration: 450, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+    ]));
+    a.start();
+    return () => a.stop();
+  }, [reducido]);
+  const T = 44;
+  const grande = hueco.h > H * 0.4; // p. ej. el texto del paso: se toca a la derecha
+  const x = grande ? hueco.x + hueco.w * 0.8 - T / 2 : Math.min(W - T - 8, Math.max(8, hueco.x + hueco.w / 2 - T / 2));
+  const abajo = !grande && hueco.y + hueco.h + T + 8 < H - 120;
+  const y = grande ? hueco.y + hueco.h / 2 - T / 2 : abajo ? hueco.y + hueco.h - 6 : hueco.y - T + 6;
+  const dir = abajo || grande ? -1 : 1; // se mueve hacia el foco
+  return (
+    <Animated.Text pointerEvents="none" accessible={false}
+      style={{ position: 'absolute', left: x, top: y, fontSize: T, textShadowColor: 'rgba(0,0,0,0.35)', textShadowRadius: 6,
+        transform: [{ translateY: v.interpolate({ inputRange: [0, 1], outputRange: [0, dir * 12] }) }] }}>
+      {abajo || grande ? '👆' : '👇'}
+    </Animated.Text>
   );
 }
 

@@ -425,7 +425,7 @@ export default function Receta({ id, tengo = null, basicos = true }) {
         </Seccion>
       </Pantalla>
 
-      <Modal visible={modoCocina} animationType="slide" presentationStyle="fullScreen" onRequestClose={() => setModoCocina(false)}>
+      <Modal visible={modoCocina} animationType="slide" presentationStyle="fullScreen" onRequestClose={() => { if (!tutorial?.activo) setModoCocina(false); }}>
         {modoCocina ? (
           <ModoCocina receta={r} onCerrar={() => setModoCocina(false)} onTerminar={() => {
             setModoCocina(false);
