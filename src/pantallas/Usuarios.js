@@ -1,10 +1,10 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, TextInput, Pressable, Alert, ScrollView } from 'react-native';
+import { View, Text, TextInput, Pressable, Alert, ScrollView, FlatList } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../supabase';
 import { useApp } from '../contexto';
 import { C } from '../theme';
-import { Pantalla, Encabezado, Avatar, Vacio, Cargando, Chip, Boton, s } from '../ui';
+import { Encabezado, Avatar, Vacio, Cargando, Chip, Boton, s } from '../ui';
 import { registrar } from '../analitica';
 import { efecto } from '../sonido';
 
@@ -107,17 +107,40 @@ export default function Usuarios({ pestana: inicial = 'sugerencias' }) {
     );
   };
 
-  const lista = (ids, vacio) => {
-    const ps = ids.map((id) => perfiles[id]).filter(Boolean).sort((a, b) => a.nombre.localeCompare(b.nombre));
-    return ps.length ? <View style={{ gap: 12 }}>{ps.map((p) => fila(p))}</View> : <Vacio texto={vacio} />;
-  };
-
   const buscando = q.trim().length >= 2;
   const amigosIds = [...sigo].filter((id) => meSiguen.has(id));
   const conteos = { amigos: amigosIds.length, siguiendo: sigo.size, seguidores: meSiguen.size };
 
-  return (
-    <Pantalla>
+  const ordenar = (ids) => ids.map((id) => perfiles[id]).filter(Boolean).sort((a, b) => a.nombre.localeCompare(b.nombre));
+  // Lo que muestra la lista según la búsqueda o la pestaña (FlatList: carga por partes aunque sean cientos)
+  let datos = [];
+  let vacio = null;
+  if (buscando) {
+    datos = resultados.map((p) => ({ p }));
+    vacio = <Vacio texto="No encontramos a nadie con ese nombre" />;
+  } else if (pestana === 'sugerencias') {
+    datos = (sugerencias || []).map((p) => ({ p, detalle: p.motivo }));
+    vacio = sugerencias === null ? <Cargando /> : <Vacio texto="Aún no hay sugerencias. Cuando más gente se sume, aparecerán aquí." />;
+  } else if (invitado) {
+    vacio = (
+            <View style={{ gap: 12, paddingVertical: 16 }}>
+              <Text style={[s.sub, { textAlign: 'center', fontSize: 15 }]}>Crea tu cuenta para seguir a tus amigos y ver quién te sigue.</Text>
+              <Boton titulo="Crear mi cuenta" icono="gift-outline" onPress={() => pedirCuenta('Crea tu cuenta para seguir a tus amigos')} />
+            </View>
+    );
+  } else if (pestana === 'amigos') {
+    datos = ordenar(amigosIds).map((p) => ({ p }));
+    vacio = <Vacio texto="Cuando tú y otra persona se sigan, aparecerá aquí como amigo." />;
+  } else if (pestana === 'siguiendo') {
+    datos = ordenar([...sigo]).map((p) => ({ p }));
+    vacio = <Vacio texto="Aún no sigues a nadie. Mira las sugerencias." />;
+  } else {
+    datos = ordenar([...meSiguen]).map((p) => ({ p }));
+    vacio = <Vacio texto="Todavía nadie te sigue. Publica una receta para que te conozcan." />;
+  }
+
+  const cabecera = (
+    <View style={{ gap: 16, marginBottom: 12 }}>
       <Encabezado onVolver={nav.volver} titulo="Amigos" sub="Sigue a otros cocineros y mira lo que cocinan" />
 
       <View style={[s.input, s.fila]}>
@@ -131,9 +154,7 @@ export default function Usuarios({ pestana: inicial = 'sugerencias' }) {
         ) : null}
       </View>
 
-      {buscando ? (
-        resultados.length ? <View style={{ gap: 12 }}>{resultados.map((p) => fila(p))}</View> : <Vacio texto="No encontramos a nadie con ese nombre" />
-      ) : (
+      {!buscando ? (
         <>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }} accessibilityRole="tablist">
             {PESTANAS.map((p) => (
@@ -163,24 +184,26 @@ export default function Usuarios({ pestana: inicial = 'sugerencias' }) {
                   <Text style={{ fontSize: 14, fontWeight: '800', color: C.texto }}>Sugerencias cerca de {perfil.ciudad} · <Text style={{ color: C.tomate }}>cambiar</Text></Text>
                 </Pressable>
               ) : null}
-              {sugerencias === null ? <Cargando /> : sugerencias.length
-                ? <View style={{ gap: 12 }}>{sugerencias.map((p) => fila(p, p.motivo))}</View>
-                : <Vacio texto="Aún no hay sugerencias. Cuando más gente se sume, aparecerán aquí." />}
             </>
-          ) : invitado ? (
-            <View style={{ gap: 12, paddingVertical: 16 }}>
-              <Text style={[s.sub, { textAlign: 'center', fontSize: 15 }]}>Crea tu cuenta para seguir a tus amigos y ver quién te sigue.</Text>
-              <Boton titulo="Crear mi cuenta" icono="gift-outline" onPress={() => pedirCuenta('Crea tu cuenta para seguir a tus amigos')} />
-            </View>
-          ) : pestana === 'amigos' ? (
-            lista(amigosIds, 'Cuando tú y otra persona se sigan, aparecerá aquí como amigo.')
-          ) : pestana === 'siguiendo' ? (
-            lista([...sigo], 'Aún no sigues a nadie. Mira las sugerencias.')
-          ) : (
-            lista([...meSiguen], 'Todavía nadie te sigue. Publica una receta para que te conozcan.')
-          )}
+          ) : null}
         </>
-      )}
-    </Pantalla>
+      ) : null}
+    </View>
+  );
+
+  return (
+    <FlatList
+      data={datos}
+      keyExtractor={(x) => x.p.id}
+      renderItem={({ item }) => fila(item.p, item.detalle)}
+      ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
+      ListHeaderComponent={cabecera}
+      ListEmptyComponent={vacio}
+      contentContainerStyle={s.contenido}
+      keyboardShouldPersistTaps="handled"
+      keyboardDismissMode="interactive"
+      automaticallyAdjustKeyboardInsets
+      initialNumToRender={12}
+    />
   );
 }

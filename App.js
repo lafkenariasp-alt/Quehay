@@ -22,6 +22,7 @@ import Buscar from './src/pantallas/Buscar';
 import Resultados from './src/pantallas/Resultados';
 import Receta from './src/pantallas/Receta';
 import Publicar from './src/pantallas/Publicar';
+import Comunidad from './src/pantallas/Comunidad';
 import Perfil from './src/pantallas/Perfil';
 import Usuarios from './src/pantallas/Usuarios';
 import PerfilPublico from './src/pantallas/PerfilPublico';
@@ -29,6 +30,7 @@ import PerfilPublico from './src/pantallas/PerfilPublico';
 const PESTANAS = [
   { id: 'nevera', nombre: 'Nevera', icono: 'file-tray-stacked-outline', comp: Nevera },
   { id: 'buscar', nombre: 'Buscar', icono: 'search', comp: Buscar },
+  { id: 'comunidad', nombre: 'Comunidad', icono: 'people-outline', comp: Comunidad },
   { id: 'publicar', nombre: 'Publicar', icono: 'add-circle-outline', comp: Publicar },
   { id: 'perfil', nombre: 'Perfil', icono: 'person-outline', comp: Perfil },
 ];
@@ -102,7 +104,7 @@ function Inicio({ pestana, visitadas, uid, teclado, irA }) {
                 <Pressable onPress={() => irA(p.id)} style={{ flex: 1, alignItems: 'center', gap: 2, minHeight: 48, justifyContent: 'center' }}
                   accessibilityRole="tab" accessibilityLabel={p.nombre} accessibilityState={{ selected: activa }}>
                   <Ionicons name={p.icono} size={24} color={activa ? C.tomate : C.suave} />
-                  <Text style={{ fontSize: 11, fontWeight: '700', color: activa ? C.tomate : C.suave }} maxFontSizeMultiplier={1.4}>{p.nombre}</Text>
+                  <Text numberOfLines={1} style={{ fontSize: 11, fontWeight: "700", color: activa ? C.tomate : C.suave }} maxFontSizeMultiplier={1.3}>{p.nombre}</Text>
                 </Pressable>
               </Foco>
             );
@@ -309,6 +311,7 @@ function Contenido() {
     const CONSEJOS = {
       nevera: 'Anota lo que compras y te digo qué cocinar. Mantén presionado un alimento para quitarlo.',
       buscar: 'Elige lo que tienes y toca Ver recetas. Con 3 o más ingredientes salen muchas más.',
+      comunidad: 'Aquí ves lo que cocinan tus amigos. Toca una foto para ver la receta.',
       publicar: 'Sube tu receta con foto y gana 50 XP. Elige los ingredientes del catálogo.',
       perfil: 'Aquí ves tu nivel, tus logros y tus recetas. Cocina y publica para subir.',
       resultados: 'Verde es lo que tienes, ámbar lo que te falta. Arriba están las que puedes cocinar ya.',

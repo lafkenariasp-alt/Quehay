@@ -1,10 +1,10 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, Alert, Pressable } from 'react-native';
+import { View, Text, Alert, Pressable, FlatList } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../supabase';
 import { useApp } from '../contexto';
 import { C } from '../theme';
-import { Pantalla, Seccion, Boton, TarjetaReceta, Pastilla, Cargando, ErrorCarga, Avatar, s } from '../ui';
+import { Boton, TarjetaReceta, Pastilla, Cargando, ErrorCarga, Avatar, s } from '../ui';
 import { reportar } from '../reportar';
 import { efecto } from '../sonido';
 
@@ -53,7 +53,13 @@ export default function PerfilPublico({ id }) {
 
   const lugar = [`@${p.usuario}`, p.ciudad].filter(Boolean).join(' · ');
   return (
-    <Pantalla>
+    <FlatList
+      data={recetas}
+      keyExtractor={(r) => String(r.id)}
+      contentContainerStyle={s.contenido}
+      ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
+      initialNumToRender={8}
+      ListHeaderComponent={<View style={{ gap: 16, marginBottom: 12 }}>
       <View style={s.filaEntre}>
         <Pressable onPress={nav.volver} accessibilityRole="button" accessibilityLabel="Volver" style={[s.fila, { gap: 2, minHeight: 44 }]}>
           <Ionicons name="chevron-back" size={22} color={C.suave} />
@@ -85,13 +91,17 @@ export default function PerfilPublico({ id }) {
           tipo={loSigo ? 'neutro' : 'principal'} onPress={alternar} />
       ) : null}
 
-      <Seccion titulo="Recetas" derecha={<Text style={s.sub}>{recetas.length}</Text>}>
-        {recetas.length === 0 ? <Text style={s.sub}>Todavía no publica recetas.</Text> : recetas.map((r) => (
-          <TarjetaReceta key={r.id} titulo={r.titulo} foto={r.foto_url}
-            meta={`${r.num_notas ? `${Number(r.nota_promedio).toFixed(1).replace('.', ',')} estrellas (${r.num_notas})` : 'Sin notas'} · ${r.num_cocinadas} la cocinaron`}
-            onPress={() => nav.abrir('receta', { id: r.id })} />
-        ))}
-      </Seccion>
-    </Pantalla>
+      <View style={s.filaEntre}>
+        <Text style={s.seccion}>Recetas</Text>
+        <Text style={s.sub}>{recetas.length}</Text>
+      </View>
+      </View>}
+      ListEmptyComponent={<Text style={s.sub}>Todavía no publica recetas.</Text>}
+      renderItem={({ item: r }) => (
+        <TarjetaReceta titulo={r.titulo} foto={r.foto_url}
+          meta={`${r.num_notas ? `${Number(r.nota_promedio).toFixed(1).replace('.', ',')} estrellas (${r.num_notas})` : 'Sin notas'} · ${r.num_cocinadas} la cocinaron`}
+          onPress={() => nav.abrir('receta', { id: r.id })} />
+      )}
+    />
   );
 }
