@@ -245,7 +245,7 @@ export default function Receta({ id, tengo = null, basicos = true }) {
             <Ionicons name="chevron-back" size={22} color={C.suave} />
             <Text style={{ fontSize: 15, fontWeight: '700', color: C.suave }}>Volver</Text>
           </Pressable>
-          <View style={[s.fila, { gap: 4 }]}>
+          <Foco id="acciones_receta" style={[s.fila, { gap: 4 }]}>
             {!esMia ? (
               <Pressable onPress={() => reportar({ uid, tipo: 'receta', objetoId: r.id, pedirCuenta })} accessibilityRole="button" accessibilityLabel="Reportar receta"
                 style={{ minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' }}>
@@ -264,7 +264,7 @@ export default function Receta({ id, tengo = null, basicos = true }) {
               style={{ minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' }}>
               <Corazon activo={meGusta} tam={28} />
             </Presionable>
-          </View>
+          </Foco>
         </View>
 
         {r.oculta ? (

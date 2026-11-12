@@ -23,16 +23,20 @@ export const GUION = [
   { cap: 2, foco: 'receta_0', cara: 'feliz', texto: 'Elijamos esta. Tócala.', esperar: { evento: 'abrir_receta' } },
   // Capítulo 3 · La receta
   { cap: 3, foco: 'ingredientes', cara: 'feliz', texto: 'Aquí ves todo lo que lleva. Lo verde ya está en tu cocina.' },
+  { cap: 3, foco: 'ingredientes', cara: 'pensando', texto: 'Con − y + cambias las porciones y las cantidades se ajustan solas. Lo que te falte lo mandas a tu lista de compras.' },
+  { cap: 3, foco: 'acciones_receta', cara: 'feliz', texto: 'Aquí la compartes, la guardas con el marcador o le das Me gusta. También sirve tocar dos veces la foto.' },
   { cap: 3, en: 'pantalla_receta', cara: 'feliz', texto: 'Más abajo verás cómo les quedó a otros, con foto.' },
   { cap: 3, foco: 'paso_a_paso', cara: 'celebrando', texto: 'Ahora lo bueno: toca Paso a paso y cocinamos juntos.', esperar: { evento: 'paso_a_paso' } },
   // Capítulo 4 · Manos a la obra
   { cap: 4, capa: 'cocina', foco: 'texto_paso', cara: 'feliz', texto: 'Un paso a la vez, en letra grande. La pantalla no se apaga.' },
+  { cap: 4, capa: 'cocina', foco: 'texto_paso', cara: 'pensando', texto: 'Si un paso dice «10 minutos», aparece un temporizador para que no se te pase.' },
   { cap: 4, capa: 'cocina', foco: 'texto_paso', cara: 'feliz', texto: 'Como en las historias: toca a la derecha para avanzar o desliza. Llega al último paso.', esperar: { evento: 'ultimo_paso' } },
   { cap: 4, capa: 'cocina', foco: 'termine', cara: 'celebrando', texto: '¡Lo lograste! Toca ¡Terminé!', esperar: { evento: 'termine' } },
   // Epílogo · La recompensa
   { cap: 5, capa: 'regalo', foco: 'regalo', cara: 'celebrando', texto: '¡Gracias por ayudarme! Toma: insignia de bienvenida, 30 XP y Fundador.', esperar: { evento: 'regalo_cerrado' } },
   { cap: 5, foco: 'chefpu_flotante', cara: 'feliz', texto: 'Desde ahora vivo aquí. Arrástrame donde quieras o presióname para más opciones.' },
-  { cap: 5, foco: 'tab_nevera', cara: 'feliz', texto: 'Si te creas una cuenta, guardo tus ingredientes en tu nevera. Cuando quieras, sin apuro.' },
+  { cap: 5, foco: 'tab_nevera', cara: 'feliz', texto: 'En la Nevera anotas lo que tienes y tu lista de compras. Para quitar algo, deslízalo a la izquierda.' },
+  { cap: 5, foco: 'tab_nevera', cara: 'feliz', texto: 'Si te creas una cuenta, guardo todo eso para ti. Cuando quieras, sin apuro.' },
 ];
 
 export const LINEA_REGALO = GUION.findIndex((l) => l.foco === 'regalo');

@@ -145,41 +145,77 @@ export function Brillo({ children, style }) {
   );
 }
 
-// ---------- Aura de Chefpu: anillo de colores que gira lento; más rápido y brillante si tiene algo que decir ----------
-export function Aura({ tam, activo, children }) {
-  const giro = useRef(new Animated.Value(0)).current;
-  const pulso = useRef(new Animated.Value(0)).current;
+// ---------- Aura de Chefpu: pura luz, sin color fijo ----------
+// Resplandeciente: halo dorado difuso que respira.
+// Brillante: destellos que aparecen y se apagan alrededor + un reflejo que cruza su cara.
+// Destacado: cuando tiene algo que decir, salen ondas de luz y todo se intensifica.
+const DESTELLOS = [ // posición (en proporción al tamaño), tamaño y desfase
+  { x: 0.02, y: 0.06, t: 13, d: 0 }, { x: 0.86, y: -0.04, t: 16, d: 700 }, { x: 0.96, y: 0.7, t: 11, d: 1500 }, { x: -0.06, y: 0.78, t: 12, d: 2200 },
+];
+function useCiclo(dura, activo = true, espera = 0) {
+  const v = useRef(new Animated.Value(0)).current;
   useEffect(() => {
-    if (reducir) return undefined;
-    giro.setValue(0);
-    const a = Animated.loop(Animated.timing(giro, { toValue: 1, duration: activo ? 1800 : 6000, easing: Easing.linear, useNativeDriver: true }));
+    if (!activo || reducir) { v.setValue(0); return undefined; }
+    const a = Animated.loop(Animated.sequence([
+      Animated.delay(espera),
+      Animated.timing(v, { toValue: 1, duration: dura, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+    ]));
     a.start();
     return () => a.stop();
-  }, [activo]);
+  }, [activo, dura, espera]);
+  return v;
+}
+function Destello({ x, y, t, d, tam, rapido }) {
+  const v = useCiclo(rapido ? 900 : 1600, true, rapido ? d / 3 : d);
+  return (
+    <Animated.View pointerEvents="none" style={{ position: 'absolute', left: x * tam, top: y * tam,
+      opacity: v.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0, 1, 0] }),
+      transform: [{ scale: v.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.3, 1, 0.3] }) }, { rotate: v.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '90deg'] }) }] }}>
+      <Ionicons name="sparkles" size={t} color="#FCD34D" style={{ textShadowColor: C.dorado, textShadowRadius: 6 }} />
+    </Animated.View>
+  );
+}
+function Onda({ tam, espera }) {
+  const v = useCiclo(1600, true, espera);
+  return (
+    <Animated.View pointerEvents="none" style={{ position: 'absolute', width: tam, height: tam, borderRadius: tam / 2, borderWidth: 2, borderColor: '#FCD34D',
+      opacity: v.interpolate({ inputRange: [0, 0.15, 1], outputRange: [0, 0.8, 0] }),
+      transform: [{ scale: v.interpolate({ inputRange: [0, 1], outputRange: [1, 1.7] }) }] }} />
+  );
+}
+export function Aura({ tam, activo, children }) {
+  const respira = useRef(new Animated.Value(0)).current;
   useEffect(() => {
-    if (!activo || reducir) { pulso.setValue(0); return undefined; }
+    if (reducir) { respira.setValue(0.5); return undefined; }
+    const mitad = activo ? 650 : 1700;
     const a = Animated.loop(Animated.sequence([
-      Animated.timing(pulso, { toValue: 1, duration: 700, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
-      Animated.timing(pulso, { toValue: 0, duration: 700, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+      Animated.timing(respira, { toValue: 1, duration: mitad, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+      Animated.timing(respira, { toValue: 0, duration: mitad, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
     ]));
     a.start();
     return () => a.stop();
   }, [activo]);
-  const G = 4; // grosor del anillo
-  const anillo = { position: 'absolute', top: 0, left: 0, width: tam, height: tam, borderRadius: tam / 2, borderWidth: G };
-  const rot = (desde) => ({ transform: [{ rotate: giro.interpolate({ inputRange: [0, 1], outputRange: [`${desde}deg`, `${desde + 360}deg`] }) }] });
+  const reflejo = useCiclo(900, true, activo ? 1200 : 3600); // cruza la cara cada pocos segundos
+  // halo difuso: capas de luz cada vez más grandes y más tenues
+  const capas = [[1.14, 0.34], [1.3, 0.2], [1.5, 0.1]];
   return (
     <View style={{ width: tam, height: tam, alignItems: 'center', justifyContent: 'center' }}>
-      {/* resplandor */}
-      <Animated.View pointerEvents="none" style={{ position: 'absolute', width: tam, height: tam, borderRadius: tam / 2, backgroundColor: C.dorado,
-        opacity: pulso.interpolate({ inputRange: [0, 1], outputRange: [activo ? 0.25 : 0, 0.5] }),
-        transform: [{ scale: pulso.interpolate({ inputRange: [0, 1], outputRange: [1.05, 1.28] }) }] }} />
-      {/* dos anillos de colores cruzados: al girar se mezclan como un degradado */}
-      <Animated.View pointerEvents="none" style={[anillo, { borderTopColor: C.tomate, borderRightColor: C.dorado, borderBottomColor: C.verde, borderLeftColor: C.dorado }, rot(0)]} />
-      <Animated.View pointerEvents="none" style={[anillo, { opacity: 0.55, borderTopColor: C.dorado, borderRightColor: C.verde, borderBottomColor: C.dorado, borderLeftColor: C.tomate }, rot(45)]} />
-      <View style={{ width: tam - G * 2, height: tam - G * 2, borderRadius: tam / 2, backgroundColor: C.blanco, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' }}>
+      {capas.map(([escala, op], k) => (
+        <Animated.View key={k} pointerEvents="none" style={{ position: 'absolute', width: tam, height: tam, borderRadius: tam / 2, backgroundColor: k === 0 ? '#FCD34D' : '#FDE68A',
+          opacity: respira.interpolate({ inputRange: [0, 1], outputRange: [op * (activo ? 0.9 : 0.45), op * (activo ? 1.6 : 1)] }),
+          transform: [{ scale: respira.interpolate({ inputRange: [0, 1], outputRange: [escala - 0.06, escala + (activo ? 0.14 : 0.06)] }) }] }} />
+      ))}
+      {activo && !reducir ? <><Onda tam={tam} espera={0} /><Onda tam={tam} espera={800} /></> : null}
+      <View style={{ width: tam, height: tam, borderRadius: tam / 2, backgroundColor: C.blanco, overflow: 'hidden', alignItems: 'center', justifyContent: 'center',
+        borderWidth: 2, borderColor: '#FFF7DB' }}>
         {children}
+        {!reducir ? (
+          <Animated.View pointerEvents="none" style={{ position: 'absolute', top: -tam * 0.3, width: tam * 0.3, height: tam * 1.6, backgroundColor: '#FFFFFF',
+            opacity: reflejo.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0, 0.6, 0] }),
+            transform: [{ translateX: reflejo.interpolate({ inputRange: [0, 1], outputRange: [-tam, tam] }) }, { rotate: '20deg' }] }} />
+        ) : null}
       </View>
+      {!reducir ? DESTELLOS.map((d, k) => <Destello key={k} {...d} tam={tam} rapido={activo} />) : null}
     </View>
   );
 }

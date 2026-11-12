@@ -189,10 +189,10 @@ export function ChefpuFlotante({ voz, visible, onQueCocino, onConsejo, onAmigos 
         accessible accessibilityRole="button" accessibilityLabel="Chefpu" accessibilityHint="Toca para ver opciones. Arrastra para moverlo."
         accessibilityActions={[{ name: 'activate' }]} onAccessibilityAction={() => setMenu((x) => !x)}>
         <Foco id="chefpu_flotante" style={{ width: TAM, height: TAM, borderRadius: TAM / 2,
-          shadowColor: m ? C.dorado : '#2A211C', shadowOpacity: m ? 0.6 : 0.22, shadowRadius: m ? 14 : 8, shadowOffset: { width: 0, height: m ? 0 : 6 } }}>
-          {/* Aura: anillo de colores que gira; más rápido y con resplandor cuando tiene algo que decir */}
+          shadowColor: C.dorado, shadowOpacity: m ? 0.9 : 0.55, shadowRadius: m ? 18 : 12, shadowOffset: { width: 0, height: 0 } }}>
+          {/* Aura de luz: halo que respira, destellos y un reflejo; se intensifica cuando tiene algo que decir */}
           <Aura tam={TAM} activo={!!m}>
-            <Mascota tam={TAM - 14} expresion={m?.cara || null} />
+            <Mascota tam={TAM - 8} expresion={m?.cara || null} />
           </Aura>
         </Foco>
       </Animated.View>
