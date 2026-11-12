@@ -1,0 +1,9 @@
+{
+  "name": "Qué Hay (Expo SDK 58)",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:22",
+  "postCreateCommand": "npm install && npx expo install --fix",
+  "forwardPorts": [8081],
+  "customizations": {
+    "codespaces": { "openFiles": ["README.md"] }
+  }
+}

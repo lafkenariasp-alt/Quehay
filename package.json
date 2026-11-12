@@ -6,7 +6,8 @@
   "scripts": {
     "start": "expo start",
     "ios": "expo start --ios",
-    "android": "expo start --android"
+    "android": "expo start --android",
+    "tunel": "expo start --tunnel"
   },
   "dependencies": {
     "@expo/vector-icons": "*",
