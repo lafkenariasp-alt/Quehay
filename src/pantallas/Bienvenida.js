@@ -6,13 +6,16 @@ import { C } from '../theme';
 import { Boton, Grilla, Casilla, s } from '../ui';
 import { Mascota, Globo } from '../mascota';
 import { registrar, guardarIngredientesInvitado } from '../analitica';
+import { useApp } from '../contexto';
+import { TOTAL_PASOS } from '../tutorial';
 import SelectorIngredientes from '../SelectorIngredientes';
 
 // Lo más común en una cocina chilena: se toca y listo
 const TIPICOS = ['Huevos', 'Arroz', 'Pollo', 'Cebolla', 'Papas', 'Tomate', 'Ajo', 'Fideos', 'Leche', 'Queso', 'Zanahoria', 'Pan'];
 
 // Primera vez que se abre la app: de "tengo hambre" a recetas en menos de un minuto, sin registrarse
-export default function Bienvenida({ onTerminar }) {
+export default function Bienvenida({ onTerminar, repetir = false }) {
+  const { tutorial, nav } = useApp();
   const [paso, setPaso] = useState(0);
   const [tipicos, setTipicos] = useState([]);
   const [elegidos, setElegidos] = useState([]); // [{ id, nombre }]
@@ -30,6 +33,7 @@ export default function Bienvenida({ onTerminar }) {
   async function verRecetas() {
     await guardarIngredientesInvitado(elegidos);
     registrar('bienvenida_resultados', { ingredientes: elegidos.length });
+    tutorial.marcar('ingredientes');
     onTerminar({ pantalla: 'resultados', params: { tengo: elegidos.map((e) => e.id), primeraVez: true } });
   }
 
@@ -43,10 +47,16 @@ export default function Bienvenida({ onTerminar }) {
           <Globo texto="¿Hambre? Dime qué tienes en la cocina y te digo qué puedes preparar ahora mismo." style={{ maxWidth: 320 }} />
         </View>
         <View style={{ gap: 10 }}>
-          <Boton titulo="Empezar" icono="arrow-forward" onPress={() => setPaso(1)} />
-          <Pressable onPress={() => onTerminar({ pantalla: 'acceso', params: {} })} accessibilityRole="button" style={{ minHeight: 44, alignItems: 'center', justifyContent: 'center' }}>
+          <Boton titulo="Empezar" icono="arrow-forward" onPress={() => { tutorial.iniciar(); setPaso(1); }} />
+          {repetir ? (
+            <Pressable onPress={() => { tutorial.saltar(); nav.volver(); }} accessibilityRole="button" style={{ minHeight: 44, alignItems: 'center', justifyContent: 'center' }}>
+              <Text style={{ fontSize: 15, fontWeight: '800', color: C.suave }}>Ahora no</Text>
+            </Pressable>
+          ) : (
+          <Pressable onPress={() => { tutorial.saltar(); onTerminar({ pantalla: 'acceso', params: {} }); }} accessibilityRole="button" style={{ minHeight: 44, alignItems: 'center', justifyContent: 'center' }}>
             <Text style={{ fontSize: 15, fontWeight: '800', color: C.tomate }}>Ya tengo cuenta</Text>
           </Pressable>
+          )}
         </View>
       </View>
     );
@@ -57,7 +67,10 @@ export default function Bienvenida({ onTerminar }) {
       <ScrollView contentContainerStyle={{ padding: 20, gap: 18 }}>
         <View style={[s.fila, { gap: 12, alignItems: 'flex-end' }]}>
           <Mascota tam={64} />
-          <Globo texto="¿Qué tienes a mano? No tiene que ser todo: con 3 basta." style={{ flex: 1 }} />
+          <View style={{ flex: 1, gap: 6 }}>
+            <Text style={{ fontSize: 12, fontWeight: '800', color: C.ambarOscuro, letterSpacing: 0.5 }}>TUTORIAL · PASO 1 DE {TOTAL_PASOS}</Text>
+            <Globo texto="¿Qué tienes a mano? No tiene que ser todo: con 3 basta." />
+          </View>
         </View>
         <Text style={s.titulo}>¿Qué tienes a mano?</Text>
         <Grilla>

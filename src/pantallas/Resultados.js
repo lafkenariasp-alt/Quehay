@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../supabase';
 import { useApp } from '../contexto';
 import { C } from '../theme';
+import { GuiaTutorial } from '../tutorial';
 import { Pantalla, Encabezado, Seccion, Tarjeta, Estrellas, Vacio, Cargando, ErrorCarga, s } from '../ui';
 import { Mascota } from '../mascota';
 import { registrar } from '../analitica';
@@ -17,7 +18,7 @@ const GRUPOS = [
 ];
 
 export default function Resultados({ tengo = [], maxFaltan = 4, basicos = true, categoria = null, maxMinutos = null, prioridad = null, titulo, primeraVez = false }) {
-  const { nav, uid } = useApp();
+  const { nav, uid, tutorial } = useApp();
   const [recetas, setRecetas] = useState(null);
   const [error, setError] = useState(null);
   const [ayuda, setAyuda] = useState(primeraVez); // explicación de colores la primera vez
@@ -60,7 +61,8 @@ export default function Resultados({ tengo = [], maxFaltan = 4, basicos = true, 
         titulo={titulo || `${recetas.length} ${recetas.length === 1 ? 'receta' : 'recetas'} para ti`}
         sub={`Con ${tengo.length} ingredientes${basicos ? ' + despensa básica' : ''}`}
       />
-      {ayuda ? (
+      <GuiaTutorial siguiente="abrio_receta" />
+      {ayuda && !tutorial?.activo ? (
         <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center', padding: 14, borderRadius: 16, backgroundColor: C.blanco, borderWidth: 1, borderColor: C.linea }}>
           <Mascota tam={56} />
           <View style={{ flex: 1, gap: 4 }}>

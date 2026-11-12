@@ -10,11 +10,13 @@ import { Pantalla, Encabezado, Seccion, Grilla, Casilla, Boton, Estrellas, Tarje
 import { fotoDelPlato, subirFoto } from '../fotos';
 import { reportar } from '../reportar';
 import { registrar } from '../analitica';
+import { GuiaTutorial } from '../tutorial';
 
 const sinDatos = Promise.resolve({ data: null });
 
 export default function Receta({ id, tengo = null, basicos = true }) {
-  const { uid, invitado, nav, recargarPerfil, pedirCuenta } = useApp();
+  const { uid, invitado, nav, recargarPerfil, pedirCuenta, tutorial } = useApp();
+  const tocaPasoAPaso = !!tutorial?.activo && tutorial.estado.hecho === 1; // el tutorial apunta a este botón
   const [r, setR] = useState(null);
   const [error, setError] = useState(false);
   const [setTengo, setSetTengo] = useState(new Set());
@@ -56,6 +58,7 @@ export default function Receta({ id, tengo = null, basicos = true }) {
   }, [id, uid]);
 
   useEffect(() => { cargar(); }, [cargar]);
+  useEffect(() => { tutorial?.marcar('abrio_receta'); }, []); // tutorial: abrió su primera receta
 
   if (error) return <ErrorCarga mensaje="Esta receta no se pudo abrir. Puede que ya no esté disponible o que falle tu conexión." onReintentar={cargar} onVolver={nav.volver} />;
   if (!r) return <Cargando />;
@@ -107,7 +110,7 @@ export default function Receta({ id, tengo = null, basicos = true }) {
     <View style={{ flex: 1 }}>
       <Pantalla pie={
         <View style={{ flexDirection: 'row', gap: 10 }}>
-          <Boton tipo="secundario" titulo="Paso a paso" icono="play-outline" onPress={() => { setModoCocina(true); registrar('modo_cocina', {}, uid); }} style={{ flex: 1 }} />
+          <Boton tipo="secundario" titulo="Paso a paso" icono="play-outline" onPress={() => { setModoCocina(true); registrar('modo_cocina', {}, uid); tutorial?.marcar('paso_a_paso'); }} style={[{ flex: 1 }, tocaPasoAPaso && { borderWidth: 3, borderColor: C.dorado, backgroundColor: C.doradoTinte }]} />
           <Boton titulo="Lo cociné" icono="camera-outline" onPress={loCocine} style={{ flex: 1 }} />
         </View>
       }>
@@ -127,6 +130,8 @@ export default function Receta({ id, tengo = null, basicos = true }) {
             </View>
           }
         />
+
+        <GuiaTutorial siguiente="paso_a_paso" />
 
         {r.oculta ? (
           <View style={{ padding: 12, borderRadius: 14, backgroundColor: C.ambarTinte }}>
@@ -239,7 +244,12 @@ export default function Receta({ id, tengo = null, basicos = true }) {
 
       <Modal visible={modoCocina} animationType="slide" presentationStyle="fullScreen" onRequestClose={() => setModoCocina(false)}>
         {modoCocina ? (
-          <ModoCocina receta={r} onCerrar={() => setModoCocina(false)} onTerminar={() => { setModoCocina(false); loCocine(); }} />
+          <ModoCocina receta={r} onCerrar={() => setModoCocina(false)} onTerminar={() => {
+            setModoCocina(false);
+            // En el tutorial, terminar entrega el regalo y no pide cuenta (beta)
+            if (tutorial?.activo && tutorial.estado.hecho === 2) { tutorial.marcar('termino'); return; }
+            loCocine();
+          }} />
         ) : null}
       </Modal>
 
@@ -275,6 +285,7 @@ function ModoCocina({ receta, onCerrar, onTerminar }) {
           <View key={i} style={{ flex: 1, height: 6, borderRadius: 3, backgroundColor: i <= paso ? C.tomate : C.grisTinte }} />
         ))}
       </View>
+      <GuiaTutorial siguiente="termino" />
       <Text style={{ fontSize: 16, fontWeight: '800', color: C.tomate }}>Paso {paso + 1} de {total}</Text>
       <ScrollView style={{ flex: 1 }}>
         <Text style={{ fontSize: 28, lineHeight: 38, fontWeight: '700', color: C.texto }}>{receta.pasos[paso]}</Text>

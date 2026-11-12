@@ -9,7 +9,8 @@ import { desdeCamara, desdeGaleria, subirFoto } from '../fotos';
 import { Mascota, PideCuenta } from '../mascota';
 
 export default function Perfil({ activa }) {
-  const { uid, invitado, perfil, recargarPerfil, nav, pedirCuenta } = useApp();
+  const { uid, invitado, perfil, recargarPerfil, nav, pedirCuenta, tutorial } = useApp();
+  const repetirTutorial = () => { tutorial.reiniciar(); nav.abrir('tutorial'); };
   const [logros, setLogros] = useState([]);
   const [mios, setMios] = useState(new Set());
   const [recetas, setRecetas] = useState([]);
@@ -36,7 +37,14 @@ export default function Perfil({ activa }) {
   useEffect(() => { if (activa) cargar(); }, [activa, cargar]); // recarga al volver a la pestaña
 
   if (invitado) {
-    return <PideCuenta titulo="Tu perfil de cocinero" texto="Sube de nivel, desbloquea logros y clases, y muestra tus recetas." onCrear={() => pedirCuenta('Crea tu cuenta y abre tu regalo de bienvenida')} />;
+    return (
+      <View style={{ flex: 1 }}>
+        <PideCuenta titulo="Tu perfil de cocinero" texto="Sube de nivel, desbloquea logros y clases, y muestra tus recetas." onCrear={() => pedirCuenta('Crea tu cuenta y abre tu regalo de bienvenida')} />
+        <View style={{ paddingHorizontal: 24, paddingBottom: 16 }}>
+          <Boton tipo="neutro" icono="school-outline" titulo="Repetir tutorial con Chefpu" onPress={repetirTutorial} />
+        </View>
+      </View>
+    );
   }
   if (!perfil) return <Cargando />;
 
@@ -113,6 +121,7 @@ export default function Perfil({ activa }) {
       </Tarjeta>
 
       <Boton tipo="secundario" icono="people-outline" titulo="Buscar cocineros y amigos" onPress={() => nav.abrir('usuarios')} />
+      <Boton tipo="neutro" icono="school-outline" titulo="Repetir tutorial con Chefpu" onPress={repetirTutorial} />
 
       <Tarjeta>
         <View style={s.filaEntre}>

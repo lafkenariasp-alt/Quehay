@@ -12,6 +12,7 @@ import { C } from './src/theme';
 import { Cargando } from './src/ui';
 import { registrar, leerIngredientesInvitado, borrarIngredientesInvitado } from './src/analitica';
 import Bienvenida from './src/pantallas/Bienvenida';
+import { useTutorialEstado, RegaloTutorial } from './src/tutorial';
 import Acceso from './src/pantallas/Acceso';
 import Nevera from './src/pantallas/Nevera';
 import Buscar from './src/pantallas/Buscar';
@@ -28,7 +29,12 @@ const PESTANAS = [
   { id: 'publicar', nombre: 'Publicar', icono: 'add-circle-outline', comp: Publicar },
   { id: 'perfil', nombre: 'Perfil', icono: 'person-outline', comp: Perfil },
 ];
-const PANTALLAS = { resultados: Resultados, receta: Receta, usuarios: Usuarios, perfilPublico: PerfilPublico, acceso: Acceso };
+// El tutorial también se puede repetir desde el perfil
+function TutorialRepetido() {
+  const { nav } = React.useContext(AppCtx);
+  return <Bienvenida repetir onTerminar={(d) => { nav.volver(); if (d) setTimeout(() => nav.abrir(d.pantalla, d.params), 0); }} />;
+}
+const PANTALLAS = { tutorial: TutorialRepetido, resultados: Resultados, receta: Receta, usuarios: Usuarios, perfilPublico: PerfilPublico, acceso: Acceso };
 const CLAVE_BIENVENIDA = 'bienvenida_v1';
 
 // Navegación nativa de iOS: transición de empuje y volver deslizando desde el borde izquierdo
@@ -95,6 +101,7 @@ function Contenido() {
   const [perfil, setPerfil] = useState(null);
   const [bienvenidaVista, setBienvenidaVista] = useState(null); // null = leyendo
   const [pestana, setPestana] = useState('buscar');
+  const tutorial = useTutorialEstado();
   const pendiente = useRef(null); // pantalla a abrir apenas la navegación esté lista
   const [visitadas, setVisitadas] = useState({ buscar: true }); // pestañas que quedan vivas (no pierden lo escrito)
   const [teclado, setTeclado] = useState(false);
@@ -161,10 +168,10 @@ function Contenido() {
     if (destino) nav.abrir(destino.pantalla, destino.params);
   }
 
-  if (sesion === undefined || bienvenidaVista === null) return <Cargando />;
+  if (sesion === undefined || bienvenidaVista === null || !tutorial.estado) return <Cargando />;
 
   const uid = sesion?.user?.id || null;
-  const ctx = { sesion, uid, invitado: !uid, perfil, recargarPerfil, nav, pedirCuenta };
+  const ctx = { sesion, uid, invitado: !uid, perfil, recargarPerfil, nav, pedirCuenta, tutorial };
 
   if (!uid && !bienvenidaVista) {
     return (
@@ -192,6 +199,7 @@ function Contenido() {
           ))}
         </Pila.Navigator>
       </NavigationContainer>
+      <RegaloTutorial />
       {teclado ? (
         <Pressable onPress={() => Keyboard.dismiss()} accessibilityRole="button" accessibilityLabel="Cerrar teclado"
           style={{ position: 'absolute', right: 12, bottom: (Platform.OS === 'ios' ? altoTeclado : 0) + 8, flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: 44, paddingHorizontal: 14, borderRadius: 999, backgroundColor: C.texto }}>
