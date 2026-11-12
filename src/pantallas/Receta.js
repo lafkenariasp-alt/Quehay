@@ -7,7 +7,7 @@ import { supabase } from '../supabase';
 import { useApp, tieneIngrediente } from '../contexto';
 import { C } from '../theme';
 import { Pantalla, Seccion, Boton, Estrellas, Tarjeta, ErrorCarga, Avatar, Esqueleto, DobleToque, VisorFotos, ScrollYCtx, avisar, s } from '../ui';
-import { fotoDelPlato, subirFoto } from '../fotos';
+import { fotoDelPlato, subirFoto, elegirFoto } from '../fotos';
 import { reportar } from '../reportar';
 import { registrar } from '../analitica';
 import { TutorialCapa } from '../tutorial';
@@ -146,6 +146,26 @@ export default function Receta({ id, tengo = null, basicos = true }) {
     ...versiones.filter((v) => v.foto_url).map((v) => ({ url: v.foto_url, id: v.id, texto: [v.perfiles?.nombre, v.nota].filter(Boolean).join(': ') })),
   ];
 
+  // El autor puede agregar o cambiar la foto de su receta (también las de la cuenta quehay)
+  const [subiendoFoto, setSubiendoFoto] = useState(false);
+  async function cambiarFoto() {
+    const foto = await elegirFoto();
+    if (!foto) return;
+    setSubiendoFoto(true);
+    try {
+      const url = await subirFoto(uid, foto, `receta-${r.id}`);
+      const { error: e } = await supabase.from('recetas').update({ foto_url: url }).eq('id', r.id);
+      if (e) throw e;
+      efecto('xp');
+      avisar({ texto: 'Foto de la receta actualizada', duracion: 2500 });
+      cargar();
+    } catch (e) {
+      Alert.alert('No se pudo subir la foto', e.message);
+    } finally {
+      setSubiendoFoto(false);
+    }
+  }
+
   // Doble toque en la foto: solo da Me gusta (como Instagram, no lo quita)
   function meGustaDoble() {
     if (invitado) { pedirCuenta('Crea tu cuenta para guardar las recetas que te gustan'); return; }
@@ -274,16 +294,21 @@ export default function Receta({ id, tengo = null, basicos = true }) {
         ) : null}
 
         <FotoElastica>
-          <DobleToque onDoble={meGustaDoble} onSimple={r.foto_url ? () => setVisor(0) : undefined}>
+          <DobleToque onDoble={meGustaDoble} onSimple={r.foto_url ? () => setVisor(0) : esMia ? cambiarFoto : undefined}>
             {r.foto_url ? (
               <Image source={{ uri: r.foto_url }} style={{ aspectRatio: 16 / 10, backgroundColor: C.superficie }} accessibilityLabel={`Foto de ${r.titulo}. Toca para verla grande`} />
             ) : (
-              <View style={{ height: 200, backgroundColor: C.superficie, alignItems: 'center', justifyContent: 'center' }}>
-                <Ionicons name="restaurant-outline" size={48} color="#B9A68E" />
+              <View style={{ height: 200, backgroundColor: C.superficie, alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                <Ionicons name={esMia ? 'camera-outline' : 'restaurant-outline'} size={48} color={esMia ? C.tomate : '#B9A68E'} />
+                {esMia ? <Text style={{ fontSize: 15, fontWeight: '800', color: C.tomate }}>Toca para agregar una foto</Text> : null}
               </View>
             )}
           </DobleToque>
         </FotoElastica>
+        {esMia ? (
+          <Boton tipo="neutro" icono="camera-outline" cargando={subiendoFoto}
+            titulo={r.foto_url ? 'Cambiar foto de la receta' : 'Agregar foto de la receta'} onPress={cambiarFoto} />
+        ) : null}
 
         <View style={{ gap: 6 }}>
           <Text style={{ fontSize: 28, fontWeight: '800', color: C.texto, letterSpacing: -0.5 }}>{r.titulo}</Text>
