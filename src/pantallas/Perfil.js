@@ -7,7 +7,7 @@ import { C, RAREZA, xpParaNivel } from '../theme';
 import { Pantalla, Seccion, Boton, Tarjeta, TarjetaReceta, Pastilla, Interruptor, Cargando, Chip, Avatar, s } from '../ui';
 import { desdeCamara, desdeGaleria, subirFoto } from '../fotos';
 import { Mascota, PideCuenta } from '../mascota';
-import { useAjustesSonido } from '../sonido';
+import { useAjustesSonido, diagnosticoSonido, efecto } from '../sonido';
 
 // Sonidos y vibración se pueden apagar; en iPhone el modo silencio también los apaga
 function AjustesSonido() {
@@ -17,6 +17,19 @@ function AjustesSonido() {
       <Text style={[s.etiqueta, { fontSize: 16 }]}>Sonido y vibración</Text>
       <Interruptor icono="volume-high-outline" texto="Sonidos" valor={a.sonido} onCambiar={(v) => a.cambiar('sonido', v)} />
       <Interruptor icono="phone-portrait-outline" texto="Vibración" valor={a.vibracion} onCambiar={(v) => a.cambiar('vibracion', v)} />
+      <Boton tipo="neutro" icono="musical-notes-outline" titulo="Probar sonido" onPress={() => {
+        efecto('xp');
+        setTimeout(() => {
+          const d = diagnosticoSonido();
+          Alert.alert('Prueba de sonido', [
+            `¿Sonó? Debió sonar una moneda.`,
+            `Librería: ${d.libreria} · vibración: ${d.vibracion}`,
+            `Sonidos listos: ${d.cargados} de ${d.total} (dentro de la app: ${d.locales})`,
+            `Sonido ${d.prefs.sonido ? 'activado' : 'apagado'} · en silencio: ${d.prefs.enSilencio ? 'sí' : 'no'}`,
+            d.error ? `Error: ${d.error}` : 'Sin errores',
+          ].join('\n'));
+        }, 900);
+      }} />
       {a.sonido ? <Interruptor icono="notifications-off-outline" texto="Sonar con el iPhone en silencio" sub="Si está apagado, el interruptor de silencio calla la app" valor={!!a.enSilencio} onCambiar={(v) => a.cambiar('enSilencio', v)} /> : null}
     </Tarjeta>
   );

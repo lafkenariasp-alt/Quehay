@@ -13,6 +13,28 @@ try { Haptics = require('expo-haptics'); } catch (e) { Haptics = null; }
 
 const BASE = 'https://raw.githubusercontent.com/lafkenariasp-alt/Quehay/main/assets/sonidos';
 const SONIDOS = ['tap', 'quitar', 'chefpu', 'blip', 'paso', 'xp', 'logro', 'nivel', 'fanfarria', 'error'];
+// Los sonidos van dentro de la app (assets): así el teléfono los guarda como archivo y suenan sin depender de internet.
+// Si alguno no está, se usa la copia de GitHub.
+const LOCAL = {};
+try { LOCAL.tap = require('../assets/sonidos/tap.wav'); } catch (e) { /* usa GitHub */ }
+try { LOCAL.quitar = require('../assets/sonidos/quitar.wav'); } catch (e) { /* usa GitHub */ }
+try { LOCAL.chefpu = require('../assets/sonidos/chefpu.wav'); } catch (e) { /* usa GitHub */ }
+try { LOCAL.blip = require('../assets/sonidos/blip.wav'); } catch (e) { /* usa GitHub */ }
+try { LOCAL.paso = require('../assets/sonidos/paso.wav'); } catch (e) { /* usa GitHub */ }
+try { LOCAL.xp = require('../assets/sonidos/xp.wav'); } catch (e) { /* usa GitHub */ }
+try { LOCAL.logro = require('../assets/sonidos/logro.wav'); } catch (e) { /* usa GitHub */ }
+try { LOCAL.nivel = require('../assets/sonidos/nivel.wav'); } catch (e) { /* usa GitHub */ }
+try { LOCAL.fanfarria = require('../assets/sonidos/fanfarria.wav'); } catch (e) { /* usa GitHub */ }
+try { LOCAL.error = require('../assets/sonidos/error.wav'); } catch (e) { /* usa GitHub */ }
+const fuente = (n) => LOCAL[n] || { uri: `${BASE}/${n}.wav` };
+
+// Diagnóstico visible en Perfil → Sonido y vibración ("Probar sonido")
+const diag = { libreria: Audio ? 'expo-audio' : AV ? 'expo-av' : 'ninguna', vibracion: Haptics ? 'expo-haptics' : 'básica', locales: 0, error: null };
+diag.locales = Object.keys(LOCAL).length;
+export const diagnosticoSonido = () => {
+  const cargados = Object.values(players).filter((p) => p && p.isLoaded).length;
+  return { ...diag, cargados, total: SONIDOS.length, prefs: { ...prefs } };
+};
 const VOLUMEN = { tap: 0.5, quitar: 0.5, chefpu: 0.6, blip: 0.5, paso: 0.5, xp: 0.8, logro: 0.8, nivel: 0.9, fanfarria: 0.9, error: 0.6 };
 const CLAVE = 'ajustes_sonido_v1';
 // Prioridad: un sonido más importante no se tapa con uno menor que llegue justo después
@@ -32,16 +54,16 @@ async function modoAudio() {
     } else if (AV?.Audio?.setAudioModeAsync) {
       await AV.Audio.setAudioModeAsync({ playsInSilentModeIOS: !!prefs.enSilencio, staysActiveInBackground: false });
     }
-  } catch (e) { /* sin modo de audio */ }
+  } catch (e) { diag.error = `modo audio: ${e?.message || e}`; }
 }
 
 function crearPlayer(n) {
   try {
-    const p = Audio.createAudioPlayer({ uri: `${BASE}/${n}.wav` });
+    const p = Audio.createAudioPlayer(fuente(n));
     p.volume = VOLUMEN[n];
     players[n] = p;
     return p;
-  } catch (e) { return null; }
+  } catch (e) { diag.error = `crear ${n}: ${e?.message || e}`; return null; }
 }
 
 export async function prepararSonidos() {
@@ -81,11 +103,11 @@ export function sonar(nombre) {
       return;
     }
     if (AV?.Audio?.Sound) {
-      AV.Audio.Sound.createAsync({ uri: `${BASE}/${nombre}.wav` }, { shouldPlay: true, volume: VOLUMEN[nombre] || 0.6 })
+      AV.Audio.Sound.createAsync(fuente(nombre), { shouldPlay: true, volume: VOLUMEN[nombre] || 0.6 })
         .then(({ sound }) => sound.setOnPlaybackStatusUpdate((s) => { if (s.didJustFinish) sound.unloadAsync(); }))
-        .catch(() => {});
+        .catch((e) => { diag.error = `expo-av ${nombre}: ${e?.message || e}`; });
     }
-  } catch (e) { /* silencio */ }
+  } catch (e) { diag.error = `sonar ${nombre}: ${e?.message || e}`; }
 }
 
 // tipo: seleccion (toques), suave, medio, exito, aviso, error
