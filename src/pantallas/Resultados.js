@@ -19,7 +19,7 @@ const GRUPOS = [
   { titulo: 'Te faltan 5 o más', color: C.ambarTexto, f: (n) => n >= 5 },
 ];
 
-export default function Resultados({ tengo = [], maxFaltan = 4, basicos = true, categoria = null, maxMinutos = null, prioridad = null, titulo, primeraVez = false }) {
+export default function Resultados({ tengo = [], maxFaltan = 4, basicos = true, categoria = null, maxMinutos = null, prioridad = null, titulo, primeraVez = false, usando = null }) {
   const { nav, uid, tutorial, chefpu } = useApp();
   const [recetas, setRecetas] = useState(null);
   const [error, setError] = useState(null);
@@ -40,11 +40,13 @@ export default function Resultados({ tengo = [], maxFaltan = 4, basicos = true, 
         if (!r2.error && r2.data?.length) { data = r2.data.slice(0, 10); setCercanas(true); }
       }
       let lista = data || [];
-      // Para "aprovechar lo que vence": solo recetas que usan algo de lo que vence
+      // Prioridad (lo que vence o lo que elegiste en la nevera): solo recetas que usan algo de eso,
+      // primero las que usan más de lo elegido
       if (prioridad?.length) {
         const { data: ri } = await supabase.from('receta_ingredientes').select('receta_id').in('ingrediente_id', prioridad);
-        const usan = new Set((ri || []).map((r) => r.receta_id));
-        lista = lista.filter((r) => usan.has(r.receta_id));
+        const usan = {};
+        (ri || []).forEach((r) => { usan[r.receta_id] = (usan[r.receta_id] || 0) + 1; });
+        lista = lista.filter((r) => usan[r.receta_id]).sort((a, b) => (usan[b.receta_id] - usan[a.receta_id]) || (a.faltan_n - b.faltan_n));
       }
       setRecetas(lista);
       if (refrescando === true) return;
@@ -75,7 +77,7 @@ export default function Resultados({ tengo = [], maxFaltan = 4, basicos = true, 
       <Encabezado
         onVolver={nav.volver}
         titulo={titulo || `${recetas.length} ${recetas.length === 1 ? 'receta' : 'recetas'} para ti`}
-        sub={`Con ${tengo.length} ingredientes${basicos ? ' + despensa básica' : ''}`}
+        sub={usando?.length ? `Usando ${usando.length > 4 ? `${usando.slice(0, 4).join(', ')} y ${usando.length - 4} más` : usando.join(', ')}` : `Con ${tengo.length} ingredientes${basicos ? ' + despensa básica' : ''}`}
       />
       <View style={[s.fila, { gap: 16, flexWrap: 'wrap' }]} accessible accessibilityLabel="Verde: lo tienes. Ámbar: te falta.">
         <View style={[s.fila, { gap: 6 }]}><View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: C.verde }} /><Text style={{ fontSize: 13, fontWeight: '700', color: C.verde }}>Verde: lo tienes</Text></View>
