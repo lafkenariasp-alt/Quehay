@@ -7,7 +7,7 @@ import { Boton, Grilla, Casilla, s } from '../ui';
 import { Mascota, Globo } from '../mascota';
 import { registrar, guardarIngredientesInvitado } from '../analitica';
 import { useApp } from '../contexto';
-import { TOTAL_PASOS } from '../tutorial';
+import { Foco } from '../foco';
 import SelectorIngredientes from '../SelectorIngredientes';
 
 // Lo más común en una cocina chilena: se toca y listo
@@ -23,23 +23,27 @@ export default function Bienvenida({ onTerminar, repetir = false }) {
 
   useEffect(() => {
     registrar('bienvenida_inicio');
+    tutorial.iniciar(); // la historia de Chefpu parte aquí
     supabase.from('ingredientes').select('id, nombre').in('nombre', TIPICOS)
       .then(({ data }) => setTipicos(TIPICOS.map((n) => (data || []).find((d) => d.nombre === n)).filter(Boolean)));
   }, []);
 
   const ids = new Set(elegidos.map((e) => e.id));
-  const alternar = (ing) => setElegidos((l) => (ids.has(ing.id) ? l.filter((e) => e.id !== ing.id) : [...l, { id: ing.id, nombre: ing.nombre }]));
+  const alternar = (ing) => {
+    if (!ids.has(ing.id)) tutorial.evento('casilla');
+    setElegidos((l) => (l.some((e) => e.id === ing.id) ? l.filter((e) => e.id !== ing.id) : [...l, { id: ing.id, nombre: ing.nombre }]));
+  };
 
   async function verRecetas() {
     await guardarIngredientesInvitado(elegidos);
     registrar('bienvenida_resultados', { ingredientes: elegidos.length });
-    tutorial.marcar('ingredientes');
+    tutorial.evento('ver_recetas');
     onTerminar({ pantalla: 'resultados', params: { tengo: elegidos.map((e) => e.id), primeraVez: true } });
   }
 
   if (paso === 0) {
     return (
-      <View style={{ flex: 1, padding: 24, justifyContent: 'space-between' }}>
+      <Foco id="pantalla_bienvenida" style={{ flex: 1, padding: 24, justifyContent: 'space-between' }}>
         <View />
         <View style={{ alignItems: 'center', gap: 22 }}>
           <Mascota tam={220} />
@@ -47,7 +51,7 @@ export default function Bienvenida({ onTerminar, repetir = false }) {
           <Globo texto="¿Hambre? Dime qué tienes en la cocina y te digo qué puedes preparar ahora mismo." style={{ maxWidth: 320 }} />
         </View>
         <View style={{ gap: 10 }}>
-          <Boton titulo="Empezar" icono="arrow-forward" onPress={() => { tutorial.iniciar(); setPaso(1); }} />
+          <Foco id="empezar"><Boton titulo="Empezar" icono="arrow-forward" onPress={() => { tutorial.evento('empezar'); setPaso(1); }} /></Foco>
           {repetir ? (
             <Pressable onPress={() => { tutorial.saltar(); nav.volver(); }} accessibilityRole="button" style={{ minHeight: 44, alignItems: 'center', justifyContent: 'center' }}>
               <Text style={{ fontSize: 15, fontWeight: '800', color: C.suave }}>Ahora no</Text>
@@ -58,7 +62,7 @@ export default function Bienvenida({ onTerminar, repetir = false }) {
           </Pressable>
           )}
         </View>
-      </View>
+      </Foco>
     );
   }
 
@@ -68,16 +72,15 @@ export default function Bienvenida({ onTerminar, repetir = false }) {
         <View style={[s.fila, { gap: 12, alignItems: 'flex-end' }]}>
           <Mascota tam={72} expresion="pensando" />
           <View style={{ flex: 1, gap: 6 }}>
-            <Text style={{ fontSize: 12, fontWeight: '800', color: C.ambarOscuro, letterSpacing: 0.5 }}>TUTORIAL · PASO 1 DE {TOTAL_PASOS}</Text>
             <Globo texto="¿Qué tienes a mano? No tiene que ser todo: con 3 basta." />
           </View>
         </View>
         <Text style={s.titulo}>¿Qué tienes a mano?</Text>
-        <Grilla>
+        <Foco id="grilla"><Grilla>
           {tipicos.map((t) => (
             <Casilla key={t.id} nombre={t.nombre} estado={ids.has(t.id) ? 'tengo' : 'vacia_nombre'} onPress={() => alternar(t)} />
           ))}
-        </Grilla>
+        </Grilla></Foco>
         {elegidos.filter((e) => !TIPICOS.includes(e.nombre)).length ? (
           <View style={s.chips}>
             {elegidos.filter((e) => !TIPICOS.includes(e.nombre)).map((e) => (
@@ -88,15 +91,15 @@ export default function Bienvenida({ onTerminar, repetir = false }) {
             ))}
           </View>
         ) : null}
-        <Boton tipo="neutro" icono="search" titulo="Buscar otro ingrediente" onPress={() => setSelector(true)} />
+        <Foco id="buscar_otro"><Boton tipo="neutro" icono="search" titulo="Buscar otro ingrediente" onPress={() => setSelector(true)} /></Foco>
       </ScrollView>
       <View style={s.pie}>
-        <Boton
+        <Foco id="ver_recetas"><Boton
           titulo={elegidos.length ? `Ver recetas con ${elegidos.length} ${elegidos.length === 1 ? 'ingrediente' : 'ingredientes'}` : 'Toca lo que tengas'}
           icono="restaurant-outline"
           deshabilitado={!elegidos.length}
           onPress={verRecetas}
-        />
+        /></Foco>
       </View>
       <SelectorIngredientes
         visible={selector}

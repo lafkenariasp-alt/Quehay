@@ -9,7 +9,7 @@ import { PideCuenta } from '../mascota';
 import SelectorIngredientes from '../SelectorIngredientes';
 
 export default function Nevera({ activa }) {
-  const { uid, invitado, perfil, recargarPerfil, nav, pedirCuenta } = useApp();
+  const { uid, invitado, perfil, recargarPerfil, nav, pedirCuenta, chefpu } = useApp();
   const [error, setError] = useState(false);
   const [items, setItems] = useState([]);
   const [cargando, setCargando] = useState(true);
@@ -26,7 +26,13 @@ export default function Nevera({ activa }) {
     if (e) { setError(true); setCargando(false); return; }
     setItems(data || []);
     setCargando(false);
-  }, [uid]);
+    // Chefpu comenta el estado de la nevera
+    const lista = data || [];
+    const vence = perfil?.control_vencimiento ? lista.find((i) => { const d = diasHasta(i.vence_el); return d !== null && d >= 0 && d <= 1; }) : null;
+    if (!lista.length) chefpu?.decir('nevera_vacia', '¿Y si llenamos la nevera? Agrega lo que tienes y te digo qué cocinar.', 'pensando');
+    else if (vence) chefpu?.decir('nevera_vence', `¡Ojo! ${vence.ingredientes.nombre} vence ${textoVence(diasHasta(vence.vence_el)).toLowerCase()}. ¿Vemos qué hacer?`, 'pensando');
+    else if (lista.length >= 5) chefpu?.decir('nevera_llena', 'Con esto ya hay harto para cocinar. Toca ¿Qué cocino? en mi menú.', 'feliz');
+  }, [uid, perfil?.control_vencimiento]);
 
   useEffect(() => { if (activa) cargar(); }, [activa, cargar]); // recarga al volver a la pestaña
 

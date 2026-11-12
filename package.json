@@ -26,6 +26,8 @@
     "react-native-url-polyfill": "^2.0.0",
     "@react-navigation/native": "*",
     "@react-navigation/native-stack": "*",
-    "react-native-screens": "*"
+    "react-native-screens": "*",
+    "expo-blur": "*",
+    "expo-haptics": "*"
   }
 }

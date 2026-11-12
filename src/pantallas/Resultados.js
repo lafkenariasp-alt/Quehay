@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../supabase';
 import { useApp } from '../contexto';
 import { C } from '../theme';
-import { GuiaTutorial } from '../tutorial';
+import { Foco } from '../foco';
 import { Pantalla, Encabezado, Seccion, Tarjeta, Estrellas, Vacio, Cargando, ErrorCarga, s } from '../ui';
 import { Mascota } from '../mascota';
 import { registrar } from '../analitica';
@@ -18,7 +18,7 @@ const GRUPOS = [
 ];
 
 export default function Resultados({ tengo = [], maxFaltan = 4, basicos = true, categoria = null, maxMinutos = null, prioridad = null, titulo, primeraVez = false }) {
-  const { nav, uid, tutorial } = useApp();
+  const { nav, uid, tutorial, chefpu } = useApp();
   const [recetas, setRecetas] = useState(null);
   const [error, setError] = useState(null);
   const [ayuda, setAyuda] = useState(primeraVez); // explicación de colores la primera vez
@@ -45,6 +45,11 @@ export default function Resultados({ tengo = [], maxFaltan = 4, basicos = true, 
         lista = lista.filter((r) => usan.has(r.receta_id));
       }
       setRecetas(lista);
+      // Chefpu comenta lo que encontró
+      const listas = lista.filter((r) => r.faltan_n === 0).length;
+      if (listas) chefpu?.decir('resultados_listas', `¡Tienes todo para ${listas} ${listas === 1 ? 'receta' : 'recetas'}! Parte por la de arriba.`, 'celebrando');
+      else if (lista.some((r) => r.faltan_n === 1)) chefpu?.decir('resultados_falta1', 'Te falta solo 1 cosa para algunas. ¿La pides o la cambias?', 'pensando');
+      else if (!lista.length) chefpu?.decir('resultados_nada', 'No encontré nada con eso… prueba agregando otro ingrediente.', 'triste');
       registrar('busqueda', { ingredientes: tengo.length, resultados: lista.length, cercanas: !data?.length }, uid);
     }
   }, []);
@@ -61,7 +66,6 @@ export default function Resultados({ tengo = [], maxFaltan = 4, basicos = true, 
         titulo={titulo || `${recetas.length} ${recetas.length === 1 ? 'receta' : 'recetas'} para ti`}
         sub={`Con ${tengo.length} ingredientes${basicos ? ' + despensa básica' : ''}`}
       />
-      <GuiaTutorial siguiente="abrio_receta" />
       {ayuda && !tutorial?.activo ? (
         <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center', padding: 14, borderRadius: 16, backgroundColor: C.blanco, borderWidth: 1, borderColor: C.linea }}>
           <Mascota tam={56} />
@@ -85,12 +89,14 @@ export default function Resultados({ tengo = [], maxFaltan = 4, basicos = true, 
       {recetas.length === 0 ? (
         <Vacio texto={'No encontramos recetas con eso.\nPrueba permitir más faltantes o agrega ingredientes.'} />
       ) : (
-        GRUPOS.map((g) => {
+        GRUPOS.map((g, gi) => {
           const lista = recetas.filter((r) => g.f(r.faltan_n));
           if (!lista.length) return null;
-          return (
-            <Seccion key={g.titulo} titulo={g.titulo} color={g.color} derecha={<Text style={s.sub}>{lista.length}</Text>}>
-              {lista.map((r) => (
+          const primerGrupo = GRUPOS.findIndex((x) => recetas.some((r) => x.f(r.faltan_n))) === gi;
+          const seccion = (
+            <Seccion titulo={g.titulo} color={g.color} derecha={<Text style={s.sub}>{lista.length}</Text>}>
+              {lista.map((r, ri) => {
+                const tarjeta = (
                 <Tarjeta key={r.receta_id} onPress={() => nav.abrir('receta', { id: r.receta_id, tengo, basicos })} style={r.foto_url ? { paddingTop: 0, overflow: 'hidden' } : null}>
                   {r.foto_url ? <Image source={{ uri: r.foto_url }} style={{ height: 150, marginHorizontal: -14, backgroundColor: C.superficie }} /> : null}
                   <Text style={{ fontSize: 18, fontWeight: '800', color: C.texto }}>{r.titulo}</Text>
@@ -116,9 +122,14 @@ export default function Resultados({ tengo = [], maxFaltan = 4, basicos = true, 
                     <Text style={{ fontSize: 13, fontWeight: '800', color: C.verde }}>Tienes todo</Text>
                   )}
                 </Tarjeta>
-              ))}
+                );
+                // la primera receta de la lista es la que el tutorial señala
+                return primerGrupo && ri === 0 ? <Foco key={r.receta_id} id="receta_0">{tarjeta}</Foco> : tarjeta;
+              })}
             </Seccion>
           );
+          const idGrupo = gi === 0 ? 'grupo_ya' : gi === 1 ? 'grupo_falta1' : null;
+          return idGrupo ? <Foco key={g.titulo} id={idGrupo}>{seccion}</Foco> : <View key={g.titulo}>{seccion}</View>;
         })
       )}
     </Pantalla>

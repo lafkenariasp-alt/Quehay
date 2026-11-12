@@ -7,8 +7,8 @@ import { Pantalla, Encabezado, Seccion, Grilla, Casilla, Chip, Boton, Tarjeta, s
 import SelectorIngredientes from '../SelectorIngredientes';
 import { guardarIngredientesInvitado, leerIngredientesInvitado } from '../analitica';
 
-export default function Buscar() {
-  const { uid, invitado, nav, pedirCuenta } = useApp();
+export default function Buscar({ activa }) {
+  const { uid, invitado, nav, pedirCuenta, chefpu } = useApp();
   const [elegidos, setElegidos] = useState([]); // [{id, nombre}]
   const leido = useRef(false);
 
@@ -21,6 +21,15 @@ export default function Buscar() {
     if (invitado && leido.current) guardarIngredientesInvitado(elegidos);
   }, [elegidos, invitado]);
   const [selector, setSelector] = useState(false);
+  // Chefpu anima a elegir al menos 3 ingredientes
+  useEffect(() => {
+    if (!activa) return undefined;
+    const t = setTimeout(() => {
+      if (!elegidos.length) chefpu?.decir('buscar_vacio', 'Elige al menos 3 cosas y te armo el menú.', 'feliz');
+      else if (elegidos.length < 3) chefpu?.decir('buscar_pocos', 'Vamos bien. Con uno o dos más, salen muchas más recetas.', 'pensando');
+    }, 1200);
+    return () => clearTimeout(t);
+  }, [activa]);
   const [basicos, setBasicos] = useState(true);
   const [maxFaltan, setMaxFaltan] = useState(4);
   const [categoria, setCategoria] = useState(null);

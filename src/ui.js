@@ -3,19 +3,28 @@ import { View, Text, Pressable, ActivityIndicator, StyleSheet, ScrollView, Image
 import { Ionicons } from '@expo/vector-icons';
 import { C } from './theme';
 import { Mascota } from './chefpu';
+import { ScrollCtx } from './foco';
 
 export function Pantalla({ children, scroll = true, pie = null }) {
+  const ref = React.useRef(null);
+  const offset = React.useRef(0);
+  const ctx = React.useMemo(() => ({ ref, offset }), []);
   return (
     <View style={{ flex: 1, backgroundColor: C.fondo }}>
       {scroll ? (
-        <ScrollView
-          contentContainerStyle={s.contenido}
-          keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="interactive"
-          automaticallyAdjustKeyboardInsets // iPhone: desplaza para que el teclado no tape el campo que escribes
-        >
-          {children}
-        </ScrollView>
+        <ScrollCtx.Provider value={ctx}>
+          <ScrollView
+            ref={ref}
+            onScroll={(e) => { offset.current = e.nativeEvent.contentOffset.y; }}
+            scrollEventThrottle={32}
+            contentContainerStyle={s.contenido}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="interactive"
+            automaticallyAdjustKeyboardInsets // iPhone: desplaza para que el teclado no tape el campo que escribes
+          >
+            {children}
+          </ScrollView>
+        </ScrollCtx.Provider>
       ) : (
         <View style={[s.contenido, { flex: 1 }]}>{children}</View>
       )}

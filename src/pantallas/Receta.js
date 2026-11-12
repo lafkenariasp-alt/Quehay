@@ -10,13 +10,13 @@ import { Pantalla, Encabezado, Seccion, Grilla, Casilla, Boton, Estrellas, Tarje
 import { fotoDelPlato, subirFoto } from '../fotos';
 import { reportar } from '../reportar';
 import { registrar } from '../analitica';
-import { GuiaTutorial } from '../tutorial';
+import { TutorialCapa } from '../tutorial';
+import { Foco } from '../foco';
 
 const sinDatos = Promise.resolve({ data: null });
 
 export default function Receta({ id, tengo = null, basicos = true }) {
-  const { uid, invitado, nav, recargarPerfil, pedirCuenta, tutorial } = useApp();
-  const tocaPasoAPaso = !!tutorial?.activo && tutorial.estado.hecho === 1; // el tutorial apunta a este botón
+  const { uid, invitado, nav, recargarPerfil, pedirCuenta, tutorial, chefpu } = useApp();
   const [r, setR] = useState(null);
   const [error, setError] = useState(false);
   const [setTengo, setSetTengo] = useState(new Set());
@@ -58,7 +58,15 @@ export default function Receta({ id, tengo = null, basicos = true }) {
   }, [id, uid]);
 
   useEffect(() => { cargar(); }, [cargar]);
-  useEffect(() => { tutorial?.marcar('abrio_receta'); }, []); // tutorial: abrió su primera receta
+  useEffect(() => { tutorial?.evento('abrir_receta'); }, []); // tutorial: abrió su primera receta
+
+  // Chefpu comenta si tienes todo o qué falta
+  useEffect(() => {
+    if (!r) return;
+    const falta = r.receta_ingredientes.filter((ri) => !ri.opcional && !(basicos && ri.ingredientes.es_basico) && !tieneIngrediente(ri.ingredientes, setTengo, padres));
+    if (!falta.length) chefpu?.decir('receta_todo', '¡Está todo! Toca Paso a paso y cocinamos juntos.', 'feliz');
+    else if (falta.length === 1) chefpu?.decir('receta_falta1', `Te falta ${falta[0].ingredientes.nombre.toLowerCase()}. A veces se puede omitir, mira cómo les quedó a otros.`, 'pensando');
+  }, [r]);
 
   if (error) return <ErrorCarga mensaje="Esta receta no se pudo abrir. Puede que ya no esté disponible o que falle tu conexión." onReintentar={cargar} onVolver={nav.volver} />;
   if (!r) return <Cargando />;
@@ -107,10 +115,12 @@ export default function Receta({ id, tengo = null, basicos = true }) {
   }
 
   return (
-    <View style={{ flex: 1 }}>
+    <Foco id="pantalla_receta" style={{ flex: 1 }}>
       <Pantalla pie={
         <View style={{ flexDirection: 'row', gap: 10 }}>
-          <Boton tipo="secundario" titulo="Paso a paso" icono="play-outline" onPress={() => { setModoCocina(true); registrar('modo_cocina', {}, uid); tutorial?.marcar('paso_a_paso'); }} style={[{ flex: 1 }, tocaPasoAPaso && { borderWidth: 3, borderColor: C.dorado, backgroundColor: C.doradoTinte }]} />
+          <Foco id="paso_a_paso" style={{ flex: 1 }}>
+            <Boton tipo="secundario" titulo="Paso a paso" icono="play-outline" onPress={() => { setModoCocina(true); registrar('modo_cocina', {}, uid); tutorial?.evento('paso_a_paso'); }} />
+          </Foco>
           <Boton titulo="Lo cociné" icono="camera-outline" onPress={loCocine} style={{ flex: 1 }} />
         </View>
       }>
@@ -131,7 +141,6 @@ export default function Receta({ id, tengo = null, basicos = true }) {
           }
         />
 
-        <GuiaTutorial siguiente="paso_a_paso" />
 
         {r.oculta ? (
           <View style={{ padding: 12, borderRadius: 14, backgroundColor: C.ambarTinte }}>
@@ -166,6 +175,7 @@ export default function Receta({ id, tengo = null, basicos = true }) {
 
         {r.descripcion ? <Text style={{ fontSize: 15, color: C.texto, lineHeight: 21 }}>{r.descripcion}</Text> : null}
 
+        <Foco id="ingredientes">
         <Seccion
           titulo="Ingredientes"
           derecha={<Text style={{ fontSize: 13, fontWeight: '800', color: faltan.length ? C.ambarTexto : C.verde }}>
@@ -180,6 +190,7 @@ export default function Receta({ id, tengo = null, basicos = true }) {
           </Grilla>
           {basicos ? <Text style={s.sub}>Más sal, aceite y lo básico de tu despensa.</Text> : null}
         </Seccion>
+        </Foco>
 
         <Seccion titulo="Preparación">
           {r.pasos.map((p, n) => (
@@ -247,7 +258,7 @@ export default function Receta({ id, tengo = null, basicos = true }) {
           <ModoCocina receta={r} onCerrar={() => setModoCocina(false)} onTerminar={() => {
             setModoCocina(false);
             // En el tutorial, terminar entrega el regalo y no pide cuenta (beta)
-            if (tutorial?.activo && tutorial.estado.hecho === 2) { tutorial.marcar('termino'); return; }
+            if (tutorial?.activo && tutorial.linea?.esperar?.evento === 'termine') { tutorial.evento('termine'); return; }
             loCocine();
           }} />
         ) : null}
@@ -259,9 +270,9 @@ export default function Receta({ id, tengo = null, basicos = true }) {
         usados={usados}
         esMia={esMia}
         onCerrar={() => setCocine(false)}
-        onListo={() => { setCocine(false); cargar(); recargarPerfil(); }}
+        onListo={() => { setCocine(false); cargar(); recargarPerfil(); setTimeout(() => chefpu?.decir('cocine', '¡Qué buena pinta! Sigue así y subes de nivel.', 'celebrando'), 1200); }}
       />
-    </View>
+    </Foco>
   );
 }
 
@@ -269,10 +280,14 @@ export default function Receta({ id, tengo = null, basicos = true }) {
 function ModoCocina({ receta, onCerrar, onTerminar }) {
   useKeepAwake();
   const insets = useSafeAreaInsets();
+  const { tutorial } = useApp();
   const [paso, setPaso] = useState(0);
   const total = receta.pasos.length;
   const ultimo = paso === total - 1;
+  // tutorial: llegar al último paso desbloquea «¡Terminé!»
+  useEffect(() => { if (ultimo) tutorial?.evento('ultimo_paso'); }, [ultimo, tutorial?.indice]);
   return (
+    <View style={{ flex: 1 }}>
     <View style={{ flex: 1, backgroundColor: C.fondo, paddingTop: insets.top + 12, paddingBottom: insets.bottom + 16, paddingHorizontal: 20, gap: 16 }}>
       <View style={s.filaEntre}>
         <Text style={s.sub}>{receta.titulo}</Text>
@@ -285,20 +300,23 @@ function ModoCocina({ receta, onCerrar, onTerminar }) {
           <View key={i} style={{ flex: 1, height: 6, borderRadius: 3, backgroundColor: i <= paso ? C.tomate : C.grisTinte }} />
         ))}
       </View>
-      <GuiaTutorial siguiente="termino" />
       <Text style={{ fontSize: 16, fontWeight: '800', color: C.tomate }}>Paso {paso + 1} de {total}</Text>
-      <ScrollView style={{ flex: 1 }}>
-        <Text style={{ fontSize: 28, lineHeight: 38, fontWeight: '700', color: C.texto }}>{receta.pasos[paso]}</Text>
-      </ScrollView>
+      <Foco id="texto_paso" style={{ flex: 1 }}>
+        <ScrollView style={{ flex: 1 }}>
+          <Text style={{ fontSize: 28, lineHeight: 38, fontWeight: '700', color: C.texto }}>{receta.pasos[paso]}</Text>
+        </ScrollView>
+      </Foco>
       <Text style={[s.sub, { textAlign: 'center' }]}>La pantalla se queda encendida mientras cocinas</Text>
       <View style={{ flexDirection: 'row', gap: 10 }}>
         <Boton tipo="neutro" titulo="Anterior" icono="chevron-back" deshabilitado={paso === 0} onPress={() => setPaso(paso - 1)} style={{ flex: 1 }} />
         {ultimo ? (
-          <Boton titulo="¡Terminé!" icono="checkmark" onPress={onTerminar} style={{ flex: 1 }} />
+          <Foco id="termine" style={{ flex: 1 }}><Boton titulo="¡Terminé!" icono="checkmark" onPress={onTerminar} /></Foco>
         ) : (
-          <Boton titulo="Siguiente" icono="chevron-forward" onPress={() => setPaso(paso + 1)} style={{ flex: 1 }} />
+          <Foco id="siguiente" style={{ flex: 1 }}><Boton titulo="Siguiente" icono="chevron-forward" onPress={() => setPaso(paso + 1)} /></Foco>
         )}
       </View>
+    </View>
+      <TutorialCapa capa="cocina" />
     </View>
   );
 }

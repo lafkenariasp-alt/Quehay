@@ -12,7 +12,9 @@ import { C } from './src/theme';
 import { Cargando } from './src/ui';
 import { registrar, leerIngredientesInvitado, borrarIngredientesInvitado } from './src/analitica';
 import Bienvenida from './src/pantallas/Bienvenida';
-import { useTutorialEstado, RegaloTutorial } from './src/tutorial';
+import { useTutorialEstado, RegaloTutorial, TutorialCapa } from './src/tutorial';
+import { ChefpuFlotante, useChefpuVoz } from './src/chefpuFlotante';
+import { Foco } from './src/foco';
 import Acceso from './src/pantallas/Acceso';
 import Nevera from './src/pantallas/Nevera';
 import Buscar from './src/pantallas/Buscar';
@@ -82,11 +84,13 @@ function Inicio({ pestana, visitadas, uid, teclado, irA }) {
           {PESTANAS.map((p) => {
             const activa = p.id === pestana;
             return (
-              <Pressable key={p.id} onPress={() => irA(p.id)} style={{ flex: 1, alignItems: 'center', gap: 2, minHeight: 48, justifyContent: 'center' }}
-                accessibilityRole="tab" accessibilityLabel={p.nombre} accessibilityState={{ selected: activa }}>
-                <Ionicons name={p.icono} size={24} color={activa ? C.tomate : C.suave} />
-                <Text style={{ fontSize: 11, fontWeight: '700', color: activa ? C.tomate : C.suave }} maxFontSizeMultiplier={1.4}>{p.nombre}</Text>
-              </Pressable>
+              <Foco key={p.id} id={`tab_${p.id}`} style={{ flex: 1 }}>
+                <Pressable onPress={() => irA(p.id)} style={{ flex: 1, alignItems: 'center', gap: 2, minHeight: 48, justifyContent: 'center' }}
+                  accessibilityRole="tab" accessibilityLabel={p.nombre} accessibilityState={{ selected: activa }}>
+                  <Ionicons name={p.icono} size={24} color={activa ? C.tomate : C.suave} />
+                  <Text style={{ fontSize: 11, fontWeight: '700', color: activa ? C.tomate : C.suave }} maxFontSizeMultiplier={1.4}>{p.nombre}</Text>
+                </Pressable>
+              </Foco>
             );
           })}
         </View>
@@ -106,6 +110,7 @@ function Contenido() {
   const [visitadas, setVisitadas] = useState({ buscar: true }); // pestañas que quedan vivas (no pierden lo escrito)
   const [teclado, setTeclado] = useState(false);
   const [altoTeclado, setAltoTeclado] = useState(0); // con el teclado abierto escondemos las pestañas
+  const voz = useChefpuVoz({ silencio: teclado || tutorial.activo });
 
   useEffect(() => {
     const mostrar = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow', (e) => { setTeclado(true); setAltoTeclado(e.endCoordinates?.height || 0); });
@@ -168,10 +173,66 @@ function Contenido() {
     if (destino) nav.abrir(destino.pantalla, destino.params);
   }
 
+  const uidActual = sesion?.user?.id || null;
+
+  // Chefpu ofrece el tutorial a quien no lo ha visto (usuarios que ya tenían la app)
+  const enApp = sesion !== undefined && bienvenidaVista !== null && !!tutorial.estado && (uidActual || bienvenidaVista);
+  useEffect(() => {
+    if (!enApp || tutorial.activo) return undefined;
+    const e = tutorial.estado;
+    if (e.ofrecido || (e.iniciado && !e.saltado)) return undefined;
+    const t = setTimeout(() => {
+      tutorial.marcarOfrecido();
+      voz.decir('oferta', e.saltado ? '¿Seguimos con el tutorial? Te muestro todo en 2 minutos.' : '¿Te muestro cómo funciona Qué Hay? Son 2 minutos.', 'feliz', {
+        forzar: true,
+        acciones: [{ texto: '¡Vamos!', fn: () => { tutorial.reiniciar(); nav.abrir('tutorial'); } }, { texto: 'Ahora no', fn: () => {} }],
+      });
+    }, 1500);
+    return () => clearTimeout(t);
+  }, [enApp, tutorial.activo, tutorial.estado?.ofrecido]);
+
+  // Menú de Chefpu: la opción principal busca con lo que tienes
+  const queCocino = useCallback(async () => {
+    registrar('chefpu_que_cocino', {}, uidActual);
+    let ids = [];
+    if (uidActual) {
+      const { data } = await supabase.from('nevera').select('ingrediente_id').eq('usuario_id', uidActual);
+      ids = (data || []).map((d) => d.ingrediente_id);
+    } else {
+      ids = (await leerIngredientesInvitado()).map((i) => i.id);
+    }
+    if (!ids.length) {
+      voz.decir('sin_ingredientes', uidActual ? 'Tu nevera está vacía. Agrega lo que tienes y te digo qué cocinar.' : 'Primero dime qué tienes: elige unos ingredientes aquí.', 'pensando', { forzar: true });
+      nav.irA(uidActual ? 'nevera' : 'buscar');
+      return;
+    }
+    nav.abrir('resultados', { tengo: ids, titulo: 'Lo que puedes cocinar' });
+  }, [uidActual, nav, voz.decir]);
+
+  const consejo = useCallback(() => {
+    const ruta = navRef.isReady() ? navRef.getCurrentRoute()?.name : null;
+    const donde = !ruta || ruta === 'inicio' ? pestana : ruta;
+    const CONSEJOS = {
+      nevera: 'Anota lo que compras y te digo qué cocinar. Mantén presionado un alimento para quitarlo.',
+      buscar: 'Elige lo que tienes y toca Ver recetas. Con 3 o más ingredientes salen muchas más.',
+      publicar: 'Sube tu receta con foto y gana 50 XP. Elige los ingredientes del catálogo.',
+      perfil: 'Aquí ves tu nivel, tus logros y tus recetas. Cocina y publica para subir.',
+      resultados: 'Verde es lo que tienes, ámbar lo que te falta. Arriba están las que puedes cocinar ya.',
+      receta: 'Toca Paso a paso para cocinar conmigo. Si la cocinas, sube tu foto en Lo cociné.',
+      usuarios: 'Busca a tus amigos por su nick y síguelos para ver sus recetas.',
+      perfilPublico: 'Si te gustan sus recetas, síguelo. Si ves algo raro, repórtalo con la banderita.',
+      acceso: 'Con una cuenta guardo tu nevera, tus recetas y tu XP.',
+      tutorial: 'Toca lo que tengas y vemos qué cocinar.',
+    };
+    voz.decir('consejo', CONSEJOS[donde] || '¡Estoy aquí para ayudarte a cocinar!', 'feliz', { forzar: true });
+  }, [pestana, voz.decir]);
+
   if (sesion === undefined || bienvenidaVista === null || !tutorial.estado) return <Cargando />;
 
-  const uid = sesion?.user?.id || null;
-  const ctx = { sesion, uid, invitado: !uid, perfil, recargarPerfil, nav, pedirCuenta, tutorial };
+  const uid = uidActual;
+  const chefpu = { decir: voz.decir };
+  const ctx = { sesion, uid, invitado: !uid, perfil, recargarPerfil, nav, pedirCuenta, tutorial, chefpu };
+  const verFlotante = !teclado && (!tutorial.activo || (tutorial.linea?.cap === 5 && !tutorial.linea?.capa));
 
   if (!uid && !bienvenidaVista) {
     return (
@@ -179,6 +240,7 @@ function Contenido() {
         <View style={{ flex: 1, paddingTop: insets.top, paddingBottom: insets.bottom, backgroundColor: C.fondo }}>
           <Bienvenida onTerminar={terminarBienvenida} />
         </View>
+        <TutorialCapa />
       </AppCtx.Provider>
     );
   }
@@ -199,6 +261,8 @@ function Contenido() {
           ))}
         </Pila.Navigator>
       </NavigationContainer>
+      <ChefpuFlotante voz={voz} visible={verFlotante} onQueCocino={queCocino} onConsejo={consejo} />
+      <TutorialCapa />
       <RegaloTutorial />
       {teclado ? (
         <Pressable onPress={() => Keyboard.dismiss()} accessibilityRole="button" accessibilityLabel="Cerrar teclado"

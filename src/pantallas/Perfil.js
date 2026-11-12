@@ -9,7 +9,7 @@ import { desdeCamara, desdeGaleria, subirFoto } from '../fotos';
 import { Mascota, PideCuenta } from '../mascota';
 
 export default function Perfil({ activa }) {
-  const { uid, invitado, perfil, recargarPerfil, nav, pedirCuenta, tutorial } = useApp();
+  const { uid, invitado, perfil, recargarPerfil, nav, pedirCuenta, tutorial, chefpu } = useApp();
   const repetirTutorial = () => { tutorial.reiniciar(); nav.abrir('tutorial'); };
   const [logros, setLogros] = useState([]);
   const [mios, setMios] = useState(new Set());
@@ -35,6 +35,12 @@ export default function Perfil({ activa }) {
   }, [uid]);
 
   useEffect(() => { if (activa) cargar(); }, [activa, cargar]); // recarga al volver a la pestaña
+  // Chefpu avisa cuando falta poco para subir de nivel
+  useEffect(() => {
+    if (!activa || !perfil) return;
+    const falta = xpParaNivel(perfil.nivel + 1) - perfil.xp;
+    if (falta > 0 && falta < 20) chefpu?.decir('perfil_cerca', '¡Estás a un plato de subir de nivel!', 'feliz');
+  }, [activa, perfil?.xp]);
 
   if (invitado) {
     return (
