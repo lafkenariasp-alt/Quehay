@@ -33,7 +33,7 @@ export const GUION = [
   { cap: 4, capa: 'cocina', foco: 'texto_paso', cara: 'feliz', texto: 'Como en las historias: toca a la derecha para avanzar o desliza. Llega al último paso.', esperar: { evento: 'ultimo_paso' } },
   { cap: 4, capa: 'cocina', foco: 'termine', cara: 'celebrando', texto: '¡Lo lograste! Toca ¡Terminé!', esperar: { evento: 'termine' } },
   // Epílogo · La recompensa
-  { cap: 5, capa: 'regalo', foco: 'regalo', cara: 'celebrando', texto: '¡Gracias por ayudarme! Toma: insignia de bienvenida, 30 XP y Fundador.', esperar: { evento: 'regalo_cerrado' } },
+  { cap: 5, capa: 'regalo', foco: 'regalo', narrador: false, cara: 'celebrando', texto: '¡Gracias por ayudarme! Toma: insignia de bienvenida, 30 XP y Fundador.', esperar: { evento: 'regalo_cerrado' } },
   { cap: 5, foco: 'chefpu_flotante', cara: 'feliz', texto: 'Desde ahora vivo aquí. Arrástrame donde quieras o presióname para más opciones.' },
   { cap: 5, foco: 'tab_nevera', cara: 'feliz', texto: 'En la Nevera anotas lo que tienes y tu lista de compras. Para quitar algo, deslízalo a la izquierda.' },
   { cap: 5, foco: 'tab_nevera', cara: 'feliz', texto: 'Si te creas una cuenta, guardo todo eso para ti. Cuando quieras, sin apuro.' },

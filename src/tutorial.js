@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { View, Text, Pressable, Modal, Animated, Easing, AccessibilityInfo, Alert, Dimensions } from 'react-native';
+import { View, Text, Pressable, Modal, Animated, Easing, AccessibilityInfo, Alert, Dimensions, useWindowDimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 // Desenfoque opcional: si la librería no está disponible, el fondo queda solo oscuro
 let BlurView = null;
@@ -161,7 +161,11 @@ export function TutorialCapa({ capa = 'raiz' }) {
   }, [mia, indice]);
 
   // Si el elemento a resaltar no aparece en 4 s, no dejamos a la persona atrapada
-  const visible = mia && focos.existe(objetivo) && (!linea.foco || !!focos.rect(linea.foco));
+  const rectFoco = mia && linea.foco ? focos.rect(linea.foco) : null;
+  const altoVentana = Dimensions.get('window').height;
+  // un foco cortado por el borde de la pantalla no se puede tocar: cuenta como no visible
+  const enPantalla = !rectFoco || (rectFoco.y + rectFoco.h <= altoVentana + 4 && rectFoco.y >= -4);
+  const visible = mia && focos.existe(objetivo) && (!linea.foco || !!rectFoco) && enPantalla;
   useEffect(() => {
     if (!mia || visible) { setPerdido(false); return undefined; }
     const t = setTimeout(() => setPerdido(true), 4000);
@@ -206,7 +210,8 @@ export function TutorialCapa({ capa = 'raiz' }) {
   if (!mia) return null;
   const rect = linea.foco ? focos.rect(linea.foco) : null;
   // Mientras el elemento aparece (cambio de pantalla), la pantalla queda bloqueada: así no se puede tocar otra cosa
-  if (!focos.existe(objetivo) || (linea.foco && !rect)) {
+  const cortado = rect && (rect.y + rect.h > H + 4 || rect.y < -4);
+  if (!focos.existe(objetivo) || (linea.foco && !rect) || (cortado && perdido)) {
     return (
       <View style={{ position: 'absolute', left: 0, top: 0, width: W, height: H, zIndex: 1000, elevation: 1000, justifyContent: 'flex-end', padding: 16, paddingBottom: insets.bottom + 24 }}>
         {perdido ? (
@@ -272,8 +277,9 @@ export function TutorialCapa({ capa = 'raiz' }) {
         <Panel onPress={tocar} style={{ left: 0, top: 0, width: W, height: H }} />
       )}
 
-      {/* Chefpu narra: una tarjeta con su cara, el texto, el avance (4 puntos) y saltar */}
-      <Animated.View pointerEvents="box-none" style={[{ position: 'absolute', left: 16, right: 16, opacity: aparece,
+      {/* Chefpu narra: una tarjeta con su cara, el texto, el avance (4 puntos) y saltar.
+          narrador: false = la pantalla ya habla por sí sola (p. ej. el regalo) y la tarjeta taparía los botones */}
+      {linea.narrador === false ? null : <Animated.View pointerEvents="box-none" style={[{ position: 'absolute', left: 16, right: 16, opacity: aparece,
         transform: [
           { translateY: aparece.interpolate({ inputRange: [0, 1], outputRange: [8, 0] }) },
           { translateX: alerta.interpolate({ inputRange: [0, 0.15, 0.3, 0.45, 0.6, 0.75, 1], outputRange: [0, -10, 10, -7, 7, -3, 0] }) },
@@ -305,7 +311,7 @@ export function TutorialCapa({ capa = 'raiz' }) {
             ) : <View style={{ minHeight: 44 }} />}
           </View>
         </View>
-      </Animated.View>
+      </Animated.View>}
     </View>
   );
 }
@@ -346,6 +352,10 @@ export function RegaloTutorial() {
   const [visible, setVisible] = useState(false);
   const escala = useRef(new Animated.Value(0.94)).current;
   const opacidad = useRef(new Animated.Value(0)).current;
+  // En pantallas bajas (Android con barras del navegador) todo debe caber sin scroll: los botones tienen que verse
+  const { height: altoPantalla } = useWindowDimensions();
+  const bajo = altoPantalla < 760;
+  const muyBajo = altoPantalla < 620;
 
   useEffect(() => {
     if (!pendiente) { setVisible(false); return undefined; }
@@ -375,12 +385,13 @@ export function RegaloTutorial() {
   ];
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={cerrar}>
-      <View style={{ flex: 1, backgroundColor: 'rgba(42,33,28,0.55)', justifyContent: 'center', padding: 24 }}>
+      <View style={{ flex: 1, backgroundColor: 'rgba(42,33,28,0.55)', justifyContent: 'center', padding: muyBajo ? 12 : bajo ? 16 : 24 }}>
         <Animated.View style={{ opacity: opacidad, transform: [{ scale: escala }], maxWidth: 440, width: '100%', alignSelf: 'center' }} accessibilityViewIsModal>
-          <Foco id="regalo" style={{ backgroundColor: C.fondo, borderRadius: 28, padding: 24, gap: 16, alignItems: 'center' }}>
-            <Mascota tam={150} expresion="celebrando" />
-            <Text style={{ fontSize: 26, fontWeight: '800', color: C.texto, textAlign: 'center' }} accessibilityRole="header">¡Tutorial completado!</Text>
-            <View style={{ gap: 10, padding: 16, borderRadius: 18, backgroundColor: C.doradoTinte, alignSelf: 'stretch' }}>
+          <View style={{ backgroundColor: C.fondo, borderRadius: 28, padding: muyBajo ? 16 : bajo ? 20 : 24, gap: muyBajo ? 10 : bajo ? 12 : 16, alignItems: 'center' }}>
+            <Mascota tam={muyBajo ? 72 : bajo ? 100 : 150} expresion="celebrando" />
+            <Text style={{ fontSize: muyBajo ? 21 : bajo ? 23 : 26, fontWeight: '800', color: C.texto, textAlign: 'center' }} accessibilityRole="header">¡Tutorial completado!</Text>
+            <Text style={{ fontSize: 15, color: C.suave, textAlign: 'center', marginTop: -6 }}>¡Gracias por ayudar a Chefpu!</Text>
+            <View style={{ gap: muyBajo ? 6 : 10, padding: muyBajo ? 12 : 16, borderRadius: 18, backgroundColor: C.doradoTinte, alignSelf: 'stretch' }}>
               {premios.map(([icono, texto]) => (
                 <View key={texto} style={s.fila}>
                   <Ionicons name={icono} size={20} color={C.ambarOscuro} />
@@ -389,6 +400,7 @@ export function RegaloTutorial() {
               ))}
             </View>
             <Text style={[s.sub, { textAlign: 'center' }]}>{invitado ? 'Crea tu cuenta para reclamarlo. Queda guardado en este teléfono hasta que lo hagas.' : 'Ya está en tu perfil.'}</Text>
+            <Foco id="regalo" style={{ alignSelf: 'stretch', gap: 10 }}>
             {invitado ? (
               <>
                 <Boton titulo="Crear cuenta y reclamar" icono="gift-outline" onPress={() => { cerrar(); setTimeout(() => pedirCuenta('¡Tu regalo te espera! Crea tu cuenta para reclamarlo.'), 300); }} style={{ alignSelf: 'stretch' }} />
@@ -397,7 +409,8 @@ export function RegaloTutorial() {
             ) : (
               <Boton titulo="¡A cocinar!" icono="restaurant-outline" onPress={cerrar} style={{ alignSelf: 'stretch' }} />
             )}
-          </Foco>
+            </Foco>
+          </View>
         </Animated.View>
         <TutorialCapa capa="regalo" />
       </View>
