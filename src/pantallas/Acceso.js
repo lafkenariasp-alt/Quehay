@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TextInput, Alert, Pressable, Switch } from 'react-native';
+import { View, Text, TextInput, Alert, Pressable, Switch, Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import { supabase } from '../supabase';
 import { useApp } from '../contexto';
@@ -20,15 +20,52 @@ const nickValido = (n) => /^[a-z0-9_.]{3,24}$/.test(n);
 // Solo nick: el correo interno se arma por dentro y la persona nunca lo ve
 const aCorreo = (t) => `${limpiarNick(t)}@${DOMINIO_NICK}`;
 
-// Guardado cifrado en el llavero del teléfono. En web no existe: se ignora sin romper.
+// Recordar nick y contraseña.
+// - En el teléfono (app): cifrado en el llavero (SecureStore).
+// - En la web no hay llavero: la contraseña la guarda el gestor de contraseñas del navegador
+//   (Chrome, Brave, Edge en Android usan la API de credenciales; Safari la ofrece al entrar),
+//   y aquí solo se recuerda el nick. Nunca se deja la contraseña en el almacenamiento de la página.
+const ES_WEB = Platform.OS === 'web';
+/* global window, navigator */
+const credencialesWeb = () => ES_WEB && typeof window !== 'undefined' && 'PasswordCredential' in window && navigator.credentials;
+
 async function leerRecordado() {
-  try { const v = await SecureStore.getItemAsync(CLAVE_RECORDAR); return v ? JSON.parse(v) : null; } catch { return null; }
+  if (!ES_WEB) {
+    try { const v = await SecureStore.getItemAsync(CLAVE_RECORDAR); return v ? JSON.parse(v) : null; } catch { return null; }
+  }
+  let nick = '';
+  try { nick = window.localStorage.getItem(CLAVE_RECORDAR + '_nick') || ''; } catch { /* sin almacenamiento */ }
+  if (!nick) return null; // no pidió recordar: no se le muestra el gestor del navegador
+  try {
+    if (credencialesWeb()) {
+      // 'optional': si el navegador tiene una sola cuenta guardada, la entrega; si hay varias, puede preguntar cuál
+      const c = await navigator.credentials.get({ password: true, mediation: 'optional' });
+      if (c && c.password) return { nick: c.id || nick, clave: c.password };
+    }
+  } catch { /* el navegador no quiso entregarla */ }
+  return { nick, clave: '' };
 }
 async function guardarRecordado(datos) {
+  if (!ES_WEB) {
+    try {
+      if (datos) await SecureStore.setItemAsync(CLAVE_RECORDAR, JSON.stringify(datos));
+      else await SecureStore.deleteItemAsync(CLAVE_RECORDAR);
+    } catch { /* sin llavero disponible */ }
+    return;
+  }
   try {
-    if (datos) await SecureStore.setItemAsync(CLAVE_RECORDAR, JSON.stringify(datos));
-    else await SecureStore.deleteItemAsync(CLAVE_RECORDAR);
-  } catch { /* sin llavero disponible */ }
+    if (datos) window.localStorage.setItem(CLAVE_RECORDAR + '_nick', datos.nick);
+    else window.localStorage.removeItem(CLAVE_RECORDAR + '_nick');
+  } catch { /* sin almacenamiento */ }
+  try {
+    if (!credencialesWeb()) return;
+    if (datos) {
+      // El navegador muestra su aviso "¿Guardar contraseña?" y la guarda cifrada en su gestor
+      await navigator.credentials.store(new window.PasswordCredential({ id: datos.nick, password: datos.clave, name: datos.nick }));
+    } else if (navigator.credentials.preventSilentAccess) {
+      await navigator.credentials.preventSilentAccess();
+    }
+  } catch { /* el navegador no lo permite (p. ej. Safari): igual lo ofrece al entrar */ }
 }
 
 // Crear cuenta o entrar. Se abre cuando un invitado intenta algo que requiere cuenta.
@@ -46,7 +83,7 @@ export default function Acceso({ motivo, modo: modoInicial, puerta = false }) {
 
   useEffect(() => {
     leerRecordado().then((d) => {
-      if (d) { setNick(d.nick || ''); setClave(d.clave || ''); setRecordar(true); }
+      if (d) { setNick(d.nick || ''); if (d.clave) setClave(d.clave); setRecordar(true); }
     });
   }, []);
 
@@ -140,7 +177,7 @@ export default function Acceso({ motivo, modo: modoInicial, puerta = false }) {
           </Pressable>
         </View>
         <View style={[s.fila, { justifyContent: 'space-between' }]}>
-          <Text style={{ fontSize: 15, color: C.texto, flex: 1 }}>Recordar mi nick y contraseña en este teléfono</Text>
+          <Text style={{ fontSize: 15, color: C.texto, flex: 1 }}>{ES_WEB ? 'Recordar mi nick y guardar la contraseña en este navegador' : 'Recordar mi nick y contraseña en este teléfono'}</Text>
           <Switch value={recordar} onValueChange={(v) => { setRecordar(v); if (!v) guardarRecordado(null); }}
             trackColor={{ true: C.verde, false: '#CBBBA5' }} />
         </View>
