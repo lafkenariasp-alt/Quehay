@@ -68,6 +68,8 @@ export function ChefpuFlotante({ voz, visible, onQueCocino, onConsejo, onAmigos,
   const [oculto, setOculto] = useState(false);
   const [menu, setMenu] = useState(false);
   const [listo, setListo] = useState(false);
+  const [altoMenu, setAltoMenu] = useState(0); // alto real del menú y del globo: así nunca se salen de la pantalla
+  const [altoGlobo, setAltoGlobo] = useState(0);
   const pos = useRef(new Animated.ValueXY({ x: W - TAM - 10, y: H * 0.55 })).current;
   const yActual = useRef(H * 0.55);
   const rebote = useRef(new Animated.Value(1)).current;
@@ -142,7 +144,10 @@ export function ChefpuFlotante({ voz, visible, onQueCocino, onConsejo, onAmigos,
   }
 
   // Globo o menú al lado de Chefpu, hacia el centro de la pantalla
-  const anclaje = { position: 'absolute', top: Math.min(yActual.current, H - insets.bottom - 280), [lado === 'izq' ? 'left' : 'right']: TAM + 20, width: 236 };
+  // Se alinea con Chefpu, pero si no cabe hacia abajo sube lo necesario (y nunca pasa por arriba de la pantalla)
+  const topDe = (alto) => Math.max(minY, Math.min(yActual.current, H - insets.bottom - 12 - (alto || 280)));
+  const lateral = { position: 'absolute', [lado === 'izq' ? 'left' : 'right']: TAM + 20, width: 236 };
+  const anclaje = { ...lateral, top: topDe(altoGlobo) };
   const m = voz.mensaje;
 
   return (
@@ -150,7 +155,8 @@ export function ChefpuFlotante({ voz, visible, onQueCocino, onConsejo, onAmigos,
       {menu ? <Pressable onPress={() => setMenu(false)} accessible={false} style={{ position: 'absolute', left: 0, top: 0, width: W, height: H, zIndex: 890, backgroundColor: 'rgba(26,18,13,0.35)' }} /> : null}
 
       {menu ? (
-        <View style={[anclaje, { width: 260, zIndex: 910, backgroundColor: C.fondo, borderRadius: 22, padding: 14, gap: 8,
+        <View onLayout={(e) => setAltoMenu(e.nativeEvent.layout.height)}
+          style={[lateral, { top: topDe(altoMenu), opacity: altoMenu ? 1 : 0, width: 260, zIndex: 910, backgroundColor: C.fondo, borderRadius: 22, padding: 14, gap: 8,
           shadowColor: '#000', shadowOpacity: 0.25, shadowRadius: 16, shadowOffset: { width: 0, height: 8 } }]} accessibilityViewIsModal>
           <Pressable onPress={() => { setMenu(false); onQueCocino(); }} accessibilityRole="button"
             style={({ pressed }) => ({ minHeight: 56, borderRadius: 18, backgroundColor: C.tomate, opacity: pressed ? 0.85 : 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 })}>
@@ -169,7 +175,7 @@ export function ChefpuFlotante({ voz, visible, onQueCocino, onConsejo, onAmigos,
           ))}
         </View>
       ) : m ? (
-        <Pressable onPress={m.acciones ? undefined : voz.callar} accessibilityLiveRegion="polite" accessibilityLabel={`Chefpu dice: ${m.texto}`}
+        <Pressable onLayout={(e) => setAltoGlobo(e.nativeEvent.layout.height)} onPress={m.acciones ? undefined : voz.callar} accessibilityLiveRegion="polite" accessibilityLabel={`Chefpu dice: ${m.texto}`}
           style={[anclaje, { zIndex: 910, backgroundColor: C.blanco, borderRadius: 20, padding: 14, gap: 10, borderWidth: 1.5, borderColor: C.linea,
             shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 10, shadowOffset: { width: 0, height: 8 } }]}>
           <Text style={{ fontSize: 15, fontWeight: '700', color: C.texto, lineHeight: 21 }}>{m.texto}</Text>
