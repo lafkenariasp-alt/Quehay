@@ -34,10 +34,10 @@ async function guardarRecordado(datos) {
 // Crear cuenta o entrar. Se abre cuando un invitado intenta algo que requiere cuenta.
 // motivo: lo que intentaba hacer ("Tu plato y tus 20 XP están listos: guárdalos")
 // puerta: pantalla de entrada tras cerrar sesión (sin volver ni modo invitado)
-export default function Acceso({ motivo, puerta = false }) {
+export default function Acceso({ motivo, modo: modoInicial, puerta = false }) {
   const { nav, tutorial } = useApp();
   const regaloListo = !!tutorial?.estado?.completado; // terminó el tutorial como invitado: la cuenta reclama el regalo
-  const [modo, setModo] = useState(motivo ? 'registro' : 'entrar'); // entrar | registro
+  const [modo, setModo] = useState(modoInicial || (motivo ? 'registro' : 'entrar')); // entrar | registro
   const [nick, setNick] = useState('');
   const [clave, setClave] = useState('');
   const [verClave, setVerClave] = useState(false);
@@ -120,8 +120,8 @@ export default function Acceso({ motivo, puerta = false }) {
         </>
       ) : (
         <View style={[s.fila, { gap: 12, alignItems: 'flex-end' }]}>
-          <Mascota tam={80} />
-          <Globo texto="¡Qué bueno verte de nuevo!" style={{ flex: 1 }} />
+          <Mascota tam={80} accesorio={regaloListo ? 'delantal_bienvenida' : null} />
+          <Globo texto={regaloListo ? '¡Qué bueno verte de nuevo! Entra y tu regalo pasa a tu cuenta.' : '¡Qué bueno verte de nuevo!'} style={{ flex: 1 }} />
         </View>
       )}
 

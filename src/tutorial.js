@@ -399,11 +399,12 @@ export function RegaloTutorial() {
                 </View>
               ))}
             </View>
-            <Text style={[s.sub, { textAlign: 'center' }]}>{invitado ? 'Crea tu cuenta para reclamarlo. Queda guardado en este teléfono hasta que lo hagas.' : 'Ya está en tu perfil.'}</Text>
+            <Text style={[s.sub, { textAlign: 'center' }]}>{invitado ? 'Para reclamarlo crea tu cuenta, o entra si ya tienes una. Queda guardado en este teléfono hasta que lo hagas.' : 'Ya está en tu perfil.'}</Text>
             <Foco id="regalo" style={{ alignSelf: 'stretch', gap: 10 }}>
             {invitado ? (
               <>
                 <Boton titulo="Crear cuenta y reclamar" icono="gift-outline" onPress={() => { cerrar(); setTimeout(() => pedirCuenta('¡Tu regalo te espera! Crea tu cuenta para reclamarlo.'), 300); }} style={{ alignSelf: 'stretch' }} />
+                <Boton tipo="secundario" titulo="Ya tengo cuenta: entrar" icono="log-in-outline" onPress={() => { cerrar(); setTimeout(() => pedirCuenta('¡Tu regalo te espera! Entra a tu cuenta para reclamarlo.', 'entrar'), 300); }} style={{ alignSelf: 'stretch' }} />
                 <Boton tipo="neutro" titulo="Después" onPress={cerrar} style={{ alignSelf: 'stretch' }} />
               </>
             ) : (

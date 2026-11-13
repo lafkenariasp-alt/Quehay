@@ -249,9 +249,10 @@ function Contenido() {
   }), []);
 
   // Para invitados: abre el registro explicando qué gana con la cuenta
-  const pedirCuenta = useCallback((motivo) => {
-    registrar('pedir_cuenta', { motivo });
-    nav.abrir('acceso', { motivo });
+  // modo: 'registro' (por defecto si hay motivo) o 'entrar' para quien ya tiene cuenta
+  const pedirCuenta = useCallback((motivo, modo) => {
+    registrar('pedir_cuenta', { motivo, modo: modo || null });
+    nav.abrir('acceso', { motivo, modo });
   }, [nav]);
 
   async function terminarBienvenida(destino) {
