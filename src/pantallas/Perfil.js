@@ -9,6 +9,7 @@ import { desdeCamara, desdeGaleria, subirFoto } from '../fotos';
 import { Mascota, PideCuenta } from '../mascota';
 import { useAjustesSonido } from '../sonido';
 import { Cascada, Balanceo } from '../anim';
+import { abrirOpinion } from '../opinion';
 
 // Sonidos y vibración se pueden apagar; en iPhone el modo silencio también los apaga
 function AjustesSonido() {
@@ -270,6 +271,7 @@ export default function Perfil({ activa }) {
       </Seccion>
 
       <AjustesSonido />
+      <Boton tipo="neutro" icono="chatbubble-ellipses-outline" titulo="Enviar opinión o reportar un error" onPress={() => abrirOpinion('perfil')} />
       <Boton tipo="neutro" icono="school-outline" titulo="Repetir tutorial con Chefpu" onPress={repetirTutorial} />
       <Boton tipo="neutro" titulo="Cerrar sesión" icono="log-out-outline" onPress={() => Alert.alert('¿Cerrar sesión?', 'Tu nevera y tus recetas quedan guardadas en tu cuenta.', [
         { text: 'Cancelar', style: 'cancel' },

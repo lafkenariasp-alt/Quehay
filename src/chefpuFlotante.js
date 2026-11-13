@@ -56,7 +56,7 @@ export function useChefpuVoz({ silencio }) {
 }
 
 // Chefpu flotante: se arrastra, se pega al borde, se oculta y abre su menú al tocarlo.
-export function ChefpuFlotante({ voz, visible, onQueCocino, onConsejo, onAmigos }) {
+export function ChefpuFlotante({ voz, visible, onQueCocino, onConsejo, onAmigos, onOpinion }) {
   const insets = useSafeAreaInsets();
   const reducido = useMovimientoReducido();
   const { width: W, height: H } = Dimensions.get('window');
@@ -159,6 +159,7 @@ export function ChefpuFlotante({ voz, visible, onQueCocino, onConsejo, onAmigos 
           </Pressable>
           {[['person-add-outline', 'Buscar cocineros', () => { setMenu(false); onAmigos(); }],
             ['bulb-outline', 'Consejo de esta pantalla', () => { setMenu(false); onConsejo(); }],
+            ['chatbubble-ellipses-outline', 'Opinión, idea o error', () => { setMenu(false); onOpinion(); }],
             ['eye-off-outline', 'Ocultar a Chefpu', ocultar]].map(([icono, texto, fn]) => (
             <Pressable key={texto} onPress={fn} accessibilityRole="button"
               style={({ pressed }) => ({ minHeight: 48, borderRadius: 14, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1.5, borderColor: C.linea, backgroundColor: pressed ? C.superficie : C.blanco })}>

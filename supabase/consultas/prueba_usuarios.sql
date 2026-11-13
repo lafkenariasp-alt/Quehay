@@ -40,3 +40,12 @@ select dispositivo, to_char(creado_en at time zone 'America/Santiago', 'DD/MM HH
 from public.eventos_app
 where creado_en >= '2026-11-12'
 order by dispositivo, creado_en;
+
+-- 5) Opiniones, ideas y errores enviados desde Chefpu (requiere la migración 012)
+select o.id, to_char(o.creado_en at time zone 'America/Santiago', 'DD/MM HH24:MI') as hora,
+       coalesce(p.usuario, 'invitado') as quien, o.tipo, o.nota, o.pantalla, o.texto, o.estado
+from public.opiniones o left join public.perfiles p on p.id = o.usuario_id
+order by o.creado_en desc;
+
+-- Marcar una como resuelta (cambia el número):
+-- update public.opiniones set estado = 'resuelta' where id = 1;

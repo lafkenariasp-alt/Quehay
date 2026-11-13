@@ -13,6 +13,7 @@ import { AppCtx } from './src/contexto';
 import { C } from './src/theme';
 import { Cargando, PestanaCtx, subirArriba, AvisoHost } from './src/ui';
 import Errores from './src/errores';
+import { VentanaOpinion, abrirOpinion } from './src/opinion';
 import { registrar, leerIngredientesInvitado, borrarIngredientesInvitado } from './src/analitica';
 import Bienvenida from './src/pantallas/Bienvenida';
 import { useTutorialEstado, RegaloTutorial, TutorialCapa } from './src/tutorial';
@@ -353,6 +354,15 @@ function Contenido() {
     nav.abrir('resultados', { tengo: ids, titulo: 'Lo que puedes cocinar' });
   }, [uidActual, nav, voz.decir]);
 
+  // Opinión, idea o error: se guarda con la pantalla donde está la persona
+  const opinion = useCallback(() => {
+    const ruta = navRef.isReady() ? navRef.getCurrentRoute()?.name : null;
+    abrirOpinion(!ruta || ruta === 'inicio' ? pestana : ruta);
+  }, [pestana]);
+  const gracias = useCallback((tipo) => {
+    voz.decir('gracias_opinion', tipo === 'error' ? '¡Gracias por avisar! Lo reviso para arreglarlo.' : '¡Gracias! Lo voy a leer con calma.', 'feliz', { forzar: true });
+  }, [voz.decir]);
+
   const consejo = useCallback(() => {
     const ruta = navRef.isReady() ? navRef.getCurrentRoute()?.name : null;
     const donde = !ruta || ruta === 'inicio' ? pestana : ruta;
@@ -441,7 +451,8 @@ function Contenido() {
           ))}
         </Pila.Navigator>
       </NavigationContainer>
-      <ChefpuFlotante voz={voz} visible={verFlotante} onQueCocino={queCocino} onConsejo={consejo} onAmigos={() => nav.abrir('amigos')} />
+      <ChefpuFlotante voz={voz} visible={verFlotante} onQueCocino={queCocino} onConsejo={consejo} onAmigos={() => nav.abrir('amigos')} onOpinion={opinion} />
+      <VentanaOpinion uid={uidActual} alEnviar={gracias} />
       <TutorialCapa />
       <RegaloTutorial />
       <AvisoHost abajo={teclado ? 8 : 72} />
