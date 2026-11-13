@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#FBF7F0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Panel Qué Hay">
+<meta name="robots" content="noindex, nofollow">
+<link rel="apple-touch-icon" href="chefpu.png">
+<link rel="icon" href="chefpu.png">
+<title>Panel · Qué Hay</title>
+<style>
+  :root {
+    --fondo: #FBF7F0; --superficie: #F3EBDD; --blanco: #FFFFFF; --linea: #E8DCC8;
+    --texto: #2A211C; --suave: #6B5D52; --gris: #78716C;
+    --tomate: #C93F18; --tomate-osc: #A8320F; --tomate-tinte: #FDE7DC;
+    --verde: #15803D; --verde-tinte: #E6F4EA;
+    --ambar: #B45309; --ambar-tinte: #FEF3E2;
+    --dorado: #D97706; --dorado-tinte: #FEF3C7;
+    --radio: 14px;
+    --sombra: 0 1px 2px rgba(42,33,28,.06), 0 4px 14px rgba(42,33,28,.05);
+    --sup: env(safe-area-inset-top); --inf: env(safe-area-inset-bottom);
+    --izq: env(safe-area-inset-left); --der: env(safe-area-inset-right);
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-tap-highlight-color: transparent; -webkit-text-size-adjust: 100%; }
+  html, body { margin: 0; background: var(--fondo); color: var(--texto); overscroll-behavior: none; }
+  body { font: 16px/1.45 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif; min-height: 100dvh; }
+  h1, h2, h3 { margin: 0; letter-spacing: -.01em; }
+  h1 { font-size: 28px; font-weight: 800; }
+  h2 { font-size: 20px; font-weight: 800; }
+  h3 { font-size: 15px; font-weight: 700; color: var(--suave); text-transform: uppercase; letter-spacing: .04em; }
+  button, input, textarea, select { font: inherit; color: inherit; }
+  input, textarea { font-size: 16px; } /* 16px: iOS no hace zoom al escribir */
+  button { cursor: pointer; user-select: none; -webkit-user-select: none; touch-action: manipulation; }
+  a { color: inherit; }
+  .oculto { display: none !important; }
+  .suave { color: var(--suave); }
+  .chico { font-size: 13px; }
+
+  /* ---------- Botones ---------- */
+  .btn { border: 0; border-radius: 12px; padding: 12px 18px; min-height: 46px; font-weight: 700;
+         background: var(--tomate); color: #fff; transition: transform .12s ease, background-color .15s ease; }
+  .btn:active { transform: scale(.97); background: var(--tomate-osc); }
+  .btn[disabled] { opacity: .5; }
+  .btn.sec { background: var(--blanco); color: var(--texto); box-shadow: inset 0 0 0 1.5px var(--linea); }
+  .btn.sec:active { background: var(--superficie); }
+  .btn.chico { min-height: 38px; padding: 8px 14px; font-size: 14px; border-radius: 10px; }
+  .btn.verde { background: var(--verde); }
+  @media (hover: hover) and (pointer: fine) {
+    .btn:hover { filter: brightness(1.05); }
+    .fila:hover { background: var(--superficie); }
+  }
+
+  /* ---------- Ingreso ---------- */
+  .ingreso { min-height: 100dvh; display: grid; place-items: center; padding: calc(24px + var(--sup)) 20px calc(24px + var(--inf)); }
+  .ingreso form { width: min(400px, 100%); background: var(--blanco); border-radius: 22px; padding: 28px; box-shadow: var(--sombra); }
+  .ingreso img { width: 76px; height: 76px; display: block; margin: 0 auto 10px; }
+  .ingreso h1 { text-align: center; }
+  .ingreso p { text-align: center; margin: 4px 0 22px; }
+  label { display: block; font-size: 14px; font-weight: 700; color: var(--suave); margin: 14px 0 6px; }
+  .campo { width: 100%; border: 1.5px solid var(--linea); border-radius: 12px; padding: 12px 14px; background: var(--fondo); outline: none; }
+  .campo:focus { border-color: var(--tomate); background: var(--blanco); }
+  .error { color: var(--tomate); font-weight: 600; font-size: 14px; min-height: 20px; margin-top: 10px; }
+
+  /* ---------- Estructura ---------- */
+  .app { display: grid; grid-template-columns: 220px 1fr; min-height: 100dvh; }
+  .lateral { position: sticky; top: 0; height: 100dvh; padding: calc(20px + var(--sup)) 14px 20px calc(14px + var(--izq));
+             border-right: 1px solid var(--linea); display: flex; flex-direction: column; gap: 4px; background: var(--fondo); }
+  .marca { display: flex; align-items: center; gap: 10px; padding: 0 8px 18px; font-weight: 800; font-size: 18px; }
+  .marca img { width: 36px; height: 36px; }
+  .marca small { display: block; font-size: 12px; font-weight: 600; color: var(--suave); }
+  .nav { display: flex; align-items: center; gap: 12px; border: 0; background: none; text-align: left;
+         padding: 11px 12px; border-radius: 12px; font-weight: 700; color: var(--suave); width: 100%; }
+  .nav .ico { font-size: 20px; width: 24px; text-align: center; }
+  .nav.activo { background: var(--tomate-tinte); color: var(--tomate-osc); }
+  .nav .globo { margin-left: auto; background: var(--tomate); color: #fff; font-size: 12px; border-radius: 999px; padding: 1px 8px; }
+  .lateral .pie { margin-top: auto; padding: 8px; font-size: 13px; color: var(--suave); }
+  .lateral .pie button { border: 0; background: none; color: var(--tomate); font-weight: 700; padding: 6px 0; }
+  main { min-width: 0; padding: calc(24px + var(--sup)) calc(28px + var(--der)) 40px 28px; }
+  .cabeza { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
+  .barra-abajo { display: none; }
+
+  @media (max-width: 760px) {
+    .app { grid-template-columns: 1fr; }
+    .lateral { display: none; }
+    main { padding: calc(16px + var(--sup)) calc(16px + var(--der)) calc(96px + var(--inf)) calc(16px + var(--izq)); }
+    .barra-abajo { display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
+                   background: rgba(251,247,240,.94); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+                   border-top: 1px solid var(--linea); padding: 6px 8px calc(6px + var(--inf)); }
+    .barra-abajo .nav { flex-direction: column; gap: 2px; font-size: 12px; padding: 6px 4px; text-align: center; position: relative; }
+    .barra-abajo .nav .globo { position: absolute; top: 2px; left: 55%; margin: 0; }
+    h1 { font-size: 26px; }
+  }
+
+  /* ---------- Tarjetas ---------- */
+  .tarjeta { background: var(--blanco); border-radius: var(--radio); box-shadow: var(--sombra); padding: 18px; }
+  .rejilla { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(165px, 1fr)); }
+  .dato { background: var(--blanco); border-radius: var(--radio); box-shadow: var(--sombra); padding: 16px 18px; }
+  .dato .num { font-size: 34px; font-weight: 800; line-height: 1.1; font-variant-numeric: tabular-nums; }
+  .dato .eti { color: var(--suave); font-size: 14px; font-weight: 600; }
+  .dato .ext { font-size: 13px; color: var(--gris); margin-top: 4px; }
+  button.dato { border: 0; text-align: left; display: flex; flex-direction: column; align-items: flex-start; justify-content: flex-start; transition: transform .12s ease; }
+  button.dato:active { transform: scale(.98); }
+  .aviso { display: flex; gap: 12px; align-items: flex-start; border-radius: var(--radio); padding: 14px 16px; margin-bottom: 16px;
+           background: var(--ambar-tinte); color: var(--ambar); font-weight: 600; }
+  .aviso.ok { background: var(--verde-tinte); color: var(--verde); }
+  .seccion { margin-top: 26px; }
+  .seccion > h3 { margin-bottom: 10px; }
+
+  /* ---------- Gráfico de actividad ---------- */
+  .grafico { position: relative; }
+  .grafico svg { display: block; width: 100%; height: auto; overflow: visible; }
+  .grafico .barra { fill: var(--verde); pointer-events: none; }
+  .grafico .eje, .grafico .base { pointer-events: none; }
+  .grafico .barra.hoy { fill: var(--verde); }
+  .grafico .zona:hover + .barra, .grafico .zona.activa + .barra { fill: #166534; }
+  .grafico .eje { fill: var(--gris); font-size: 11px; }
+  .grafico .base { stroke: var(--linea); stroke-width: 1; }
+  .globo-dato { position: absolute; pointer-events: none; background: var(--texto); color: #fff; font-size: 13px; font-weight: 600;
+                padding: 6px 10px; border-radius: 8px; transform: translate(-50%, -110%); white-space: nowrap; }
+
+  /* ---------- Lista de testers ---------- */
+  .dividido { display: grid; grid-template-columns: minmax(300px, 380px) 1fr; gap: 20px; align-items: start; }
+  .dividido .lista-wrap { position: sticky; top: calc(16px + var(--sup)); max-height: calc(100dvh - 120px); overflow: auto;
+                          -webkit-overflow-scrolling: touch; border-radius: var(--radio); }
+  @media (max-width: 1000px) {
+    .dividido { grid-template-columns: 1fr; }
+    .dividido .lista-wrap { position: static; max-height: none; }
+    .dividido.con-ficha .lista-wrap, .dividido.con-ficha .herramientas { display: none; }
+    .dividido:not(.con-ficha) .detalle { display: none; }
+  }
+  @media (min-width: 1001px) { .volver { display: none; } }
+  .herramientas { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+  .herramientas .campo { flex: 1 1 200px; }
+  .herramientas select.campo { flex: 0 0 auto; width: auto; }
+  .lista { background: var(--blanco); border-radius: var(--radio); box-shadow: var(--sombra); overflow: hidden; }
+  .fila { display: flex; gap: 12px; align-items: center; padding: 12px 14px; border: 0; background: none; width: 100%; text-align: left;
+          border-bottom: 1px solid var(--superficie); transition: background-color .12s ease; }
+  .fila:last-child { border-bottom: 0; }
+  .fila:active, .fila.activa { background: var(--tomate-tinte); }
+  .fila .info { min-width: 0; flex: 1; }
+  .fila .nom { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .fila .sub { font-size: 13px; color: var(--suave); }
+  .fila .der { text-align: right; font-size: 13px; color: var(--suave); white-space: nowrap; }
+  .avatar { width: 42px; height: 42px; border-radius: 50%; flex: 0 0 auto; background: var(--superficie); object-fit: cover;
+            display: grid; place-items: center; font-weight: 800; color: var(--suave); }
+  .avatar.grande { width: 72px; height: 72px; font-size: 26px; }
+  .chip { display: inline-flex; align-items: center; gap: 4px; border-radius: 999px; padding: 2px 10px; font-size: 12px; font-weight: 700;
+          background: var(--superficie); color: var(--suave); white-space: nowrap; }
+  .chip.admin { background: var(--tomate-tinte); color: var(--tomate-osc); }
+  .chip.prueba { background: var(--dorado-tinte); color: #92400E; }
+  .chip.verde { background: var(--verde-tinte); color: var(--verde); }
+  .chip.ambar { background: var(--ambar-tinte); color: var(--ambar); }
+  .punto { width: 9px; height: 9px; border-radius: 50%; background: var(--verde); display: inline-block; margin-right: 6px; }
+
+  /* ---------- Ficha ---------- */
+  .ficha-cabeza { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+  .ficha-cabeza .chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+  .mini { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; margin-top: 16px; }
+  .mini div { background: var(--fondo); border-radius: 12px; padding: 10px 12px; }
+  .mini b { display: block; font-size: 20px; font-variant-numeric: tabular-nums; }
+  .mini span { font-size: 12px; color: var(--suave); font-weight: 600; }
+  .acciones { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px; }
+  .volver { border: 0; background: none; color: var(--tomate); font-weight: 700; padding: 6px 0 12px; font-size: 16px; }
+
+  .linea-tiempo { list-style: none; margin: 0; padding: 0; }
+  .linea-tiempo .dia { font-size: 13px; font-weight: 800; color: var(--suave); margin: 14px 0 6px; text-transform: capitalize; }
+  .linea-tiempo .dia:first-child { margin-top: 0; }
+  .ev { display: grid; grid-template-columns: 50px 26px 1fr; gap: 6px; align-items: start; padding: 6px 0; }
+  .ev .hora { font-size: 13px; color: var(--gris); font-variant-numeric: tabular-nums; padding-top: 1px; }
+  .ev .ic { text-align: center; }
+  .ev.malo .txt { color: var(--tomate-osc); font-weight: 600; }
+  .ev .sin { font-size: 11px; color: var(--gris); margin-left: 6px; }
+  .chips-nevera { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chips-nevera .chip { background: var(--verde-tinte); color: var(--verde); font-size: 13px; padding: 4px 10px; }
+  .fotos { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; }
+  .fotos a { display: block; aspect-ratio: 1; border-radius: 10px; overflow: hidden; background: var(--superficie); }
+  .fotos img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .receta { display: flex; gap: 10px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--superficie); }
+  .receta:last-child { border-bottom: 0; }
+  .receta img, .receta .sinfoto { width: 48px; height: 48px; border-radius: 10px; object-fit: cover; background: var(--superficie);
+                                   display: grid; place-items: center; flex: 0 0 auto; }
+  .nota { background: var(--dorado-tinte); border-radius: 12px; padding: 10px 12px; margin-top: 8px; display: flex; gap: 8px; }
+  .nota p { margin: 0; flex: 1; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .nota button { border: 0; background: none; color: var(--gris); font-size: 18px; padding: 0 4px; }
+  .nueva-nota { display: flex; gap: 8px; margin-top: 4px; align-items: flex-end; }
+  .nueva-nota textarea { flex: 1; min-height: 46px; resize: vertical; }
+
+  /* ---------- Opiniones ---------- */
+  .filtros { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 14px; scrollbar-width: none; }
+  .filtros button { border: 0; border-radius: 999px; padding: 8px 14px; font-weight: 700; font-size: 14px; white-space: nowrap;
+                    background: var(--blanco); color: var(--suave); box-shadow: inset 0 0 0 1.5px var(--linea); }
+  .filtros button.activo { background: var(--texto); color: #fff; box-shadow: none; }
+  .opiniones { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); }
+  .opinion { display: flex; flex-direction: column; gap: 10px; }
+  .opinion .arriba { display: flex; gap: 10px; align-items: center; }
+  .opinion .cara { font-size: 30px; line-height: 1; }
+  .opinion .texto { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 16px; }
+  .opinion .meta { font-size: 13px; color: var(--suave); }
+  .opinion .meta button { border: 0; background: none; padding: 0; color: var(--tomate); font-weight: 700; font-size: 13px; }
+  .opinion.resuelta { opacity: .6; }
+  .opinion .botones { display: flex; gap: 8px; margin-top: auto; }
+
+  .vacio { text-align: center; padding: 40px 20px; color: var(--suave); }
+  .vacio img { width: 80px; opacity: .9; }
+  .cargando { padding: 30px; text-align: center; color: var(--gris); }
+
+  /* ---------- Hoja inferior (cambiar contraseña) ---------- */
+  .velo { position: fixed; inset: 0; background: rgba(42,33,28,.35); z-index: 40; display: grid; align-items: end; justify-items: center;
+          animation: aparecer .18s ease-out; }
+  .hoja { background: var(--blanco); width: min(520px, 100%); border-radius: 22px 22px 0 0; padding: 22px 22px calc(22px + var(--inf));
+          animation: subir .26s cubic-bezier(.2,.8,.2,1); }
+  @media (min-width: 761px) { .velo { align-items: center; } .hoja { border-radius: 22px; } }
+  .hoja .fila-botones { display: flex; gap: 10px; margin-top: 18px; }
+  .hoja .fila-botones .btn { flex: 1; }
+  .ver-clave { display: flex; gap: 8px; }
+  .ver-clave .campo { flex: 1; }
+  @keyframes aparecer { from { opacity: 0; } }
+  @keyframes subir { from { transform: translateY(24px); opacity: 0; } }
+
+  .toast { position: fixed; left: 50%; bottom: calc(24px + var(--inf)); transform: translateX(-50%); z-index: 50;
+           background: var(--texto); color: #fff; padding: 12px 18px; border-radius: 12px; font-weight: 600; box-shadow: var(--sombra);
+           animation: subir .22s ease-out; max-width: calc(100% - 32px); }
+  @media (max-width: 760px) { .toast { bottom: calc(90px + var(--inf)); } }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<div id="raiz"><div class="cargando">Cargando…</div></div>
+
+<script>
+'use strict';
+// Panel de administración de Qué Hay.
+// Usa la llave pública (la misma de la app). Todo lo de admin pasa por funciones de la base
+// que primero comprueban que la cuenta conectada tiene rol admin.
+const URL_SB = 'https://qkqwiyioigwznmiqgcma.supabase.co';
+const LLAVE = 'sb_publishable_L6cwZ1GzkYq_Zq25g8nBGw_y7of4igP';
+const DOMINIO_NICK = 'usuarios.quehay.app';
+const CLAVE_SESION = 'panel_quehay_sesion';
+const MINIMO_CLAVE = 8;
+
+// ---------- Utilidades ----------
+const $ = (s, r = document) => r.querySelector(s);
+const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const urlSegura = (u) => (typeof u === 'string' && /^https:\/\//i.test(u) ? esc(u) : '');
+const fmtNum = (n) => new Intl.NumberFormat('es-CL').format(n ?? 0);
+const fecha = (d) => new Date(d);
+function hace(d) {
+  if (!d) return 'nunca';
+  const s = (Date.now() - fecha(d).getTime()) / 1000;
+  if (s < 60) return 'recién';
+  if (s < 3600) return `hace ${Math.floor(s / 60)} min`;
+  if (s < 86400) return `hace ${Math.floor(s / 3600)} h`;
+  const dias = Math.floor(s / 86400);
+  if (dias === 1) return 'ayer';
+  if (dias < 30) return `hace ${dias} días`;
+  return fecha(d).toLocaleDateString('es-CL', { day: 'numeric', month: 'short' });
+}
+const hora = (d) => fecha(d).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+function diaLargo(d) {
+  const f = fecha(d), hoy = new Date(), ayer = new Date(Date.now() - 86400000);
+  if (f.toDateString() === hoy.toDateString()) return 'Hoy';
+  if (f.toDateString() === ayer.toDateString()) return 'Ayer';
+  return f.toLocaleDateString('es-CL', { weekday: 'long', day: 'numeric', month: 'long' });
+}
+const hoyLargo = () => new Date().toLocaleDateString('es-CL', { weekday: 'long', day: 'numeric', month: 'long' }).replace(/^./, (c) => c.toUpperCase());
+const iniciales = (n) => esc((n || '?').trim().charAt(0).toUpperCase());
+function avatar(p, grande) {
+  const u = urlSegura(p.avatar_url);
+  const cls = 'avatar' + (grande ? ' grande' : '');
+  return u ? `<img class="${cls}" src="${u}" alt="" loading="lazy">` : `<div class="${cls}">${iniciales(p.nombre || p.usuario)}</div>`;
+}
+function avisar(texto) {
+  document.querySelectorAll('.toast').forEach((t) => t.remove());
+  const t = document.createElement('div');
+  t.className = 'toast'; t.textContent = texto; t.setAttribute('role', 'status');
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 2600);
+}
+
+// ---------- Conexión con Supabase (sin librerías) ----------
+let sesion = null;
+try { sesion = JSON.parse(localStorage.getItem(CLAVE_SESION) || 'null'); } catch (e) { sesion = null; }
+function guardarSesion(s) {
+  sesion = s;
+  try { s ? localStorage.setItem(CLAVE_SESION, JSON.stringify(s)) : localStorage.removeItem(CLAVE_SESION); } catch (e) { /* sin almacenamiento */ }
+}
+async function pedirToken(tipo, cuerpo) {
+  const r = await fetch(`${URL_SB}/auth/v1/token?grant_type=${tipo}`, {
+    method: 'POST', headers: { apikey: LLAVE, 'Content-Type': 'application/json' }, body: JSON.stringify(cuerpo),
+  });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(d.error_description || d.msg || d.message || 'No se pudo entrar');
+  return { access: d.access_token, refresh: d.refresh_token, vence: Date.now() + (d.expires_in || 3600) * 1000, uid: d.user && d.user.id };
+}
+async function entrar(nick, clave) {
+  const t = nick.trim().toLowerCase();
+  const correo = t.includes('@') ? t : `${t.replace(/^@/, '')}@${DOMINIO_NICK}`;
+  guardarSesion(await pedirToken('password', { email: correo, password: clave }));
+}
+async function tokenVigente() {
+  if (!sesion) throw new Error('sin_sesion');
+  if (Date.now() > sesion.vence - 60000) {
+    try { guardarSesion(await pedirToken('refresh_token', { refresh_token: sesion.refresh })); }
+    catch (e) { guardarSesion(null); throw new Error('sin_sesion'); }
+  }
+  return sesion.access;
+}
+async function rpc(nombre, args = {}) {
+  const token = await tokenVigente();
+  const r = await fetch(`${URL_SB}/rest/v1/rpc/${nombre}`, {
+    method: 'POST',
+    headers: { apikey: LLAVE, Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(args),
+  });
+  if (r.status === 204) return null;
+  const d = await r.json().catch(() => null);
+  if (!r.ok) {
+    const msg = (d && (d.message || d.hint)) || `Error ${r.status}`;
+    if (r.status === 401) { guardarSesion(null); throw new Error('sin_sesion'); }
+    throw new Error(msg);
+  }
+  return d;
+}
+async function salir() {
+  try { await fetch(`${URL_SB}/auth/v1/logout`, { method: 'POST', headers: { apikey: LLAVE, Authorization: `Bearer ${sesion.access}` } }); } catch (e) { /* igual sale */ }
+  guardarSesion(null);
+  location.hash = '';
+  arrancar();
+}
+
+// ---------- Textos del recorrido ----------
+const CARAS = ['', '😣', '🙁', '😐', '🙂', '😍'];
+const TIPOS = { opinion: ['💬', 'Opinión'], idea: ['💡', 'Idea o cambio'], error: ['🐞', 'Error o bug'] };
+function describirEvento(e) {
+  const d = e.datos || {};
+  const receta = e.receta ? `«${esc(e.receta)}»` : 'una receta';
+  switch (e.nombre) {
+    case 'bienvenida_inicio': return ['👋', 'Abrió la app por primera vez'];
+    case 'bienvenida_resultados': return ['🥕', `Vio recetas en la bienvenida con ${d.ingredientes ?? '?'} ingredientes`];
+    case 'tutorial_linea': return ['🦌', `Tutorial: ${esc(d.linea || 'avanzó')}`];
+    case 'tutorial_saltado': return ['⏭️', `Saltó el tutorial en «${esc(d.linea || '?')}»`, true];
+    case 'tutorial_completado': return ['🎓', 'Terminó el tutorial'];
+    case 'registro': return ['✨', `Creó su cuenta${d.motivo ? ` (desde ${esc(d.motivo)})` : ''}`];
+    case 'pedir_cuenta': return ['🔐', `La app le pidió crear cuenta${d.motivo ? ` para ${esc(d.motivo)}` : ''}`];
+    case 'sesion_iniciada': return ['🔑', 'Entró a su cuenta'];
+    case 'busqueda': return d.resultados === 0
+      ? ['🔍', `Buscó con ${d.ingredientes ?? '?'} ingredientes y no encontró recetas`, true]
+      : ['🔍', `Buscó con ${d.ingredientes ?? '?'} ingredientes → ${d.resultados ?? '?'} recetas${d.cercanas ? ' (casi)' : ''}`];
+    case 'modo_cocina': return ['👩‍🍳', 'Abrió el paso a paso'];
+    case 'lo_cocine': return ['🍳', `Cocinó ${receta}${d.foto ? ' y subió foto' : ''}${d.primera ? ' (primera vez)' : ''}`];
+    case 'compartir_receta': return ['📤', `Compartió ${receta}`];
+    case 'seguir': return ['➕', 'Siguió a un cocinero'];
+    case 'reporte': return ['🚩', `Reportó un ${esc(d.tipo || 'contenido')}${d.motivo ? `: ${esc(d.motivo)}` : ''}`];
+    case 'opinion_enviada': return ['💬', `Mandó ${d.tipo === 'error' ? 'un error' : d.tipo === 'idea' ? 'una idea' : 'su opinión'}${d.nota ? ' ' + CARAS[d.nota] : ''}`];
+    case 'error_app': return ['⚠️', `La app falló: ${esc(d.mensaje || 'sin detalle')}`, true];
+    case 'chefpu_ocultar': return ['🙈', 'Ocultó a Chefpu'];
+    case 'chefpu_que_cocino': return ['🦌', 'Le preguntó a Chefpu qué cocinar'];
+    default: return ['•', esc(e.nombre.replace(/_/g, ' '))];
+  }
+}
+
+// ---------- Estado y navegación ----------
+const estado = { testers: null, buscar: '', orden: 'reciente', filtroOp: 'nuevas', inicio: null };
+function ruta() {
+  const h = location.hash.replace(/^#\/?/, '');
+  const [vista, id] = h.split('/');
+  return { vista: vista || 'inicio', id: id || null };
+}
+window.addEventListener('hashchange', () => { if (sesion && $('#contenido')) pintar(); });
+document.addEventListener('click', (ev) => {
+  const b = ev.target.closest('[data-ir]');
+  if (b) location.hash = '#' + b.dataset.ir;
+});
+
+async function arrancar() {
+  if (!sesion) return pintarIngreso();
+  try {
+    const admin = await rpc('es_admin');
+    if (!admin) return pintarSinAcceso();
+    pintarApp();
+  } catch (e) {
+    if (e.message === 'sin_sesion') return pintarIngreso();
+    $('#raiz').innerHTML = `<div class="ingreso"><div class="tarjeta"><h2>No pude conectar</h2><p class="suave">${esc(e.message)}</p><button class="btn" onclick="arrancar()">Reintentar</button></div></div>`;
+  }
+}
+
+function pintarIngreso(error) {
+  $('#raiz').innerHTML = `
+  <div class="ingreso">
+    <form id="f-ingreso" autocomplete="on">
+      <img src="chefpu.png" alt="">
+      <h1>Panel de Qué Hay</h1>
+      <p class="suave">Solo para administradores</p>
+      <label for="nick">Nick</label>
+      <input class="campo" id="nick" name="username" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" required>
+      <label for="clave">Contraseña</label>
+      <input class="campo" id="clave" name="password" type="password" autocomplete="current-password" required>
+      <div class="error" id="err">${esc(error || '')}</div>
+      <button class="btn" style="width:100%;margin-top:8px" id="b-entrar">Entrar</button>
+    </form>
+  </div>`;
+  $('#f-ingreso').addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const b = $('#b-entrar'); b.disabled = true; b.textContent = 'Entrando…';
+    try { await entrar($('#nick').value, $('#clave').value); arrancar(); }
+    catch (e) {
+      b.disabled = false; b.textContent = 'Entrar';
+      $('#err').textContent = /invalid/i.test(e.message) ? 'Nick o contraseña incorrectos' : e.message;
+    }
+  });
+}
+
+function pintarSinAcceso() {
+  $('#raiz').innerHTML = `
+  <div class="ingreso"><div class="tarjeta" style="max-width:400px;text-align:center">
+    <img src="chefpu.png" alt="" style="width:76px">
+    <h2>No tienes acceso</h2>
+    <p class="suave">Esta cuenta no es de administrador.</p>
+    <button class="btn sec" onclick="salir()">Entrar con otra cuenta</button>
+  </div></div>`;
+}
+
+const SECCIONES = [['inicio', '🏠', 'Inicio'], ['testers', '👥', 'Testers'], ['opiniones', '💬', 'Opiniones']];
+function botonesNav(activa, nuevas) {
+  return SECCIONES.map(([id, ico, nom]) => `
+    <button class="nav ${activa === id ? 'activo' : ''}" data-ir="${id}" ${activa === id ? 'aria-current="page"' : ''}>
+      <span class="ico" aria-hidden="true">${ico}</span><span>${nom}</span>
+      ${id === 'opiniones' && nuevas ? `<span class="globo">${nuevas}</span>` : ''}
+    </button>`).join('');
+}
+function pintarApp() {
+  $('#raiz').innerHTML = `
+  <div class="app">
+    <nav class="lateral" aria-label="Secciones">
+      <div class="marca"><img src="chefpu.png" alt=""><div>Qué Hay<small>Panel</small></div></div>
+      <div id="nav-l"></div>
+      <div class="pie"><button onclick="salir()">Cerrar sesión</button></div>
+    </nav>
+    <main id="contenido"></main>
+    <nav class="barra-abajo" id="nav-b" aria-label="Secciones"></nav>
+  </div>`;
+  pintar();
+}
+function pintarNav(activa) {
+  const nuevas = estado.inicio ? estado.inicio.opiniones_nuevas : 0;
+  $('#nav-l').innerHTML = botonesNav(activa, nuevas);
+  $('#nav-b').innerHTML = botonesNav(activa, nuevas);
+}
+function pintar() {
+  const r = ruta();
+  const vista = r.vista === 'tester' ? 'testers' : r.vista;
+  pintarNav(vista);
+  if (vista === 'testers') return vistaTesters(r.id);
+  if (vista === 'opiniones') return vistaOpiniones();
+  return vistaInicio();
+}
+function manejarError(e, donde) {
+  if (e.message === 'sin_sesion') return pintarIngreso('Tu sesión expiró. Vuelve a entrar.');
+  (donde || $('#contenido')).innerHTML = `<div class="tarjeta"><b>No se pudo cargar.</b> <span class="suave">${esc(e.message)}</span></div>`;
+}
+
+// ---------- Inicio ----------
+async function vistaInicio() {
+  const c = $('#contenido');
+  c.innerHTML = `<div class="cabeza"><div><h1>Inicio</h1><div class="suave">${hoyLargo()}</div></div></div><div class="cargando">Cargando…</div>`;
+  try {
+    const d = await rpc('panel_inicio');
+    estado.inicio = d; pintarNav('inicio');
+    const diasQuieto = d.ultima_actividad ? (Date.now() - fecha(d.ultima_actividad)) / 86400000 : 99;
+    const aviso = diasQuieto >= 5
+      ? `<div class="aviso">⏸️ <div>Nadie ha usado la app en ${Math.floor(diasQuieto)} días. Supabase pausa el proyecto gratis a los 7 días sin uso: abre la app o este panel para mantenerlo activo.</div></div>`
+      : `<div class="aviso ok">✅ <div>El proyecto está activo. Última actividad ${hace(d.ultima_actividad)}.</div></div>`;
+    c.innerHTML = `
+      <div class="cabeza"><div><h1>Inicio</h1><div class="suave">${hoyLargo()}</div></div>
+        <button class="btn sec chico" onclick="vistaInicio()">Actualizar</button></div>
+      ${aviso}
+      <div class="rejilla">
+        <div class="dato"><div class="num">${fmtNum(d.activos_hoy)}</div><div class="eti">Personas hoy</div><div class="ext">${fmtNum(d.activos_semana)} en los últimos 7 días</div></div>
+        <button class="dato" data-ir="testers"><div class="num">${fmtNum(d.cuentas)}</div><div class="eti">Cuentas</div><div class="ext">+${fmtNum(d.cuentas_semana)} esta semana</div></button>
+        <button class="dato" data-ir="opiniones"><div class="num" style="color:${d.opiniones_nuevas ? 'var(--tomate)' : 'inherit'}">${fmtNum(d.opiniones_nuevas)}</div><div class="eti">Opiniones nuevas</div><div class="ext">Sin leer</div></button>
+        <div class="dato"><div class="num" style="color:${d.errores_semana ? 'var(--tomate)' : 'inherit'}">${fmtNum(d.errores_semana)}</div><div class="eti">Fallos de la app</div><div class="ext">Últimos 7 días</div></div>
+        <div class="dato"><div class="num">${fmtNum(d.recetas)}</div><div class="eti">Recetas</div><div class="ext">${fmtNum(d.sin_foto)} sin foto</div></div>
+      </div>
+      <section class="seccion tarjeta">
+        <h3>Personas que usaron la app, por día</h3>
+        <p class="suave chico" style="margin:4px 0 12px">Últimas 2 semanas. Cuenta testers con cuenta y visitas sin cuenta.</p>
+        <div class="grafico" id="grafico"></div>
+      </section>`;
+    dibujarActividad($('#grafico'), d.por_dia || []);
+  } catch (e) { manejarError(e); }
+}
+
+function dibujarActividad(cont, datos) {
+  const W = Math.max(280, Math.round(cont.clientWidth || 640)), H = 150, base = 128, alto = 112, n = datos.length || 1, paso = W / n, ancho = Math.max(6, paso - 6);
+  const max = Math.max(1, ...datos.map((x) => x.personas));
+  const barras = datos.map((x, i) => {
+    const h = x.personas ? Math.max(4, (x.personas / max) * alto) : 0;
+    const xx = i * paso + (paso - ancho) / 2, y = base - h, r = Math.min(4, ancho / 2, h);
+    // barra con las esquinas de arriba redondeadas, apoyada en la base
+    const camino = h ? `M${xx},${base} V${y + r} Q${xx},${y} ${xx + r},${y} H${xx + ancho - r} Q${xx + ancho},${y} ${xx + ancho},${y + r} V${base} Z` : '';
+    const f = new Date(x.dia + 'T12:00:00');
+    const etiqueta = (i % 2 === (n - 1) % 2) ? `<text class="eje" x="${xx + ancho / 2}" y="${base + 16}" text-anchor="middle">${f.getDate()}</text>` : '';
+    return `<rect class="zona" x="${i * paso}" y="0" width="${paso}" height="${base}" fill="transparent" data-i="${i}"></rect>
+            <path class="barra" d="${camino}"></path>${etiqueta}`;
+  }).join('');
+  cont.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Personas por día en las últimas dos semanas">
+      <line class="base" x1="0" x2="${W}" y1="${base}" y2="${base}"></line>${barras}</svg>
+    <div class="globo-dato oculto" id="globo"></div>
+    <table class="oculto"><caption>Personas por día</caption>${datos.map((x) => `<tr><td>${x.dia}</td><td>${x.personas}</td></tr>`).join('')}</table>`;
+  const globo = $('#globo', cont), svg = $('svg', cont);
+  const mostrar = (zona) => {
+    cont.querySelectorAll('.zona.activa').forEach((z) => z.classList.remove('activa'));
+    if (!zona) return globo.classList.add('oculto');
+    zona.classList.add('activa');
+    const x = datos[+zona.dataset.i];
+    const f = new Date(x.dia + 'T12:00:00').toLocaleDateString('es-CL', { weekday: 'short', day: 'numeric', month: 'short' });
+    globo.textContent = `${f}: ${x.personas} ${x.personas === 1 ? 'persona' : 'personas'}`;
+    const caja = zona.getBoundingClientRect(), ref = cont.getBoundingClientRect();
+    const sx = svg.getBoundingClientRect().width / W;
+    const h = x.personas ? Math.max(4, (x.personas / max) * alto) : 0;
+    globo.style.top = ((base - h) * sx) + 'px';
+    globo.classList.remove('oculto');
+    // centrado sobre la barra, pero sin salirse de la tarjeta
+    const mitad = globo.offsetWidth / 2, centro = caja.left - ref.left + caja.width / 2;
+    globo.style.left = Math.min(Math.max(centro, mitad), ref.width - mitad) + 'px';
+  };
+  cont.addEventListener('pointerover', (ev) => mostrar(ev.target.closest('.zona')));
+  cont.addEventListener('pointerdown', (ev) => mostrar(ev.target.closest('.zona')));
+  // con el dedo, el navegador dispara pointerleave al soltar: solo se esconde con mouse
+  cont.addEventListener('pointerleave', (ev) => { if (ev.pointerType === 'mouse') mostrar(null); });
+}
+
+// ---------- Testers ----------
+async function vistaTesters(id) {
+  const c = $('#contenido');
+  if (!$('#lista-testers')) {
+    c.innerHTML = `
+      <div class="cabeza"><h1>Testers</h1></div>
+      <div class="dividido" id="dividido">
+        <div>
+          <div class="herramientas">
+            <input class="campo" id="buscar" type="search" placeholder="Buscar por nick o nombre" value="${esc(estado.buscar)}" autocapitalize="none" autocorrect="off">
+            <select class="campo" id="orden" aria-label="Ordenar">
+              <option value="reciente">Última vez que entró</option>
+              <option value="actividad">Más activos (7 días)</option>
+              <option value="nivel">Nivel</option>
+              <option value="nuevos">Más nuevos</option>
+            </select>
+          </div>
+          <div class="lista-wrap"><div class="lista" id="lista-testers"><div class="cargando">Cargando…</div></div></div>
+        </div>
+        <div class="detalle" id="detalle"></div>
+      </div>`;
+    $('#orden').value = estado.orden;
+    let espera;
+    $('#buscar').addEventListener('input', (ev) => { estado.buscar = ev.target.value; clearTimeout(espera); espera = setTimeout(pintarLista, 120); });
+    $('#orden').addEventListener('change', (ev) => { estado.orden = ev.target.value; pintarLista(); });
+    try { estado.testers = await rpc('panel_testers', { p_buscar: '' }); } catch (e) { return manejarError(e); }
+  }
+  $('#dividido').classList.toggle('con-ficha', !!id);
+  pintarLista(id);
+  if (id) cargarFicha(id);
+  else $('#detalle').innerHTML = `<div class="tarjeta vacio"><img src="chefpu.png" alt=""><p>Elige un tester para ver su recorrido.</p></div>`;
+}
+
+function pintarLista(idActivo) {
+  const lista = $('#lista-testers'); if (!lista || !estado.testers) return;
+  idActivo = idActivo || ruta().id;
+  const q = estado.buscar.trim().toLowerCase();
+  const filas = estado.testers.filter((t) => !q || t.usuario.includes(q) || (t.nombre || '').toLowerCase().includes(q));
+  const t0 = (d) => (d ? fecha(d).getTime() : 0);
+  const orden = {
+    reciente: (a, b) => t0(b.ultimo_acceso) - t0(a.ultimo_acceso),
+    actividad: (a, b) => b.acciones_semana - a.acciones_semana,
+    nivel: (a, b) => b.xp - a.xp,
+    nuevos: (a, b) => t0(b.creado_en) - t0(a.creado_en),
+  }[estado.orden];
+  filas.sort(orden);
+  if (!filas.length) { lista.innerHTML = `<div class="vacio">No encontré a nadie con «${esc(estado.buscar)}».</div>`; return; }
+  lista.innerHTML = filas.map((t) => {
+    const activoHoy = t.ultimo_acceso && Date.now() - t0(t.ultimo_acceso) < 86400000;
+    return `<a class="fila ${t.id === idActivo ? 'activa' : ''}" href="#tester/${esc(t.id)}" style="text-decoration:none">
+      ${avatar(t)}
+      <div class="info">
+        <div class="nom">${esc(t.nombre)} ${t.rol !== 'usuario' ? `<span class="chip ${esc(t.rol)}">${esc(t.rol)}</span>` : ''}</div>
+        <div class="sub">@${esc(t.usuario)} · Nivel ${t.nivel}${t.notas ? ` · 📝 ${t.notas}` : ''}</div>
+      </div>
+      <div class="der">${activoHoy ? '<span class="punto" aria-hidden="true"></span>' : ''}${hace(t.ultimo_acceso)}<br>${t.acciones_semana} acciones</div>
+    </a>`;
+  }).join('');
+}
+
+async function cargarFicha(id) {
+  const det = $('#detalle');
+  det.innerHTML = `<div class="tarjeta cargando">Cargando ficha…</div>`;
+  let f;
+  try { f = await rpc('panel_ficha', { p_id: id }); } catch (e) { return manejarError(e, det); }
+  if (ruta().id !== id) return; // el usuario ya eligió a otro
+  const p = f.perfil;
+  if (!p) { det.innerHTML = `<div class="tarjeta">No encontré esa cuenta. Quizás fue eliminada.</div>`; return; }
+  const resumen = estado.testers && estado.testers.find((t) => t.id === id);
+
+  // recorrido agrupado por día
+  let diaPrevio = '';
+  const recorrido = (f.recorrido || []).map((e) => {
+    const dia = diaLargo(e.creado_en);
+    const [ic, txt, malo] = describirEvento(e);
+    const cab = dia !== diaPrevio ? `<li class="dia">${esc(dia)}</li>` : '';
+    diaPrevio = dia;
+    return `${cab}<li class="ev ${malo ? 'malo' : ''}"><span class="hora">${hora(e.creado_en)}</span><span class="ic" aria-hidden="true">${ic}</span>
+      <span class="txt">${txt}${e.sin_cuenta ? '<span class="sin">sin cuenta</span>' : ''}</span></li>`;
+  }).join('');
+
+  det.innerHTML = `
+    <button class="volver" onclick="location.hash='#testers'">‹ Testers</button>
+    <div class="tarjeta">
+      <div class="ficha-cabeza">
+        ${avatar(p, true)}
+        <div style="flex:1;min-width:180px">
+          <h2>${esc(p.nombre)}</h2>
+          <div class="suave">@${esc(p.usuario)}${p.ciudad ? ' · ' + esc(p.ciudad) : ''}</div>
+          <div class="chips">
+            <span class="chip ${esc(p.rol)}">${esc(p.rol)}</span>
+            <span class="chip">Nivel ${p.nivel} · ${esc(p.titulo)}</span>
+            ${p.tutorial_completado ? '<span class="chip verde">Tutorial terminado</span>' : '<span class="chip ambar">Tutorial sin terminar</span>'}
+            <span class="chip">${p.correo ? 'Cuenta con correo' : 'Cuenta con nick'}</span>
+          </div>
+        </div>
+      </div>
+      <div class="mini">
+        <div><b>${fmtNum(p.xp)}</b><span>XP</span></div>
+        <div><b>${(f.recetas || []).length}</b><span>Recetas</span></div>
+        <div><b>${(f.nevera || []).length}</b><span>En la nevera</span></div>
+        <div><b>${(f.fotos || []).length}</b><span>Fotos «así me quedó»</span></div>
+        <div><b>${resumen ? resumen.acciones_semana : '–'}</b><span>Acciones en 7 días</span></div>
+      </div>
+      <p class="suave chico" style="margin:12px 0 0">Cuenta creada ${fecha(p.creado_en).toLocaleDateString('es-CL', { day: 'numeric', month: 'long', year: 'numeric' })} · Último ingreso ${hace(p.ultimo_ingreso)}${p.correo ? ` · ${esc(p.correo)}` : ''}</p>
+      <div class="acciones">
+        <button class="btn chico" id="b-clave">🔑 Cambiar contraseña</button>
+      </div>
+    </div>
+
+    <section class="seccion tarjeta">
+      <h3>Tus notas</h3>
+      <div id="notas">${(f.notas || []).map((n) => `<div class="nota"><p>${esc(n.texto)}<br><span class="chico suave">${hace(n.creado_en)}</span></p><button aria-label="Borrar nota" data-borrar-nota="${n.id}">×</button></div>`).join('') || '<p class="suave chico" style="margin:6px 0">Aún no tienes notas sobre esta persona.</p>'}</div>
+      <form class="nueva-nota" id="f-nota">
+        <textarea class="campo" id="t-nota" rows="1" maxlength="2000" placeholder="Ej: se perdió en Buscar"></textarea>
+        <button class="btn chico">Agregar</button>
+      </form>
+    </section>
+
+    <section class="seccion tarjeta">
+      <h3>Su recorrido</h3>
+      <p class="suave chico" style="margin:4px 0 12px">Lo más reciente arriba. «Sin cuenta» son pasos desde su mismo teléfono antes de entrar.</p>
+      ${recorrido ? `<ul class="linea-tiempo">${recorrido}</ul>` : '<p class="suave">Todavía no hay actividad registrada.</p>'}
+    </section>
+
+    ${(f.opiniones || []).length ? `<section class="seccion tarjeta"><h3>Sus opiniones</h3>
+      ${f.opiniones.map((o) => `<div class="receta"><span style="font-size:24px">${o.nota ? CARAS[o.nota] : TIPOS[o.tipo][0]}</span><div style="flex:1"><div>${esc(o.texto)}</div><div class="chico suave">${TIPOS[o.tipo][1]} · ${hace(o.creado_en)} · ${esc(o.estado)}</div></div></div>`).join('')}
+    </section>` : ''}
+
+    <section class="seccion tarjeta">
+      <h3>Su nevera</h3>
+      ${(f.nevera || []).length ? `<div class="chips-nevera" style="margin-top:10px">${f.nevera.map((n) => `<span class="chip">${esc(n)}</span>`).join('')}</div>` : '<p class="suave">Vacía.</p>'}
+    </section>
+
+    <section class="seccion tarjeta">
+      <h3>Sus recetas</h3>
+      ${(f.recetas || []).map((r) => `<div class="receta">${urlSegura(r.foto_url) ? `<img src="${urlSegura(r.foto_url)}" alt="" loading="lazy">` : '<div class="sinfoto" aria-hidden="true">🍲</div>'}
+        <div style="flex:1;min-width:0"><div style="font-weight:700">${esc(r.titulo)}${r.oculta ? ' <span class="chip ambar">oculta</span>' : ''}</div>
+        <div class="chico suave">${hace(r.creado_en)} · ❤️ ${r.num_likes} · 🍳 ${r.num_cocinadas}${r.foto_url ? '' : ' · sin foto'}</div></div></div>`).join('') || '<p class="suave">No ha publicado recetas.</p>'}
+    </section>
+
+    ${(f.fotos || []).length ? `<section class="seccion tarjeta"><h3>Sus fotos «así me quedó»</h3>
+      <div class="fotos" style="margin-top:10px">${f.fotos.map((x) => urlSegura(x.foto_url) ? `<a href="${urlSegura(x.foto_url)}" target="_blank" rel="noopener" title="${esc(x.titulo)}"><img src="${urlSegura(x.foto_url)}" alt="${esc(x.titulo)}" loading="lazy"></a>` : '').join('')}</div>
+    </section>` : ''}`;
+
+  $('#b-clave').addEventListener('click', () => abrirCambioClave(p));
+  $('#f-nota').addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const texto = $('#t-nota').value.trim(); if (!texto) return;
+    try { await rpc('panel_agregar_nota', { p_id: id, p_texto: texto }); avisar('Nota guardada'); refrescarResumen(); cargarFicha(id); }
+    catch (e) { avisar('No se pudo guardar: ' + e.message); }
+  });
+  det.querySelectorAll('[data-borrar-nota]').forEach((b) => b.addEventListener('click', async () => {
+    if (!confirm('¿Borrar esta nota?')) return;
+    try { await rpc('panel_borrar_nota', { p_nota: +b.dataset.borrarNota }); refrescarResumen(); cargarFicha(id); }
+    catch (e) { avisar('No se pudo borrar: ' + e.message); }
+  }));
+  if (matchMedia('(max-width: 1000px)').matches) window.scrollTo(0, 0);
+}
+async function refrescarResumen() {
+  try { estado.testers = await rpc('panel_testers', { p_buscar: '' }); pintarLista(); } catch (e) { /* la lista queda como estaba */ }
+}
+
+function abrirCambioClave(p) {
+  const velo = document.createElement('div');
+  velo.className = 'velo';
+  velo.innerHTML = `
+    <form class="hoja" role="dialog" aria-modal="true" aria-labelledby="t-hoja">
+      <h2 id="t-hoja">Nueva contraseña para @${esc(p.usuario)}</h2>
+      <p class="suave chico" style="margin:6px 0 0">La actual deja de funcionar. Mándale la nueva por un canal privado.${p.correo ? ' Esta cuenta también puede entrar con Google si la creó así.' : ''}</p>
+      <label for="n-clave">Contraseña nueva (mínimo ${MINIMO_CLAVE})</label>
+      <div class="ver-clave">
+        <input class="campo" id="n-clave" type="password" autocomplete="new-password" required>
+        <button type="button" class="btn sec chico" id="b-ver">Ver</button>
+      </div>
+      <div class="error" id="e-clave"></div>
+      <div class="fila-botones">
+        <button type="button" class="btn sec" id="b-cancelar">Cancelar</button>
+        <button class="btn" id="b-guardar">Guardar</button>
+      </div>
+    </form>`;
+  document.body.appendChild(velo);
+  const campo = $('#n-clave', velo);
+  setTimeout(() => campo.focus(), 50);
+  const cerrar = () => velo.remove();
+  velo.addEventListener('click', (ev) => { if (ev.target === velo) cerrar(); });
+  $('#b-cancelar', velo).addEventListener('click', cerrar);
+  $('#b-ver', velo).addEventListener('click', (ev) => {
+    const ver = campo.type === 'password'; campo.type = ver ? 'text' : 'password'; ev.target.textContent = ver ? 'Ocultar' : 'Ver';
+  });
+  $('form', velo).addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const clave = campo.value;
+    if (clave.length < MINIMO_CLAVE) { $('#e-clave', velo).textContent = `Debe tener al menos ${MINIMO_CLAVE} caracteres.`; return; }
+    const b = $('#b-guardar', velo); b.disabled = true; b.textContent = 'Guardando…';
+    try { await rpc('panel_cambiar_clave', { p_id: p.id, p_clave: clave }); cerrar(); avisar(`Listo: @${p.usuario} ya tiene contraseña nueva`); }
+    catch (e) { b.disabled = false; b.textContent = 'Guardar'; $('#e-clave', velo).textContent = e.message; }
+  });
+  document.addEventListener('keydown', function esc_(ev) { if (ev.key === 'Escape') { cerrar(); document.removeEventListener('keydown', esc_); } });
+}
+
+// ---------- Opiniones ----------
+const FILTROS_OP = [['nuevas', 'Nuevas'], ['errores', '🐞 Errores'], ['ideas', '💡 Ideas'], ['todas', 'Todas'], ['resueltas', 'Resueltas']];
+async function vistaOpiniones() {
+  const c = $('#contenido');
+  c.innerHTML = `
+    <div class="cabeza"><h1>Opiniones</h1></div>
+    <div class="filtros" role="tablist">${FILTROS_OP.map(([id, nom]) => `<button role="tab" data-filtro="${id}" class="${estado.filtroOp === id ? 'activo' : ''}" aria-selected="${estado.filtroOp === id}">${nom}</button>`).join('')}</div>
+    <div id="ops"><div class="cargando">Cargando…</div></div>`;
+  c.querySelectorAll('[data-filtro]').forEach((b) => b.addEventListener('click', () => { estado.filtroOp = b.dataset.filtro; vistaOpiniones(); }));
+  let lista;
+  try { lista = await rpc('panel_opiniones', { p_filtro: estado.filtroOp }); } catch (e) { return manejarError(e, $('#ops')); }
+  if (!lista.length) {
+    $('#ops').innerHTML = `<div class="tarjeta vacio"><img src="chefpu.png" alt=""><p>${estado.filtroOp === 'nuevas' ? '¡Al día! No hay opiniones nuevas.' : 'Nada por aquí todavía.'}</p></div>`;
+    return;
+  }
+  $('#ops').innerHTML = `<div class="opiniones">${lista.map((o) => `
+    <article class="tarjeta opinion ${o.estado === 'resuelta' ? 'resuelta' : ''}">
+      <div class="arriba">
+        <span class="cara" aria-label="Nota ${o.nota || 'sin nota'}">${o.nota ? CARAS[o.nota] : TIPOS[o.tipo][0]}</span>
+        <div style="flex:1"><span class="chip ${o.tipo === 'error' ? 'admin' : o.tipo === 'idea' ? 'prueba' : ''}">${TIPOS[o.tipo][0]} ${TIPOS[o.tipo][1]}</span>
+          ${o.estado !== 'nueva' ? `<span class="chip ${o.estado === 'resuelta' ? 'verde' : ''}">${esc(o.estado)}</span>` : ''}</div>
+      </div>
+      <p class="texto">${esc(o.texto)}</p>
+      <div class="meta">${o.usuario ? `<button data-ir="tester/${esc(o.usuario_id)}">@${esc(o.usuario)}</button>` : 'Invitado'} · ${hace(o.creado_en)}${o.pantalla ? ` · en ${esc(o.pantalla)}` : ''}${o.plataforma ? ` · ${esc(o.plataforma)}` : ''}</div>
+      <div class="botones">
+        ${o.estado === 'nueva' ? `<button class="btn sec chico" data-op="${o.id}" data-antes="${esc(o.estado)}" data-estado="vista">Marcar vista</button>` : ''}
+        ${o.estado !== 'resuelta' ? `<button class="btn verde chico" data-op="${o.id}" data-antes="${esc(o.estado)}" data-estado="resuelta">✓ Resuelta</button>`
+                                  : `<button class="btn sec chico" data-op="${o.id}" data-antes="${esc(o.estado)}" data-estado="nueva">Reabrir</button>`}
+      </div>
+    </article>`).join('')}</div>`;
+  $('#ops').querySelectorAll('[data-op]').forEach((b) => b.addEventListener('click', async () => {
+    b.disabled = true;
+    try {
+      await rpc('panel_marcar_opinion', { p_id: +b.dataset.op, p_estado: b.dataset.estado });
+      if (estado.inicio) {
+        const eraNueva = b.dataset.antes === 'nueva', quedaNueva = b.dataset.estado === 'nueva';
+        estado.inicio.opiniones_nuevas = Math.max(0, estado.inicio.opiniones_nuevas + (quedaNueva ? 1 : 0) - (eraNueva ? 1 : 0));
+      }
+      avisar(b.dataset.estado === 'resuelta' ? 'Marcada como resuelta' : b.dataset.estado === 'vista' ? 'Marcada como vista' : 'Reabierta');
+      vistaOpiniones();
+    } catch (e) { b.disabled = false; avisar('No se pudo: ' + e.message); }
+  }));
+}
+
+arrancar();
+</script>
+</body>
+</html>

@@ -37,6 +37,8 @@ jobs:
         run: |
           cp dist/index.html dist/404.html
           touch dist/.nojekyll
+      - name: Agregar el panel de administración (/Quehay/panel)
+        run: cp -r panel dist/panel
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
