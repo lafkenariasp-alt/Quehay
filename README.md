@@ -22,6 +22,7 @@ App de recetas: cocina con lo que tienes en la nevera, comparte recetas y sube d
 | `migrations/011_credito_fotos.sql` | Columna `foto_credito` en recetas: enlace al autor y licencia de fotos libres |
 | `migrations/012_opiniones.sql` | Tabla `opiniones`: opiniones, ideas y errores enviados desde Chefpu; solo los admin las leen |
 | `migrations/013_panel_admin.sql` | Funciones del panel de administración (solo admin): inicio, testers, ficha, cambiar contraseña, notas, opiniones; registro de acciones |
+| `migrations/014_panel_recetas.sql` | Panel: ver todas las recetas, subir o pegar su foto (con crédito), quitarla, ocultar o mostrar la receta. Requiere la 013 |
 | `migrations/008_regalo_y_cuentas.sql` | El regalo se gana terminando el tutorial; máx. 3 cuentas por día por teléfono; eliminar cuenta; «Lo cociné» sin foto (comentario sin XP) |
 | `migrations/007_tutorial_por_cuenta.sql` | El tutorial se guarda en la cuenta: cada cuenta nueva lo hace la primera vez, en cualquier teléfono |
 | `migrations/006_amigos.sql` | Sugerencias de amigos (te sigue, amigos en común, misma ciudad, mismos gustos) |

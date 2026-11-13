@@ -125,12 +125,13 @@
 
   /* ---------- Lista de testers ---------- */
   .dividido { display: grid; grid-template-columns: minmax(300px, 380px) 1fr; gap: 20px; align-items: start; }
+  .dividido > * { min-width: 0; }
   .dividido .lista-wrap { position: sticky; top: calc(16px + var(--sup)); max-height: calc(100dvh - 120px); overflow: auto;
                           -webkit-overflow-scrolling: touch; border-radius: var(--radio); }
   @media (max-width: 1000px) {
     .dividido { grid-template-columns: 1fr; }
     .dividido .lista-wrap { position: static; max-height: none; }
-    .dividido.con-ficha .lista-wrap, .dividido.con-ficha .herramientas { display: none; }
+    .dividido.con-ficha .lista-wrap, .dividido.con-ficha .herramientas, .dividido.con-ficha .filtros { display: none; }
     .dividido:not(.con-ficha) .detalle { display: none; }
   }
   @media (min-width: 1001px) { .volver { display: none; } }
@@ -205,6 +206,29 @@
   .opinion.resuelta { opacity: .6; }
   .opinion .botones { display: flex; gap: 8px; margin-top: auto; }
 
+  /* ---------- Recetas ---------- */
+  .tarjetas-recetas { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
+  .tr { background: var(--blanco); border-radius: var(--radio); box-shadow: var(--sombra); overflow: hidden; text-decoration: none;
+        display: flex; flex-direction: column; transition: transform .12s ease; }
+  .tr:active { transform: scale(.98); }
+  .tr.activa { box-shadow: 0 0 0 3px var(--tomate); }
+  .tr .img { aspect-ratio: 4 / 3; background: var(--superficie); display: grid; place-items: center; font-size: 34px; overflow: hidden; }
+  .tr .img img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .tr .cuerpo { padding: 10px 12px 12px; }
+  .tr .tit { font-weight: 700; line-height: 1.25; }
+  .tr .sub { font-size: 12px; color: var(--suave); margin-top: 2px; }
+  .dividido.recetas { grid-template-columns: minmax(300px, 1fr) minmax(340px, 460px); }
+  .dividido.recetas .lista-wrap { max-height: none; position: static; overflow: visible; }
+  .dividido.recetas .detalle { position: sticky; top: calc(16px + var(--sup)); max-height: calc(100dvh - 32px); overflow: auto; -webkit-overflow-scrolling: touch; border-radius: var(--radio); }
+  @media (max-width: 1000px) { .dividido.recetas { grid-template-columns: 1fr; } .dividido.recetas .detalle { position: static; max-height: none; overflow: visible; } }
+  .foto-grande { aspect-ratio: 4 / 3; border-radius: 12px; background: var(--superficie); overflow: hidden; display: grid; place-items: center;
+                 font-size: 48px; position: relative; }
+  .foto-grande img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .foto-grande .subiendo { position: absolute; inset: 0; background: rgba(255,255,255,.8); display: grid; place-items: center; font-size: 16px; font-weight: 700; color: var(--texto); }
+  .pasos { margin: 8px 0 0; padding-left: 22px; }
+  .pasos li { margin: 6px 0; }
+  .ings { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .enlace-foto { display: grid; gap: 8px; margin-top: 10px; }
   .vacio { text-align: center; padding: 40px 20px; color: var(--suave); }
   .vacio img { width: 80px; opacity: .9; }
   .cargando { padding: 30px; text-align: center; color: var(--gris); }
@@ -365,7 +389,7 @@ function describirEvento(e) {
 }
 
 // ---------- Estado y navegación ----------
-const estado = { testers: null, buscar: '', orden: 'reciente', filtroOp: 'nuevas', inicio: null };
+const estado = { testers: null, buscar: '', orden: 'reciente', filtroOp: 'nuevas', inicio: null, recetas: null, filtroRec: 'sin_foto', buscarRec: '' };
 function ruta() {
   const h = location.hash.replace(/^#\/?/, '');
   const [vista, id] = h.split('/');
@@ -425,7 +449,7 @@ function pintarSinAcceso() {
   </div></div>`;
 }
 
-const SECCIONES = [['inicio', '🏠', 'Inicio'], ['testers', '👥', 'Testers'], ['opiniones', '💬', 'Opiniones']];
+const SECCIONES = [['inicio', '🏠', 'Inicio'], ['testers', '👥', 'Testers'], ['recetas', '🍲', 'Recetas'], ['opiniones', '💬', 'Opiniones']];
 function botonesNav(activa, nuevas) {
   return SECCIONES.map(([id, ico, nom]) => `
     <button class="nav ${activa === id ? 'activo' : ''}" data-ir="${id}" ${activa === id ? 'aria-current="page"' : ''}>
@@ -453,10 +477,11 @@ function pintarNav(activa) {
 }
 function pintar() {
   const r = ruta();
-  const vista = r.vista === 'tester' ? 'testers' : r.vista;
+  const vista = r.vista === 'tester' ? 'testers' : r.vista === 'receta' ? 'recetas' : r.vista;
   pintarNav(vista);
   if (vista === 'testers') return vistaTesters(r.id);
   if (vista === 'opiniones') return vistaOpiniones();
+  if (vista === 'recetas') return vistaRecetas(r.id);
   return vistaInicio();
 }
 function manejarError(e, donde) {
@@ -484,7 +509,7 @@ async function vistaInicio() {
         <button class="dato" data-ir="testers"><div class="num">${fmtNum(d.cuentas)}</div><div class="eti">Cuentas</div><div class="ext">+${fmtNum(d.cuentas_semana)} esta semana</div></button>
         <button class="dato" data-ir="opiniones"><div class="num" style="color:${d.opiniones_nuevas ? 'var(--tomate)' : 'inherit'}">${fmtNum(d.opiniones_nuevas)}</div><div class="eti">Opiniones nuevas</div><div class="ext">Sin leer</div></button>
         <div class="dato"><div class="num" style="color:${d.errores_semana ? 'var(--tomate)' : 'inherit'}">${fmtNum(d.errores_semana)}</div><div class="eti">Fallos de la app</div><div class="ext">Últimos 7 días</div></div>
-        <div class="dato"><div class="num">${fmtNum(d.recetas)}</div><div class="eti">Recetas</div><div class="ext">${fmtNum(d.sin_foto)} sin foto</div></div>
+        <button class="dato" data-ir="recetas"><div class="num">${fmtNum(d.recetas)}</div><div class="eti">Recetas</div><div class="ext">${fmtNum(d.sin_foto)} sin foto</div></button>
       </div>
       <section class="seccion tarjeta">
         <h3>Personas que usaron la app, por día</h3>
@@ -734,6 +759,188 @@ function abrirCambioClave(p) {
     catch (e) { b.disabled = false; b.textContent = 'Guardar'; $('#e-clave', velo).textContent = e.message; }
   });
   document.addEventListener('keydown', function esc_(ev) { if (ev.key === 'Escape') { cerrar(); document.removeEventListener('keydown', esc_); } });
+}
+
+// ---------- Recetas ----------
+const FILTROS_REC = [['sin_foto', '📷 Sin foto'], ['todas', 'Todas'], ['con_foto', 'Con foto'], ['ocultas', '🙈 Ocultas']];
+async function vistaRecetas(id) {
+  const c = $('#contenido');
+  if (!$('#lista-recetas')) {
+    c.innerHTML = `
+      <div class="cabeza"><div><h1>Recetas</h1><div class="suave" id="cuenta-rec"></div></div></div>
+      <div class="dividido recetas" id="dividido-r">
+        <div>
+          <div class="herramientas">
+            <input class="campo" id="buscar-r" type="search" placeholder="Buscar por título o autor" value="${esc(estado.buscarRec)}" autocapitalize="none" autocorrect="off">
+          </div>
+          <div class="filtros" role="tablist">${FILTROS_REC.map(([f, nom]) => `<button role="tab" data-filtro-rec="${f}" class="${estado.filtroRec === f ? 'activo' : ''}" aria-selected="${estado.filtroRec === f}">${nom}</button>`).join('')}</div>
+          <div class="lista-wrap"><div id="lista-recetas"><div class="cargando">Cargando…</div></div></div>
+        </div>
+        <div class="detalle" id="detalle-r"></div>
+      </div>`;
+    let espera;
+    $('#buscar-r').addEventListener('input', (ev) => { estado.buscarRec = ev.target.value; clearTimeout(espera); espera = setTimeout(pintarRecetas, 120); });
+    c.querySelectorAll('[data-filtro-rec]').forEach((b) => b.addEventListener('click', async () => {
+      estado.filtroRec = b.dataset.filtroRec;
+      c.querySelectorAll('[data-filtro-rec]').forEach((x) => { x.classList.toggle('activo', x === b); x.setAttribute('aria-selected', x === b); });
+      await cargarRecetas(); pintarRecetas();
+    }));
+    await cargarRecetas();
+  }
+  $('#dividido-r').classList.toggle('con-ficha', !!id);
+  pintarRecetas();
+  if (id) cargarReceta(+id);
+  else $('#detalle-r').innerHTML = `<div class="tarjeta vacio"><img src="chefpu.png" alt=""><p>Elige una receta para verla o ponerle foto.</p></div>`;
+}
+async function cargarRecetas() {
+  try { estado.recetas = await rpc('panel_recetas', { p_filtro: estado.filtroRec, p_buscar: '' }); }
+  catch (e) { estado.recetas = []; manejarError(e, $('#lista-recetas')); }
+}
+function pintarRecetas() {
+  const lista = $('#lista-recetas'); if (!lista || !estado.recetas) return;
+  const idActivo = +ruta().id;
+  const q = estado.buscarRec.trim().toLowerCase();
+  const filas = estado.recetas.filter((r) => !q || r.titulo.toLowerCase().includes(q) || r.autor.includes(q));
+  const nombreFiltro = FILTROS_REC.find(([f]) => f === estado.filtroRec)[1].replace(/^\S+ /, '').toLowerCase();
+  $('#cuenta-rec').textContent = `${filas.length} ${filas.length === 1 ? 'receta' : 'recetas'}${estado.filtroRec === 'todas' ? '' : ' · ' + nombreFiltro}`;
+  if (!filas.length) {
+    lista.innerHTML = `<div class="tarjeta vacio"><img src="chefpu.png" alt=""><p>${estado.filtroRec === 'sin_foto' && !q ? '¡Todas las recetas tienen foto!' : 'No hay recetas aquí.'}</p></div>`;
+    return;
+  }
+  // agrupadas por autor, como en la app
+  let autor = '';
+  lista.innerHTML = filas.map((r) => {
+    const cab = r.autor !== autor ? `${autor ? '</div>' : ''}<h3 style="margin:${autor ? 20 : 0}px 0 10px">@${esc(r.autor)}</h3><div class="tarjetas-recetas">` : '';
+    autor = r.autor;
+    const foto = urlSegura(r.foto_url);
+    return `${cab}<a class="tr ${r.id === idActivo ? 'activa' : ''}" href="#receta/${r.id}">
+      <div class="img">${foto ? `<img src="${foto}" alt="" loading="lazy">` : '<span aria-hidden="true">📷</span>'}</div>
+      <div class="cuerpo"><div class="tit">${esc(r.titulo)}</div>
+        <div class="sub">${r.oculta ? '🙈 oculta · ' : ''}${r.minutos} min · ❤️ ${r.num_likes}</div></div>
+    </a>`;
+  }).join('') + '</div>';
+}
+
+async function cargarReceta(id) {
+  const det = $('#detalle-r');
+  det.innerHTML = `<div class="tarjeta cargando">Cargando receta…</div>`;
+  let d;
+  try { d = await rpc('panel_receta', { p_id: id }); } catch (e) { return manejarError(e, det); }
+  if (+ruta().id !== id) return;
+  const r = d.receta;
+  if (!r) { det.innerHTML = `<div class="tarjeta">No encontré esa receta. Quizás fue eliminada.</div>`; return; }
+  const foto = urlSegura(r.foto_url);
+  det.innerHTML = `
+    <button class="volver" onclick="location.hash='#recetas'">‹ Recetas</button>
+    <div class="tarjeta">
+      <div class="foto-grande" id="foto-r">${foto ? `<img src="${foto}" alt="${esc(r.titulo)}">` : '<span aria-hidden="true">📷</span>'}</div>
+      ${urlSegura(r.foto_credito) ? `<p class="chico suave" style="margin:6px 0 0">Foto: <a href="${urlSegura(r.foto_credito)}" target="_blank" rel="noopener">ver autor y licencia ↗</a></p>` : ''}
+      <div class="acciones">
+        <label class="btn chico" style="margin:0;display:inline-flex;align-items:center;color:#fff">📷 ${foto ? 'Cambiar foto' : 'Subir foto'}
+          <input type="file" accept="image/*" id="archivo-r" class="oculto"></label>
+        <button class="btn sec chico" id="b-enlace">🔗 Pegar enlace</button>
+        ${foto ? '<button class="btn sec chico" id="b-quitar">Quitar foto</button>' : ''}
+      </div>
+      <form class="enlace-foto oculto" id="f-enlace">
+        <input class="campo" id="url-foto" type="url" inputmode="url" placeholder="https://… (enlace directo a la imagen)" autocapitalize="none" autocorrect="off">
+        <input class="campo" id="url-credito" type="url" inputmode="url" placeholder="Crédito / licencia (opcional, ej. página de Wikimedia)" autocapitalize="none" autocorrect="off">
+        <button class="btn chico">Guardar enlace</button>
+      </form>
+      <div class="error" id="e-foto"></div>
+      <h2 style="margin-top:6px">${esc(r.titulo)}</h2>
+      <div class="suave chico">@${esc(r.autor)} · ${r.minutos} min · ${r.porciones} porciones · ${esc(r.dificultad)} · ❤️ ${r.num_likes} · 🍳 ${r.num_cocinadas}</div>
+      <div class="chips" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
+        ${r.oculta ? '<span class="chip ambar">🙈 Oculta: nadie la ve en la app</span>' : '<span class="chip verde">Visible en la app</span>'}
+        ${(r.categorias || []).map((x) => `<span class="chip">${esc(x)}</span>`).join('')}
+      </div>
+      <div class="acciones"><button class="btn sec chico" id="b-ocultar">${r.oculta ? '👁️ Mostrar en la app' : '🙈 Ocultar de la app'}</button></div>
+    </div>
+    ${r.descripcion ? `<section class="seccion tarjeta"><h3>Descripción</h3><p style="margin:8px 0 0">${esc(r.descripcion)}</p></section>` : ''}
+    <section class="seccion tarjeta"><h3>Ingredientes</h3>
+      <div class="ings">${(d.ingredientes || []).map((i) => `<span class="chip" style="font-size:13px;padding:4px 10px">${esc(i.nombre)}${i.cantidad ? ` · ${esc(i.cantidad)}` : ''}${i.opcional ? ' (opcional)' : ''}</span>`).join('') || '<span class="suave">Sin ingredientes.</span>'}</div>
+    </section>
+    <section class="seccion tarjeta"><h3>Pasos</h3>
+      <ol class="pasos">${(r.pasos || []).map((x) => `<li>${esc(x)}</li>`).join('')}</ol>
+    </section>`;
+
+  const errorFoto = (m) => { $('#e-foto').textContent = m || ''; };
+  const guardarFoto = async (url, credito, mensaje) => {
+    await rpc('panel_foto_receta', { p_id: id, p_url: url, p_credito: credito || null });
+    avisar(mensaje);
+    actualizarRecetaEnLista(id, { foto_url: url });
+    cargarReceta(id);
+  };
+  $('#archivo-r').addEventListener('change', async (ev) => {
+    const archivo = ev.target.files && ev.target.files[0]; if (!archivo) return;
+    errorFoto();
+    $('#foto-r').insertAdjacentHTML('beforeend', '<div class="subiendo">Subiendo foto…</div>');
+    try {
+      const url = await subirFotoReceta(archivo, id);
+      await guardarFoto(url, null, 'Foto guardada. Ya se ve en la app.');
+    } catch (e) {
+      const s = $('#foto-r .subiendo'); if (s) s.remove();
+      errorFoto('No se pudo subir: ' + e.message);
+    }
+  });
+  $('#b-enlace').addEventListener('click', () => { $('#f-enlace').classList.toggle('oculto'); $('#url-foto').focus(); });
+  $('#f-enlace').addEventListener('submit', async (ev) => {
+    ev.preventDefault(); errorFoto();
+    const url = $('#url-foto').value.trim(), credito = $('#url-credito').value.trim();
+    if (!/^https:\/\//i.test(url)) return errorFoto('El enlace debe empezar con https://');
+    try { await guardarFoto(url, credito, 'Foto guardada. Ya se ve en la app.'); } catch (e) { errorFoto(e.message); }
+  });
+  const quitar = $('#b-quitar');
+  if (quitar) quitar.addEventListener('click', async () => {
+    if (!confirm('¿Quitar la foto de esta receta?')) return;
+    try { await guardarFoto(null, null, 'Foto quitada'); } catch (e) { errorFoto(e.message); }
+  });
+  $('#b-ocultar').addEventListener('click', async () => {
+    const ocultar = !r.oculta;
+    if (ocultar && !confirm(`¿Ocultar «${r.titulo}»? Nadie la verá en la app hasta que la vuelvas a mostrar.`)) return;
+    try {
+      await rpc('panel_ocultar_receta', { p_id: id, p_oculta: ocultar });
+      avisar(ocultar ? 'Receta oculta' : 'Receta visible de nuevo');
+      actualizarRecetaEnLista(id, { oculta: ocultar });
+      cargarReceta(id);
+    } catch (e) { avisar('No se pudo: ' + e.message); }
+  });
+  if (matchMedia('(max-width: 1000px)').matches) window.scrollTo(0, 0);
+}
+function actualizarRecetaEnLista(id, cambios) {
+  if (!estado.recetas) return;
+  const r = estado.recetas.find((x) => x.id === id); if (r) Object.assign(r, cambios);
+  // si deja de calzar con el filtro (ej. ya tiene foto), sale de la lista
+  estado.recetas = estado.recetas.filter((x) => estado.filtroRec === 'sin_foto' ? !x.foto_url
+    : estado.filtroRec === 'con_foto' ? !!x.foto_url : estado.filtroRec === 'ocultas' ? x.oculta : true);
+  if (estado.inicio && 'foto_url' in cambios) estado.inicio = null;
+  pintarRecetas();
+}
+
+// Achica la foto en el iPad (máx. 1600 px, JPEG) y la sube a la carpeta del admin en Supabase
+async function achicarFoto(archivo, maximo = 1600) {
+  const img = await new Promise((ok, mal) => {
+    const i = new Image(); i.onload = () => ok(i); i.onerror = () => mal(new Error('No pude leer esa imagen'));
+    i.src = URL.createObjectURL(archivo);
+  });
+  const escala = Math.min(1, maximo / Math.max(img.naturalWidth, img.naturalHeight));
+  const lienzo = document.createElement('canvas');
+  lienzo.width = Math.round(img.naturalWidth * escala); lienzo.height = Math.round(img.naturalHeight * escala);
+  lienzo.getContext('2d').drawImage(img, 0, 0, lienzo.width, lienzo.height);
+  URL.revokeObjectURL(img.src);
+  return new Promise((ok, mal) => lienzo.toBlob((b) => (b ? ok(b) : mal(new Error('No pude preparar la foto'))), 'image/jpeg', 0.82));
+}
+async function subirFotoReceta(archivo, idReceta) {
+  if (!archivo.type.startsWith('image/')) throw new Error('Ese archivo no es una imagen');
+  const blob = await achicarFoto(archivo);
+  if (blob.size > 5 * 1024 * 1024) throw new Error('La foto quedó muy pesada (más de 5 MB)');
+  const token = await tokenVigente();
+  const uid = sesion.uid || JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))).sub;
+  const ruta = `${uid}/receta-${idReceta}-${Date.now()}.jpg`;
+  const r = await fetch(`${URL_SB}/storage/v1/object/fotos/${ruta}`, {
+    method: 'POST', headers: { apikey: LLAVE, Authorization: `Bearer ${token}`, 'Content-Type': 'image/jpeg' }, body: blob,
+  });
+  if (!r.ok) { const d = await r.json().catch(() => ({})); throw new Error(d.message || d.error || `Error ${r.status}`); }
+  return `${URL_SB}/storage/v1/object/public/fotos/${ruta}`;
 }
 
 // ---------- Opiniones ----------
